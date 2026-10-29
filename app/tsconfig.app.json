@@ -23,5 +23,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // The service worker runs without a window; it has its own config.
+  "exclude": ["src/sw.ts"]
 }
