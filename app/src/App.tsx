@@ -1,35 +1,60 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Screen } from './components';
+import { navigate, paths, useRoute } from './lib/router';
+import { useSubscriptionSync } from './lib/notifications';
+import { useServers } from './lib/storage';
+import { useTimeZoneSync } from './lib/timeZone';
+import { PairScreen } from './screens/PairScreen';
+import { ServerListScreen } from './screens/ServerListScreen';
+import { ServerScreen } from './screens/ServerScreen';
+import { SettingsScreen } from './screens/SettingsScreen';
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const route = useRoute();
+  const { servers, upsert, remove } = useServers();
+  useTimeZoneSync(servers);
+  useSubscriptionSync(servers);
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+  let screen;
+  switch (route.name) {
+    case 'pair':
+      screen = (
+        <PairScreen
+          key={`${route.url}|${route.code}`}
+          initialUrl={route.url}
+          initialCode={route.code}
+          servers={servers}
+          onPaired={(server) => {
+            upsert(server);
+            navigate(paths.server(server.id), { replace: true });
+          }}
+        />
+      );
+      break;
+    case 'server':
+    case 'settings': {
+      const server = servers.find((s) => s.id === route.id);
+      screen = !server ? (
+        <Screen title="Not found" back={paths.servers}>
+          <p className="muted">This device isn't paired with that server.</p>
+        </Screen>
+      ) : route.name === 'settings' ? (
+        <SettingsScreen
+          // Keyed so moving between servers doesn't show the previous one's data while loading.
+          key={server.id}
+          server={server}
+          onLeft={() => {
+            remove(server.id);
+            navigate(paths.servers, { replace: true });
+          }}
+        />
+      ) : (
+        <ServerScreen key={server.id} server={server} />
+      );
+      break;
+    }
+    default:
+      screen = <ServerListScreen servers={servers} />;
+  }
+
+  return screen;
 }
-
-export default App
