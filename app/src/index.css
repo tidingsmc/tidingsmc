@@ -1039,3 +1039,79 @@ h2 {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+
+.qr-scanner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Sets the ways to pair apart from the server name above. */
+  margin-top: 18px;
+}
+
+.qr-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 320px;
+  padding: 16px;
+  border: 2px dashed var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+}
+
+button.qr-zone {
+  cursor: pointer;
+}
+
+button.qr-zone svg {
+  color: var(--accent);
+}
+
+/* While scanning: the camera fills the zone, with Cancel over it. */
+div.qr-zone {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  border-style: solid;
+  border-color: var(--accent);
+  background: #000;
+  justify-content: flex-end;
+}
+
+.qr-zone video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.qr-zone .button {
+  position: relative;
+  width: auto;
+  margin: 12px;
+}
+
+/* "or use a pairing code", between two lines. */
+.or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.or::before,
+.or::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--border);
+}

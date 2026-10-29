@@ -262,17 +262,8 @@ const MOCK_PLAYERS: { name: string; skinUrl?: string }[] = [
       "7fd9ba42a7c81eeea22f1524271ae85a8e045ce0af5a6ae16c6406ae917e68b5",
     ),
   },
-  {
-    name: "Dinnerbone",
-    skinUrl: skin(
-      "50c410fad8d9d8825ad56b0e443e2777a6b46bfa20dacd1d2f55edc71fbeb06d",
-    ),
-  },
   { name: "Steve" },
   { name: "Alex" },
-  { name: "Kai" },
-  { name: "Zuri" },
-  { name: "Noor" },
 ];
 const mockPlayer = (p: (typeof MOCK_PLAYERS)[number]): LinkedPlayer => ({
   uuid: `mock-${p.name}`,
@@ -378,11 +369,6 @@ function mockServerName(host: string): string {
 const MOCK_WORLDS: Record<string, Pick<WorldInfo, "dayTime" | "weather">> = {
   "survival.example.com": { dayTime: 6000, weather: "clear" }, // noon
   "creative.example.com": { dayTime: 18000, weather: "clear" }, // midnight, stars
-  "skyblock.example.com": { dayTime: 12300, weather: "rain" }, // sunset
-  "hardcore.example.com": { dayTime: 16000, weather: "thunder" }, // night
-  "modded.example.com": { dayTime: 23300, weather: "clear" }, // sunrise
-  "adventure.example.com": { dayTime: 3000, weather: "rain" }, // morning
-  "offline.example.com": { dayTime: 0, weather: "clear" }, // unreachable
 };
 
 const mockStartedAt = Date.now();

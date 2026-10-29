@@ -75,9 +75,16 @@
     "howTo": "Connectez-vous à un serveur qui utilise Tidings, puis tapez <code>/tidings pair</code> pour obtenir un code.",
     "address": "Adresse du serveur",
     "code": "Code d'association",
-    "deviceName": "Nom de cet appareil",
+    "serverName": "Nom du serveur",
     "submit": "Associer",
-    "submitting": "Association…"
+    "submitting": "Association…",
+    "scan": "Scanner le QR code",
+    "scanHelp": "Visez la carte obtenue avec /tidings pair",
+    "stopScan": "Annuler",
+    "or": "ou utilisez un code d'association",
+    "notPairingQr": "Ce QR code n'est pas un code d'association Tidings.",
+    "cameraDenied": "L'accès à la caméra a été refusé. Autorisez-le dans les réglages du navigateur, ou utilisez un code d'association.",
+    "cameraError": "Impossible de démarrer la caméra. Utilisez plutôt un code d'association."
   },
   "settings": {
     "notifications": "Notifications",

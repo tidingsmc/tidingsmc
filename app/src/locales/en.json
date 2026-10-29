@@ -75,9 +75,16 @@
     "howTo": "Connect to a server using Tidings, and run <code>/tidings pair</code> to get a code.",
     "address": "Server address",
     "code": "Pairing code",
-    "deviceName": "Name of this device",
+    "serverName": "Server name",
     "submit": "Pair",
-    "submitting": "Pairing…"
+    "submitting": "Pairing…",
+    "scan": "Scan the QR code",
+    "scanHelp": "Point the camera at the map you got with /tidings pair",
+    "stopScan": "Cancel",
+    "or": "or use a pairing code",
+    "notPairingQr": "This QR code isn't a Tidings pairing code.",
+    "cameraDenied": "Camera access was denied. Allow it in your browser settings, or use a pairing code.",
+    "cameraError": "Couldn't start the camera. Use a pairing code instead."
   },
   "settings": {
     "notifications": "Notifications",

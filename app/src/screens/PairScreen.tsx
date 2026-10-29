@@ -4,8 +4,12 @@ import { LinkedAs, Screen } from "../components";
 import { api, normalizeServerUrl, type PairedServer } from "../lib/api";
 import { errorText } from "../lib/i18n";
 import { askPermission, subscribe } from "../lib/notifications";
-import { paths } from "../lib/router";
+import { parseRoute, paths } from "../lib/router";
 import { defaultDeviceName, hostOf } from "../lib/util";
+import { QrScanner } from "../qrScanner";
+
+/** Camera access needs HTTPS (or localhost) and a browser that has it at all. */
+const canScan = Boolean(navigator.mediaDevices?.getUserMedia);
 
 interface Props {
   /** Filled in when the app was opened from the in-game QR code. */
@@ -36,16 +40,37 @@ export function PairScreen({
   onPaired,
 }: Props) {
   const { t } = useTranslation();
-  const fromLink = Boolean(initialUrl && initialCode);
   const [address, setAddress] = useState(initialUrl ?? "");
   const [code, setCode] = useState(initialCode ?? "");
-  const [deviceName, setDeviceName] = useState(() => defaultDeviceName(t));
+  // Opened from the QR code with the phone's camera, or scanned here: address and code are known.
+  const [fromLink, setFromLink] = useState(Boolean(initialUrl && initialCode));
+  const [scanError, setScanError] = useState<string>();
+  const [serverName, setServerName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   // From the QR code we can tell right away; a typed address is checked when submitting.
   const [alreadyPaired, setAlreadyPaired] = useState(() =>
-    fromLink ? pairedAt(servers, initialUrl!) : undefined,
+    initialUrl && initialCode ? pairedAt(servers, initialUrl) : undefined,
   );
+
+  /** The QR code holds the same pairing link the phone's camera app would open. */
+  function scanned(text: string) {
+    let route;
+    try {
+      route = parseRoute(new URL(text).hash);
+    } catch {
+      route = null;
+    }
+    if (route?.name !== "pair" || !route.url || !route.code) {
+      setScanError(t("pair.notPairingQr"));
+      return;
+    }
+    setScanError(undefined);
+    setAddress(route.url);
+    setCode(route.code);
+    setFromLink(true);
+    setAlreadyPaired(pairedAt(servers, route.url));
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -60,8 +85,9 @@ export function PairScreen({
     setBusy(true);
     try {
       const url = normalizeServerUrl(address);
-      const name = deviceName.trim() || defaultDeviceName(t);
-      const res = await api.pair(url, code.trim(), name);
+      // Not asked: only a label the server could show in a device list, so the detected one will do.
+      const deviceName = defaultDeviceName(t);
+      const res = await api.pair(url, code.trim(), deviceName);
       // Same server under another address: the server ID is what identifies it.
       const sameServer = servers.find((s) => s.id === res.serverId);
       if (sameServer) {
@@ -75,11 +101,11 @@ export function PairScreen({
       }
       const server: PairedServer = {
         id: res.serverId,
-        name: res.serverName,
+        name: serverName.trim() || res.serverName,
         url,
         token: res.token,
         vapidPublicKey: res.vapidPublicKey,
-        deviceName: name,
+        deviceName,
         pairedAt: Date.now(),
         player: res.player,
       };
@@ -119,7 +145,7 @@ export function PairScreen({
         <p>
           <Trans
             i18nKey="pair.confirm"
-            values={{ host: hostOf(initialUrl!) }}
+            values={{ host: hostOf(address) }}
             components={{ strong: <strong /> }}
           />
         </p>
@@ -130,46 +156,53 @@ export function PairScreen({
       )}
 
       <form className="form" onSubmit={submit}>
-        {!fromLink && (
-          <>
-            <label className="field">
-              {t("pair.address")}
-              <input
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="mc.example.com"
-                inputMode="url"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                required
-              />
-            </label>
-            <label className="field">
-              {t("pair.code")}
-              <input
-                className="code-input"
-                value={code}
-                onChange={(e) =>
-                  setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                }
-                placeholder="123456"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="\d{6}"
-                required
-              />
-            </label>
-          </>
-        )}
         <label className="field">
-          {t("pair.deviceName")}
+          {t("pair.serverName")}
           <input
-            value={deviceName}
-            onChange={(e) => setDeviceName(e.target.value)}
+            value={serverName}
+            onChange={(e) => setServerName(e.target.value)}
             maxLength={40}
+            required
           />
         </label>
+        {!fromLink && canScan && (
+          <>
+            <QrScanner onScan={scanned} error={scanError} />
+            <p className="or">{t("pair.or")}</p>
+          </>
+        )}
+        {!fromLink && (
+          <label className="field">
+            {t("pair.address")}
+            <input
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="mc.example.com"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              required
+            />
+          </label>
+        )}
+        {!fromLink && (
+          <label className="field">
+            {t("pair.code")}
+            <input
+              className="code-input"
+              value={code}
+              onChange={(e) =>
+                setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              placeholder="123456"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="\d{6}"
+              required
+            />
+          </label>
+        )}
 
         {error != null && <p className="error">{errorText(error, t)}</p>}
 
