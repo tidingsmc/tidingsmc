@@ -1,7 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { BellRing, ChevronLeft, SettingsCog } from 'pixelarticons/react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { BellRing, Check, ChevronDown, ChevronLeft, SettingsCog } from 'pixelarticons/react';
+import { useTranslation } from 'react-i18next';
 import type { LinkedPlayer, MotdSegment, PairedServer } from './lib/api';
-import { BLOCKED_MESSAGE, UNSUPPORTED_MESSAGE, enableNotifications, usePushState } from './lib/notifications';
+import { errorText } from './lib/i18n';
+import { enableNotifications, usePushState } from './lib/notifications';
 import { skinFace } from './lib/skin';
 import type { OnlineState } from './lib/useOnline';
 import { hashString, safeSkinUrl } from './lib/util';
@@ -17,11 +19,12 @@ interface ScreenProps {
 }
 
 export function Screen({ title, back, action, logo, children }: ScreenProps) {
+  const { t } = useTranslation();
   return (
     <>
       <header className="topbar">
         {back && (
-          <a className="back" href={back} aria-label="Back">
+          <a className="back" href={back} aria-label={t('common.back')}>
             <ChevronLeft />
           </a>
         )}
@@ -35,8 +38,9 @@ export function Screen({ title, back, action, logo, children }: ScreenProps) {
 }
 
 export function SettingsLink({ href }: { href: string }) {
+  const { t } = useTranslation();
   return (
-    <a className="icon-button" href={href} aria-label="Settings">
+    <a className="icon-button" href={href} aria-label={t('common.settings')}>
       <SettingsCog />
     </a>
   );
@@ -66,6 +70,152 @@ export function Toggle({ label, description, checked, disabled, onChange }: Togg
         onChange={(e) => onChange(e.target.checked)}
       />
     </label>
+  );
+}
+
+interface DropdownOption<T extends string> {
+  value: T;
+  label: string;
+  /** The option's own language, if it's written in one (a language's name). */
+  lang?: string;
+}
+
+interface DropdownProps<T extends string> {
+  /** What is being picked, for screen readers. */
+  label: string;
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (value: T) => void;
+}
+
+/**
+ * A button that opens a list to pick one option from, drawn by the app rather than the phone's own picker.
+ * Works like a native select from the keyboard: arrows to move, Enter to pick, Escape to close.
+ */
+export function Dropdown<T extends string>({ label, value, options, onChange }: DropdownProps<T>) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const root = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const list = useRef<HTMLUListElement>(null);
+  const id = useId();
+  const selected = Math.max(0, options.findIndex((o) => o.value === value));
+
+  useEffect(() => {
+    if (!open) return;
+    list.current?.focus();
+    // A tap anywhere else closes it, like a native picker.
+    const onPointerDown = (e: PointerEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [open]);
+
+  function show() {
+    setActive(selected);
+    setOpen(true);
+  }
+
+  function close() {
+    setOpen(false);
+    button.current?.focus();
+  }
+
+  function choose(i: number) {
+    onChange(options[i].value);
+    close();
+  }
+
+  function onListKeyDown(e: KeyboardEvent) {
+    switch (e.key) {
+      case 'ArrowDown':
+        setActive((i) => Math.min(i + 1, options.length - 1));
+        break;
+      case 'ArrowUp':
+        setActive((i) => Math.max(i - 1, 0));
+        break;
+      case 'Home':
+        setActive(0);
+        break;
+      case 'End':
+        setActive(options.length - 1);
+        break;
+      case 'Enter':
+      case ' ':
+        choose(active);
+        break;
+      case 'Escape':
+        close();
+        break;
+      case 'Tab':
+        setOpen(false);
+        return;
+      default:
+        return;
+    }
+    e.preventDefault();
+  }
+
+  return (
+    <div className="dropdown" ref={root}>
+      <button
+        ref={button}
+        type="button"
+        className="button dropdown-button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={open ? `${id}-list` : undefined}
+        aria-label={t('common.labelValue', { label, value: options[selected].label })}
+        onClick={() => (open ? close() : show())}
+        onKeyDown={(e) => {
+          if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+            e.preventDefault();
+            show();
+          }
+        }}
+      >
+        {/* All stacked, only the current one shown: the button keeps the widest one's width as it changes. */}
+        <span className="dropdown-values">
+          {options.map((option, i) => (
+            <span key={option.value} lang={option.lang} hidden={i !== selected}>
+              {option.label}
+            </span>
+          ))}
+        </span>
+        <ChevronDown className="dropdown-chevron" aria-hidden />
+      </button>
+      {open && (
+        <ul
+          ref={list}
+          id={`${id}-list`}
+          className="dropdown-menu"
+          role="listbox"
+          aria-label={label}
+          aria-activedescendant={`${id}-${active}`}
+          tabIndex={-1}
+          onKeyDown={onListKeyDown}
+        >
+          {options.map((option, i) => (
+            <li
+              key={option.value}
+              id={`${id}-${i}`}
+              role="option"
+              aria-selected={i === selected}
+              lang={option.lang}
+              className={i === active ? 'dropdown-option active' : 'dropdown-option'}
+              onPointerMove={() => setActive(i)}
+              onClick={() => choose(i)}
+            >
+              {option.label}
+              {/* Kept in place when hidden, so labels line up. */}
+              <Check aria-hidden style={{ visibility: i === selected ? 'visible' : 'hidden' }} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -169,20 +319,22 @@ export function Motd({ segments }: { segments: MotdSegment[] }) {
 
 /** Which Minecraft account this device is paired as: a small face and "as <name>". */
 export function LinkedAs({ player }: { player: LinkedPlayer }) {
+  const { t } = useTranslation();
   return (
     <span className="linked-as">
       <Avatar name={player.name} skinUrl={player.skinUrl} size={16} />
-      as {player.name}
+      {t('common.linkedAs', { name: player.name })}
     </span>
   );
 }
 
 /** Compact status for a server card, under its name: a dot and the player count. */
 export function OnlineSummary({ state }: { state: OnlineState }) {
+  const { t } = useTranslation();
   if (state.status === 'loading') {
     return (
       <div className="status">
-        <span className="status-line muted">Checking…</span>
+        <span className="status-line muted">{t('common.checking')}</span>
       </div>
     );
   }
@@ -190,7 +342,7 @@ export function OnlineSummary({ state }: { state: OnlineState }) {
     return (
       <div className="status">
         <span className="status-line">
-          <span className="dot error" /> Unreachable
+          <span className="dot error" /> {t('online.unreachable')}
         </span>
       </div>
     );
@@ -200,7 +352,7 @@ export function OnlineSummary({ state }: { state: OnlineState }) {
     <div className="status">
       <span className="status-line">
         <span className={players.length > 0 ? 'dot ok' : 'dot'} />
-        {players.length > 0 ? `${players.length} online` : 'Nobody online'}
+        {players.length > 0 ? t('online.count', { count: players.length }) : t('online.nobody')}
       </span>
     </div>
   );
@@ -208,9 +360,10 @@ export function OnlineSummary({ state }: { state: OnlineState }) {
 
 /** Says when this device doesn't get the server's notifications, with a button to turn them on if it can. */
 export function NotificationsOff({ server }: { server: PairedServer }) {
+  const { t } = useTranslation();
   const { state, refresh } = usePushState(server);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   if (state === null || state === 'on') return null;
 
@@ -220,7 +373,7 @@ export function NotificationsOff({ server }: { server: PairedServer }) {
     try {
       await enableNotifications(server);
     } catch (err) {
-      setError((err as Error).message);
+      setError(err as Error);
     }
     setBusy(false);
     refresh();
@@ -229,18 +382,14 @@ export function NotificationsOff({ server }: { server: PairedServer }) {
   return (
     <div className="notice">
       <p className="warning">
-        {state === 'unsupported'
-          ? UNSUPPORTED_MESSAGE
-          : state === 'blocked'
-            ? BLOCKED_MESSAGE
-            : "This device doesn't get this server's notifications yet."}
+        {state === 'unsupported' ? t('push.unsupported') : state === 'blocked' ? t('push.blocked') : t('push.notYet')}
       </p>
       {state === 'off' && (
         <button className="button" onClick={turnOn} disabled={busy}>
-          {busy ? 'Turning on…' : 'Turn on notifications'}
+          {busy ? t('push.turningOn') : t('push.turnOn')}
         </button>
       )}
-      {error && <p className="error small">{error}</p>}
+      {error && <p className="error small">{errorText(error, t)}</p>}
     </div>
   );
 }

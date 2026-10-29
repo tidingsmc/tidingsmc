@@ -1,4 +1,5 @@
 import { Plus } from 'pixelarticons/react';
+import { useTranslation } from 'react-i18next';
 import { OnlineSummary, Screen, ServerIcon, SettingsLink } from '../components';
 import type { PairedServer } from '../lib/api';
 import { paths } from '../lib/router';
@@ -6,14 +7,13 @@ import { useInfo } from '../lib/useInfo';
 import { useOnline } from '../lib/useOnline';
 
 export function ServerListScreen({ servers }: { servers: PairedServer[] }) {
+  const { t } = useTranslation();
   return (
     <Screen title="Tidings" logo action={<SettingsLink href={paths.appSettings} />}>
       {servers.length === 0 ? (
         <div className="empty">
-          <p className="empty-title">No servers yet</p>
-          <p>
-            Join a Minecraft server that has Tidings and scan the QR code on the map you get, or pair with a code.
-          </p>
+          <p className="empty-title">{t('serverList.empty')}</p>
+          <p>{t('serverList.emptyHelp')}</p>
         </div>
       ) : (
         <ul className="server-list">
@@ -26,7 +26,7 @@ export function ServerListScreen({ servers }: { servers: PairedServer[] }) {
       )}
       <div className="bottom-bar">
         <a className="button primary" href={paths.pair}>
-          <Plus /> Pair a server
+          <Plus /> {t('serverList.pair')}
         </a>
       </div>
     </Screen>

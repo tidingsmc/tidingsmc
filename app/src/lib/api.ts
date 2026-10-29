@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next';
+import { TranslatedError } from './i18n';
 import { currentTimeZone, hashString, hostOf } from './util';
 
 /** A server this device is paired with, as stored on the device. */
@@ -148,11 +150,11 @@ export interface TidingsApi {
   unpair(server: PairedServer): Promise<void>;
 }
 
-export class ApiError extends Error {
+export class ApiError extends TranslatedError {
   readonly status?: number;
 
-  constructor(message: string, status?: number) {
-    super(message);
+  constructor(text: (t: TFunction) => string, status?: number) {
+    super(text);
     this.status = status;
   }
 }
@@ -165,10 +167,10 @@ export function normalizeServerUrl(input: string): string {
   try {
     url = new URL(s);
   } catch {
-    throw new ApiError('Not a valid server address');
+    throw new ApiError((t) => t('errors.invalidAddress'));
   }
   if (url.protocol !== 'https:' && url.hostname !== 'localhost') {
-    throw new ApiError('The server address must start with https://');
+    throw new ApiError((t) => t('errors.httpsRequired'));
   }
   return url.origin + url.pathname.replace(/\/+$/, '');
 }
@@ -178,11 +180,15 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
   try {
     res = await fetch(url, init);
   } catch {
-    throw new ApiError('Server unreachable');
+    throw new ApiError((t) => t('errors.unreachable'));
   }
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new ApiError(body?.error ?? `Server answered ${res.status}`, res.status);
+    const reason = body?.error;
+    throw new ApiError(
+      typeof reason === 'string' ? () => reason : (t) => t('errors.serverAnswered', { status: res.status }),
+      res.status,
+    );
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
@@ -244,7 +250,7 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const mockApi: TidingsApi = {
   async pair(url, code) {
     await delay(600);
-    if (!/^\d{6}$/.test(code) || code === '000000') throw new ApiError('Invalid or expired pairing code', 403);
+    if (!/^\d{6}$/.test(code) || code === '000000') throw new ApiError((t) => t('errors.invalidCode'), 403);
     const host = hostOf(url);
     return {
       serverId: mockServerId(host),
@@ -257,7 +263,7 @@ const mockApi: TidingsApi = {
   },
   async info(server) {
     await delay(200 + (hashString(server.id) % 300));
-    if (server.url.includes('offline')) throw new ApiError('Server unreachable');
+    if (server.url.includes('offline')) throw new ApiError((t) => t('errors.unreachable'));
     return {
       motd: [
         { text: 'Welcome to ', color: 'gray' },
@@ -274,7 +280,7 @@ const mockApi: TidingsApi = {
   },
   async online(server) {
     await delay(300 + (hashString(server.id) % 500));
-    if (server.url.includes('offline')) throw new ApiError('Server unreachable');
+    if (server.url.includes('offline')) throw new ApiError((t) => t('errors.unreachable'));
     // Changes every minute, so refreshing shows players coming and going.
     let seed = hashString(server.id) + Math.floor(Date.now() / 60_000);
     // Poppy2105 is always online; the others come and go.
@@ -289,7 +295,7 @@ const mockApi: TidingsApi = {
   },
   async players(server) {
     await delay(300);
-    if (server.url.includes('offline')) throw new ApiError('Server unreachable');
+    if (server.url.includes('offline')) throw new ApiError((t) => t('errors.unreachable'));
     return { players: MOCK_PLAYERS.map(mockPlayer) };
   },
   async settings(server) {

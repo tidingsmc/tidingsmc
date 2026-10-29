@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash } from 'pixelarticons/react';
+import { useTranslation } from 'react-i18next';
 import { Avatar, Toggle } from '../components';
 import { api, type FriendFilter, type OnlinePlayer, type PairedServer } from '../lib/api';
+import { errorText } from '../lib/i18n';
 
 interface Props {
   server: PairedServer;
@@ -13,14 +15,14 @@ interface Props {
 
 /** Everyone who has played on the server, fetched once the filter is on. */
 function useKnownPlayers(server: PairedServer, enabled: boolean) {
-  const [state, setState] = useState<{ players?: OnlinePlayer[]; error?: string }>({});
+  const [state, setState] = useState<{ players?: OnlinePlayer[]; error?: Error }>({});
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
     api.players(server).then(
       ({ players }) => !cancelled && setState({ players }),
-      (err: Error) => !cancelled && setState({ error: err.message }),
+      (err: Error) => !cancelled && setState({ error: err }),
     );
     return () => {
       cancelled = true;
@@ -32,6 +34,7 @@ function useKnownPlayers(server: PairedServer, enabled: boolean) {
 
 /** Join and leave notifications for chosen players only. */
 export function FriendsSection({ server, friends, disabled, onChange }: Props) {
+  const { t } = useTranslation();
   const known = useKnownPlayers(server, friends.enabled);
   const [picking, setPicking] = useState(false);
   const [query, setQuery] = useState('');
@@ -51,11 +54,11 @@ export function FriendsSection({ server, friends, disabled, onChange }: Props) {
 
   return (
     <section className="section">
-      <h2>Friends</h2>
+      <h2>{t('friends.title')}</h2>
       <div className="settings-group">
         <Toggle
-          label="Only my friends"
-          description="Join and leave notifications only for the players you pick"
+          label={t('friends.only')}
+          description={t('friends.onlyHelp')}
           checked={friends.enabled}
           disabled={disabled}
           onChange={(enabled) => {
@@ -66,7 +69,7 @@ export function FriendsSection({ server, friends, disabled, onChange }: Props) {
         {friends.enabled && (
           <>
             {friends.players.length === 0 && !picking && (
-              <p className="warning small group-note">No friends yet, so nobody joining or leaving is announced.</p>
+              <p className="warning small group-note">{t('friends.none')}</p>
             )}
             <ul className="friend-list">
               {friends.players.map((friend) => {
@@ -77,7 +80,7 @@ export function FriendsSection({ server, friends, disabled, onChange }: Props) {
                     <span className="friend-name">{name}</span>
                     <button
                       className="icon-button remove-friend"
-                      aria-label={`Remove ${name}`}
+                      aria-label={t('friends.remove', { name })}
                       onClick={() => onChange({ ...friends, players: friends.players.filter((f) => f.uuid !== friend.uuid) })}
                     >
                       <Trash />
@@ -93,18 +96,18 @@ export function FriendsSection({ server, friends, disabled, onChange }: Props) {
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search players"
-                  aria-label="Search players"
+                  placeholder={t('friends.search')}
+                  aria-label={t('friends.search')}
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
                   autoFocus
                 />
-                {known.error && <p className="error small group-note">{known.error}</p>}
-                {!known.players && !known.error && <p className="muted small group-note">Loading players…</p>}
+                {known.error && <p className="error small group-note">{errorText(known.error, t)}</p>}
+                {!known.players && !known.error && <p className="muted small group-note">{t('friends.loading')}</p>}
                 {known.players && candidates.length === 0 && (
                   <p className="muted small group-note">
-                    {search ? 'Nobody by that name has played here' : 'Everyone who has played here is already a friend'}
+                    {search ? t('friends.noMatch') : t('friends.allFriends')}
                   </p>
                 )}
                 <ul className="friend-list">
@@ -124,12 +127,12 @@ export function FriendsSection({ server, friends, disabled, onChange }: Props) {
                   ))}
                 </ul>
                 <button className="group-button" onClick={closePicker}>
-                  Done
+                  {t('friends.done')}
                 </button>
               </div>
             ) : (
               <button className="group-button" onClick={() => setPicking(true)}>
-                <Plus /> Add a friend
+                <Plus /> {t('friends.add')}
               </button>
             )}
           </>

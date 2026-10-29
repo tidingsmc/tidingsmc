@@ -1,10 +1,12 @@
 // Registered once per paired server, at "<app>/s/<serverId>/", each with that server's push subscription.
 // Built to sw.js at the app's root; see the serviceWorker plugin in vite.config.ts.
 
+import i18next from 'i18next';
 import { notificationContent, type PushMessage } from './lib/push';
-import { serverName } from './lib/serverNames';
 import { skinFace } from './lib/skin';
 import { safeSkinUrl } from './lib/util';
+import { savedLanguage, serverName } from './lib/workerStore';
+import { i18nOptions, resolveLocale } from './locales';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -31,10 +33,22 @@ function parse(data: PushMessageData | null): PushMessage | undefined {
 
 /** For a push we can't read (empty, or from a newer mod). */
 async function showFallback() {
+  const t = await translator();
   await self.registration.showNotification('Tidings', {
-    body: 'Something happened on one of your servers',
+    body: t('notification.unknown'),
     data: { serverId: serverIdOfScope() },
   });
+}
+
+const i18n = i18next.createInstance();
+const i18nReady = i18n.init(i18nOptions('en'));
+
+/** Texts in the language picked in the app, or else the browser's. Checked for each notification: it can change. */
+async function translator() {
+  const language = await savedLanguage().catch(() => 'system' as const);
+  await i18nReady;
+  // Fixed to this locale, so pushes handled at the same time can't switch each other's language.
+  return i18n.getFixedT(resolveLocale(language, self.navigator.languages));
 }
 
 /** The scope is "<app>/s/<serverId>/". */
@@ -75,7 +89,7 @@ async function show(message: PushMessage) {
   // Never from the push itself, so a server can't pass itself off as another or replace its notifications.
   const serverId = serverIdOfScope();
   const name = (await serverName(serverId).catch(() => undefined)) ?? 'Tidings';
-  const { title, body, tag } = notificationContent(message, { id: serverId, name });
+  const { title, body, tag } = notificationContent(message, { id: serverId, name }, await translator());
   await self.registration.showNotification(title, {
     body,
     tag,

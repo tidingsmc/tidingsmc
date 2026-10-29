@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Screen } from './components';
 import { navigate, paths, useRoute } from './lib/router';
 import { useSubscriptionSync } from './lib/notifications';
@@ -10,6 +11,7 @@ import { ServerScreen } from './screens/ServerScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 
 export default function App() {
+  const { t } = useTranslation();
   const route = useRoute();
   const { servers, upsert, remove } = useServers();
   useTimeZoneSync(servers);
@@ -38,8 +40,8 @@ export default function App() {
     case 'settings': {
       const server = servers.find((s) => s.id === route.id);
       screen = !server ? (
-        <Screen title="Not found" back={paths.servers}>
-          <p className="muted">This device isn't paired with that server.</p>
+        <Screen title={t('server.notFound')} back={paths.servers}>
+          <p className="muted">{t('server.notPaired')}</p>
         </Screen>
       ) : route.name === 'settings' ? (
         <SettingsScreen

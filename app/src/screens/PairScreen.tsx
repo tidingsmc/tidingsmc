@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { LinkedAs, Screen } from '../components';
 import { api, normalizeServerUrl, usingMockApi, type PairedServer } from '../lib/api';
+import { errorText } from '../lib/i18n';
 import { askPermission, subscribe } from '../lib/notifications';
 import { paths } from '../lib/router';
 import { defaultDeviceName, hostOf } from '../lib/util';
@@ -25,12 +27,13 @@ function pairedAt(servers: PairedServer[], address: string): PairedServer | unde
 }
 
 export function PairScreen({ initialUrl, initialCode, servers, onPaired }: Props) {
+  const { t } = useTranslation();
   const fromLink = Boolean(initialUrl && initialCode);
   const [address, setAddress] = useState(initialUrl ?? '');
   const [code, setCode] = useState(initialCode ?? '');
-  const [deviceName, setDeviceName] = useState(defaultDeviceName);
+  const [deviceName, setDeviceName] = useState(() => defaultDeviceName(t));
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   // From the QR code we can tell right away; a typed address is checked when submitting.
   const [alreadyPaired, setAlreadyPaired] = useState(() =>
     fromLink ? pairedAt(servers, initialUrl!) : undefined,
@@ -49,7 +52,7 @@ export function PairScreen({ initialUrl, initialCode, servers, onPaired }: Props
     setBusy(true);
     try {
       const url = normalizeServerUrl(address);
-      const name = deviceName.trim() || defaultDeviceName();
+      const name = deviceName.trim() || defaultDeviceName(t);
       const res = await api.pair(url, code.trim(), name);
       // Same server under another address: the server ID is what identifies it.
       const sameServer = servers.find((s) => s.id === res.serverId);
@@ -74,38 +77,35 @@ export function PairScreen({ initialUrl, initialCode, servers, onPaired }: Props
       if (await notificationsAllowed) await subscribe(server).catch(() => {});
       onPaired(server);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(err);
       setBusy(false);
     }
   }
 
   if (alreadyPaired) {
     return (
-      <Screen title="Pair a server" back={paths.servers}>
+      <Screen title={t('pair.title')} back={paths.servers}>
         <p>
-          This device is already paired with <strong>{alreadyPaired.name}</strong>:
+          <Trans i18nKey="pair.alreadyPaired" values={{ server: alreadyPaired.name }} components={{ strong: <strong /> }} />
         </p>
         <LinkedAs player={alreadyPaired.player} />
-        <p className="muted">
-          A device can only be paired once with each server. To pair it as someone else, leave{' '}
-          {alreadyPaired.name} in its settings first, then pair again.
-        </p>
+        <p className="muted">{t('pair.onlyOnce', { server: alreadyPaired.name })}</p>
         <a className="button" href={paths.settings(alreadyPaired.id)}>
-          Open {alreadyPaired.name}'s settings
+          {t('pair.openSettings', { server: alreadyPaired.name })}
         </a>
       </Screen>
     );
   }
 
   return (
-    <Screen title="Pair a server" back={paths.servers}>
+    <Screen title={t('pair.title')} back={paths.servers}>
       {fromLink ? (
         <p>
-          Pair this device with <strong>{hostOf(initialUrl!)}</strong>?
+          <Trans i18nKey="pair.confirm" values={{ host: hostOf(initialUrl!) }} components={{ strong: <strong /> }} />
         </p>
       ) : (
         <p className="muted">
-          In Minecraft, run <code>/tidings pair</code> to get a code.
+          <Trans i18nKey="pair.howTo" components={{ code: <code /> }} />
         </p>
       )}
 
@@ -113,7 +113,7 @@ export function PairScreen({ initialUrl, initialCode, servers, onPaired }: Props
         {!fromLink && (
           <>
             <label className="field">
-              Server address
+              {t('pair.address')}
               <input
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
@@ -126,7 +126,7 @@ export function PairScreen({ initialUrl, initialCode, servers, onPaired }: Props
               />
             </label>
             <label className="field">
-              Pairing code
+              {t('pair.code')}
               <input
                 className="code-input"
                 value={code}
@@ -141,21 +141,20 @@ export function PairScreen({ initialUrl, initialCode, servers, onPaired }: Props
           </>
         )}
         <label className="field">
-          Name of this device
+          {t('pair.deviceName')}
           <input value={deviceName} onChange={(e) => setDeviceName(e.target.value)} maxLength={40} />
         </label>
 
-        {error && <p className="error">{error}</p>}
+        {error != null && <p className="error">{errorText(error, t)}</p>}
 
         <button className="button primary" disabled={busy}>
-          {busy ? 'Pairing…' : 'Pair'}
+          {busy ? t('pair.submitting') : t('pair.submit')}
         </button>
       </form>
 
       {usingMockApi && (
         <p className="muted small">
-          Demo mode: any address and any 6-digit code work. <code>000000</code> is rejected, and an address
-          containing "offline" acts unreachable.
+          <Trans i18nKey="pair.demo" components={{ code: <code /> }} />
         </p>
       )}
     </Screen>

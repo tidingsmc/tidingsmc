@@ -1,0 +1,123 @@
+{
+  "common": {
+    "back": "Retour",
+    "settings": "Réglages",
+    "checking": "Vérification…",
+    "loading": "Chargement…",
+    "linkedAs": "en tant que {{name}}",
+    "labelValue": "{{label}}\u00a0: {{value}}"
+  },
+  "errors": {
+    "invalidAddress": "Cette adresse de serveur n'est pas valide",
+    "httpsRequired": "L'adresse du serveur doit commencer par https://",
+    "unreachable": "Serveur injoignable",
+    "serverAnswered": "Le serveur a répondu {{status}}",
+    "invalidCode": "Code d'association invalide ou expiré",
+    "couldntSave": "Échec de l'enregistrement\u00a0: {{reason}}"
+  },
+  "device": {
+    "iPhone": "iPhone",
+    "iPad": "iPad",
+    "android": "Téléphone Android",
+    "browser": "Navigateur"
+  },
+  "push": {
+    "unsupported": "Ce navigateur ne peut pas recevoir de notifications. Sur iPhone, ajoutez Tidings à l'écran d'accueil et ouvrez-le depuis là.",
+    "blocked": "Les notifications de Tidings sont bloquées dans les réglages de votre navigateur",
+    "notYet": "Cet appareil ne reçoit pas encore les notifications de ce serveur.",
+    "turnOn": "Activer les notifications",
+    "turningOn": "Activation…",
+    "couldntStart": "Impossible de démarrer le service de notifications"
+  },
+  "notification": {
+    "someone": "Quelqu'un",
+    "joined": "{{name}} s'est connecté",
+    "left": "{{name}} s'est déconnecté",
+    "serverStarted": "Le serveur vient de démarrer",
+    "serverStopping": "Le serveur s'arrête",
+    "unknown": "Il s'est passé quelque chose sur l'un de vos serveurs"
+  },
+  "online": {
+    "count": "{{count}} en ligne",
+    "nobody": "Personne en ligne",
+    "unreachable": "Injoignable"
+  },
+  "world": {
+    "label": "Monde",
+    "clear": "Dégagé",
+    "rain": "Pluie",
+    "thunder": "Orage",
+    "day": "Jour {{day}}"
+  },
+  "serverList": {
+    "empty": "Aucun serveur",
+    "emptyHelp": "Rejoignez un serveur Minecraft qui a Tidings et scannez le QR code de la carte que vous recevez, ou associez-le avec un code.",
+    "pair": "Associer un serveur"
+  },
+  "server": {
+    "notFound": "Introuvable",
+    "notPaired": "Cet appareil n'est pas associé à ce serveur.",
+    "onlineNow": "En ligne",
+    "nobodyOnline": "Personne n'est en ligne pour le moment.",
+    "you": "vous"
+  },
+  "pair": {
+    "title": "Associer un serveur",
+    "alreadyPaired": "Cet appareil est déjà associé à <strong>{{server}}</strong>\u00a0:",
+    "onlyOnce": "Un appareil ne peut être associé qu'une fois à chaque serveur. Pour l'associer en tant que quelqu'un d'autre, quittez d'abord {{server}} dans ses réglages, puis associez-le à nouveau.",
+    "openSettings": "Ouvrir les réglages de {{server}}",
+    "confirm": "Associer cet appareil à <strong>{{host}}</strong>\u00a0?",
+    "howTo": "Dans Minecraft, tapez <code>/tidings pair</code> pour obtenir un code.",
+    "address": "Adresse du serveur",
+    "code": "Code d'association",
+    "deviceName": "Nom de cet appareil",
+    "submit": "Associer",
+    "submitting": "Association…",
+    "demo": "Mode démo\u00a0: n'importe quelle adresse et n'importe quel code à 6 chiffres fonctionnent. <code>000000</code> est refusé, et une adresse contenant «\u00a0offline\u00a0» est injoignable."
+  },
+  "settings": {
+    "notifications": "Notifications",
+    "joins": "Quand quelqu'un se connecte",
+    "leaves": "Quand quelqu'un se déconnecte",
+    "leavesHelp": "Envoyée quelques minutes après, pour ignorer les reconnexions rapides",
+    "serverStatus": "Quand le serveur démarre ou s'arrête",
+    "quietWhileOnline": "Pas pendant que je joue",
+    "quietWhileOnlineHelp": "Rien pendant que vous êtes vous-même sur ce serveur",
+    "test": "Envoyer une notification de test",
+    "quietHours": "Heures de silence",
+    "quietHoursHelp": "Aucune notification pendant ces heures, tous les jours",
+    "from": "De",
+    "to": "À",
+    "removePeriod": "Supprimer cette plage",
+    "samePeriod": "Une plage ne peut pas commencer et finir à la même heure.",
+    "addPeriod": "Ajouter une plage",
+    "server": "Serveur",
+    "version": "Minecraft {{version}}",
+    "thisDevice": "Cet appareil",
+    "pairedOn": "Associé le {{date, datetime}}",
+    "leave": "Quitter {{server}}",
+    "leaving": "Départ…",
+    "leaveConfirm": "Quitter {{server}}\u00a0? Vous ne recevrez plus ses notifications et il sera retiré de l'application."
+  },
+  "friends": {
+    "title": "Amis",
+    "only": "Seulement mes amis",
+    "onlyHelp": "Connexions et déconnexions seulement pour les joueurs que vous choisissez",
+    "none": "Pas encore d'amis, donc aucune connexion ni déconnexion n'est annoncée.",
+    "remove": "Retirer {{name}}",
+    "search": "Chercher un joueur",
+    "loading": "Chargement des joueurs…",
+    "noMatch": "Personne de ce nom n'a joué ici",
+    "allFriends": "Tous ceux qui ont joué ici sont déjà vos amis",
+    "done": "Terminé",
+    "add": "Ajouter un ami"
+  },
+  "appSettings": {
+    "theme": "Thème",
+    "themes": { "system": "Système", "light": "Clair", "dark": "Sombre" },
+    "language": "Langue",
+    "systemLanguage": "Système",
+    "version": "Version",
+    "disclaimer": "Produit Minecraft non officiel. Non approuvé par Mojang ou Microsoft et non associé à eux."
+  }
+}

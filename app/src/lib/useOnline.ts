@@ -4,7 +4,7 @@ import { api, type OnlineResponse, type PairedServer } from './api';
 export type OnlineState =
   | { status: 'loading' }
   | { status: 'ok'; data: OnlineResponse; receivedAt: number }
-  | { status: 'error'; message: string };
+  | { status: 'error'; error: Error };
 
 const REFRESH_MS = 30_000;
 
@@ -18,7 +18,7 @@ export function useOnline(server: PairedServer): OnlineState {
       if (document.visibilityState !== 'visible') return;
       api.online(server).then(
         (data) => !cancelled && setState({ status: 'ok', data, receivedAt: Date.now() }),
-        (err: Error) => !cancelled && setState({ status: 'error', message: err.message }),
+        (err: Error) => !cancelled && setState({ status: 'error', error: err }),
       );
     };
     load();

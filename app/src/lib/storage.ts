@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { mockServers, usingMockApi, type PairedServer } from './api';
-import { saveServerNames } from './serverNames';
+import { saveServerNames } from './workerStore';
 
 const KEY = 'tidings.servers';
 
@@ -16,7 +16,7 @@ function load(): PairedServer[] {
 
 /**
  * Paired servers, persisted on this device.
- * Their names are also copied to IndexedDB, for the service worker (see serverNames.ts).
+ * Their names are also copied to IndexedDB, for the service worker (see workerStore.ts).
  */
 export function useServers() {
   const [servers, setServers] = useState<PairedServer[]>(load);

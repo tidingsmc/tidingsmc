@@ -1,5 +1,7 @@
+import { useTranslation } from 'react-i18next';
 import { Avatar, Motd, NotificationsOff, Screen, ServerIcon, SettingsLink } from '../components';
 import type { PairedServer } from '../lib/api';
+import { errorText } from '../lib/i18n';
 import { paths } from '../lib/router';
 import { useInfo } from '../lib/useInfo';
 import { useOnline } from '../lib/useOnline';
@@ -7,6 +9,7 @@ import { hostOf } from '../lib/util';
 import { WorldCard } from '../world';
 
 export function ServerScreen({ server }: { server: PairedServer }) {
+  const { t } = useTranslation();
   const online = useOnline(server);
   const info = useInfo(server);
 
@@ -22,21 +25,21 @@ export function ServerScreen({ server }: { server: PairedServer }) {
 
       <section className="section">
         <h2>
-          Online now
+          {t('server.onlineNow')}
           {online.status === 'ok' && ` · ${online.data.players.length}/${online.data.maxPlayers}`}
         </h2>
-        {online.status === 'loading' && <p className="muted">Checking…</p>}
-        {online.status === 'error' && <p className="error">{online.message}</p>}
+        {online.status === 'loading' && <p className="muted">{t('common.checking')}</p>}
+        {online.status === 'error' && <p className="error">{errorText(online.error, t)}</p>}
         {online.status === 'ok' &&
           (online.data.players.length === 0 ? (
-            <p className="muted">Nobody is online right now.</p>
+            <p className="muted">{t('server.nobodyOnline')}</p>
           ) : (
             <ul className="player-list">
               {online.data.players.map((player) => (
                 <li key={player.uuid} className="player">
                   <Avatar name={player.name} skinUrl={player.skinUrl} />
                   {player.name}
-                  {player.uuid === server.player.uuid && <span className="you muted small">you</span>}
+                  {player.uuid === server.player.uuid && <span className="you muted small">{t('server.you')}</span>}
                 </li>
               ))}
             </ul>

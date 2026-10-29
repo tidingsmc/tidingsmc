@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type OnlinePlayer, type PairedServer } from './api';
+import { TranslatedError } from './i18n';
 import type { PushMessage } from './push';
 import { navigate } from './router';
 import { sentToServers } from './storage';
-
-export const UNSUPPORTED_MESSAGE =
-  "This browser can't get notifications. On iPhone, add Tidings to the home screen and open it from there.";
-export const BLOCKED_MESSAGE = 'Notifications are blocked for Tidings in your browser settings';
 
 export function pushSupported(): boolean {
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -26,13 +23,13 @@ async function register(serverId: string): Promise<ServiceWorkerRegistration> {
   });
   // The newest worker, so a just-updated one is used rather than the one it replaces.
   const worker = registration.installing ?? registration.waiting ?? registration.active;
-  if (!worker) throw new Error("Couldn't start the notification service");
+  if (!worker) throw new TranslatedError((t) => t('push.couldntStart'));
   if (worker.state === 'activated') return registration;
   return new Promise((resolve, reject) => {
     worker.addEventListener('statechange', () => {
       if (worker.state === 'activated') resolve(registration);
       // Failed to install, or replaced by a newer one before activating.
-      if (worker.state === 'redundant') reject(new Error("Couldn't start the notification service"));
+      if (worker.state === 'redundant') reject(new TranslatedError((t) => t('push.couldntStart')));
     });
   });
 }
@@ -80,8 +77,8 @@ function base64UrlToBytes(s: string): Uint8Array<ArrayBuffer> {
 
 /** Asks for permission and subscribes, with a message saying why if it can't. Call it while handling a tap. */
 export async function enableNotifications(server: PairedServer): Promise<void> {
-  if (!pushSupported()) throw new Error(UNSUPPORTED_MESSAGE);
-  if (!(await askPermission())) throw new Error(BLOCKED_MESSAGE);
+  if (!pushSupported()) throw new TranslatedError((t) => t('push.unsupported'));
+  if (!(await askPermission())) throw new TranslatedError((t) => t('push.blocked'));
   await subscribe(server);
 }
 
@@ -141,8 +138,8 @@ export function listenForNotificationClicks() {
 
 /** Shows a "player joined" notification through the server's service worker, as a real push would. */
 export async function sendTestNotification(server: PairedServer, player?: OnlinePlayer) {
-  if (!pushSupported()) throw new Error(UNSUPPORTED_MESSAGE);
-  if (!(await askPermission())) throw new Error(BLOCKED_MESSAGE);
+  if (!pushSupported()) throw new TranslatedError((t) => t('push.unsupported'));
+  if (!(await askPermission())) throw new TranslatedError((t) => t('push.blocked'));
   const message: PushMessage = {
     kind: 'player_joined',
     player: player && { uuid: player.uuid, name: player.name, skinUrl: player.skinUrl },

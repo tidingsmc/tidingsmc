@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next';
+
 export function hashString(s: string): number {
   let h = 0;
   for (const c of s) h = (Math.imul(31, h) + c.charCodeAt(0)) | 0;
@@ -32,10 +34,10 @@ export function currentTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-export function defaultDeviceName(): string {
+export function defaultDeviceName(t: TFunction): string {
   const ua = navigator.userAgent;
-  if (/iPhone/.test(ua)) return 'iPhone';
-  if (/iPad/.test(ua)) return 'iPad';
-  if (/Android/.test(ua)) return 'Android phone';
-  return 'Browser';
+  if (/iPhone/.test(ua)) return t('device.iPhone');
+  if (/iPad/.test(ua)) return t('device.iPad');
+  if (/Android/.test(ua)) return t('device.android');
+  return t('device.browser');
 }
