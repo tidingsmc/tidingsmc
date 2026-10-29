@@ -1,0 +1,26 @@
+// Platform-independent logic: HTTP API, pairing, push sending, storage.
+// Must not depend on Minecraft or Forge, and only on libraries Minecraft already ships (Gson).
+plugins {
+    id 'java-library'
+}
+
+group = mod_group_id
+version = mod_version
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Minecraft 1.20.1 ships Gson 2.10, so the Forge jar doesn't need to bundle it.
+    compileOnly 'com.google.code.gson:gson:2.10'
+    testImplementation 'com.google.code.gson:gson:2.10'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
