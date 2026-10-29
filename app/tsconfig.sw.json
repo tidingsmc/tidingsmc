@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.sw.tsbuildinfo",
+    "lib": ["ES2020", "WebWorker"],
+    "jsx": "preserve"
+  },
+  "include": ["src/sw.ts"],
+  "exclude": []
+}

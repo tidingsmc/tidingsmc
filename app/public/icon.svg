@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- pixelarticons' bell-ring (MIT), scaled 1.5×: each art pixel is 3 units, so whole pixels at 192 and 512 px. -->
+  <rect width="64" height="64" rx="14" fill="#2f5bb7"/>
+  <path fill="#fff" transform="translate(14 14) scale(1.5)" d="M14 22H10V20H14V22ZM10 20H8V18H10V20ZM16 20H14V18H16V20ZM5 15H19V13H21V17H3V13H5V15ZM7 13H5V6H7V13ZM19 13H17V6H19V13ZM3 6H1V4H3V6ZM9 6H7V4H9V6ZM17 6H15V4H17V6ZM23 6H21V4H23V6ZM5 4H3V2H5V4ZM15 4H9V2H15V4ZM21 4H19V2H21V4Z"/>
+</svg>
