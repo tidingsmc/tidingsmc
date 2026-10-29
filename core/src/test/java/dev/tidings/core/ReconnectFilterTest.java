@@ -2,11 +2,12 @@ package dev.tidings.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.junit.jupiter.api.Test;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import org.junit.jupiter.api.Test;
 
 class ReconnectFilterTest {
     private final ReconnectFilter filter = new ReconnectFilter(Duration.ofMinutes(5));
@@ -27,7 +28,9 @@ class ReconnectFilterTest {
         filter.onJoin(steve, t0);
         filter.onLeave(steve, minutes(10));
 
-        assertEquals(new ReconnectFilter.Join(false, false), filter.onJoin(steve, minutes(12)),
+        assertEquals(
+                new ReconnectFilter.Join(false, false),
+                filter.onJoin(steve, minutes(12)),
                 "rejoin within grace is not announced");
         assertEquals(List.of(), filter.dueLeaves(minutes(30)), "and the leave is never announced");
     }

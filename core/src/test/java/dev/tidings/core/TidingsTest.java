@@ -2,9 +2,10 @@ package dev.tidings.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import org.junit.jupiter.api.Test;
+
 import java.util.List;
 import java.util.UUID;
-import org.junit.jupiter.api.Test;
 
 class TidingsTest {
     private final UUID steve = UUID.randomUUID();
@@ -16,7 +17,9 @@ class TidingsTest {
         tidings.playerJoined(steve, "Steve");
         tidings.playerJoined(alex, "Alex");
 
-        assertEquals(List.of(new OnlinePlayer(steve, "Steve"), new OnlinePlayer(alex, "Alex")), tidings.onlinePlayers());
+        assertEquals(
+                List.of(new OnlinePlayer(steve, "Steve"), new OnlinePlayer(alex, "Alex")),
+                tidings.onlinePlayers());
     }
 
     @Test

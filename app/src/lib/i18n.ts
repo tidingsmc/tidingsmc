@@ -1,17 +1,22 @@
-import i18next, { type TFunction } from 'i18next';
-import { useCallback, useState } from 'react';
-import { initReactI18next } from 'react-i18next';
-import { i18nOptions, isLanguage, resolveLocale, type Language } from '../locales';
-import { saveLanguage } from './workerStore';
+import i18next, { type TFunction } from "i18next";
+import { useCallback, useState } from "react";
+import { initReactI18next } from "react-i18next";
+import {
+  i18nOptions,
+  isLanguage,
+  resolveLocale,
+  type Language,
+} from "../locales";
+import { saveLanguage } from "./workerStore";
 
-const KEY = 'tidings.language';
+const KEY = "tidings.language";
 
 function load(): Language {
   try {
     const saved = localStorage.getItem(KEY);
-    return isLanguage(saved) ? saved : 'system';
+    return isLanguage(saved) ? saved : "system";
   } catch {
-    return 'system';
+    return "system";
   }
 }
 
@@ -22,19 +27,24 @@ function apply(language: Language) {
 }
 
 export function initLanguage() {
-  i18next.on('languageChanged', (locale) => (document.documentElement.lang = locale));
+  i18next.on(
+    "languageChanged",
+    (locale) => (document.documentElement.lang = locale),
+  );
   const language = load();
-  i18next.use(initReactI18next).init(i18nOptions(resolveLocale(language, navigator.languages)));
+  i18next
+    .use(initReactI18next)
+    .init(i18nOptions(resolveLocale(language, navigator.languages)));
   saveLanguage(language).catch(() => {});
   // The phone's language changed, which matters while following it.
-  addEventListener('languagechange', () => apply(load()));
+  addEventListener("languagechange", () => apply(load()));
 }
 
 export function useLanguage() {
   const [language, setLanguage] = useState<Language>(load);
   const choose = useCallback((language: Language) => {
     try {
-      if (language === 'system') localStorage.removeItem(KEY);
+      if (language === "system") localStorage.removeItem(KEY);
       else localStorage.setItem(KEY, language);
     } catch {
       // Still applied for now; just not remembered.

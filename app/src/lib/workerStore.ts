@@ -4,11 +4,11 @@
 // - the language picked in the app's settings.
 // No window-only APIs here: the service worker imports this file.
 
-import { isLanguage, type Language } from '../locales';
+import { isLanguage, type Language } from "../locales";
 
-const DB_NAME = 'tidings';
-const SERVER_NAMES = 'serverNames';
-const SETTINGS = 'settings';
+const DB_NAME = "tidings";
+const SERVER_NAMES = "serverNames";
+const SETTINGS = "settings";
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -25,11 +25,14 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-async function write(store: string, change: (store: IDBObjectStore) => void): Promise<void> {
+async function write(
+  store: string,
+  change: (store: IDBObjectStore) => void,
+): Promise<void> {
   const db = await openDb();
   try {
     await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction(store, 'readwrite');
+      const tx = db.transaction(store, "readwrite");
       change(tx.objectStore(store));
       tx.oncomplete = () => resolve();
       tx.onerror = tx.onabort = () => reject(tx.error);
@@ -53,7 +56,9 @@ async function read(store: string, key: string): Promise<unknown> {
 }
 
 /** Replaces the stored names with these servers' names. */
-export function saveServerNames(servers: { id: string; name: string }[]): Promise<void> {
+export function saveServerNames(
+  servers: { id: string; name: string }[],
+): Promise<void> {
   return write(SERVER_NAMES, (store) => {
     store.clear();
     for (const server of servers) store.put(server.name, server.id);
@@ -62,14 +67,14 @@ export function saveServerNames(servers: { id: string; name: string }[]): Promis
 
 export async function serverName(id: string): Promise<string | undefined> {
   const name = await read(SERVER_NAMES, id);
-  return typeof name === 'string' ? name : undefined;
+  return typeof name === "string" ? name : undefined;
 }
 
 export function saveLanguage(language: Language): Promise<void> {
-  return write(SETTINGS, (store) => store.put(language, 'language'));
+  return write(SETTINGS, (store) => store.put(language, "language"));
 }
 
 export async function savedLanguage(): Promise<Language> {
-  const language = await read(SETTINGS, 'language');
-  return isLanguage(language) ? language : 'system';
+  const language = await read(SETTINGS, "language");
+  return isLanguage(language) ? language : "system";
 }

@@ -1,4 +1,4 @@
-import type { TFunction } from 'i18next';
+import type { TFunction } from "i18next";
 
 export function hashString(s: string): number {
   let h = 0;
@@ -22,8 +22,8 @@ export function safeSkinUrl(url?: string): string | undefined {
   if (!url) return undefined;
   try {
     const u = new URL(url);
-    if (u.hostname !== 'textures.minecraft.net') return undefined;
-    u.protocol = 'https:';
+    if (u.hostname !== "textures.minecraft.net") return undefined;
+    u.protocol = "https:";
     return u.href;
   } catch {
     return undefined;
@@ -36,8 +36,8 @@ export function currentTimeZone(): string {
 
 export function defaultDeviceName(t: TFunction): string {
   const ua = navigator.userAgent;
-  if (/iPhone/.test(ua)) return t('device.iPhone');
-  if (/iPad/.test(ua)) return t('device.iPad');
-  if (/Android/.test(ua)) return t('device.android');
-  return t('device.browser');
+  if (/iPhone/.test(ua)) return t("device.iPhone");
+  if (/iPad/.test(ua)) return t("device.iPad");
+  if (/Android/.test(ua)) return t("device.android");
+  return t("device.browser");
 }

@@ -1,7 +1,7 @@
 // What the mod sends in a Web Push, and how the service worker shows it.
 // No window-only APIs here: the service worker imports this file.
 
-import type { TFunction } from 'i18next';
+import type { TFunction } from "i18next";
 
 /**
  * The JSON payload of a push from the mod. Kept small: Web Push payloads are limited to about 4 KB,
@@ -10,7 +10,7 @@ import type { TFunction } from 'i18next';
  */
 export interface PushMessage {
   /** Mirrors the mod's NotificationKind. */
-  kind: 'player_joined' | 'player_left' | 'server_started' | 'server_stopping';
+  kind: "player_joined" | "player_left" | "server_started" | "server_stopping";
   /** For player_joined and player_left. */
   player?: { uuid: string; name: string; skinUrl?: string };
 }
@@ -30,19 +30,35 @@ export function notificationContent(
 ): NotificationContent {
   const { kind, player } = message;
   const { id: serverId, name: serverName } = server;
-  const name = player?.name ?? t('notification.someone');
+  const name = player?.name ?? t("notification.someone");
   // One notification per player: their leave replaces their join, so the latest news is what's shown.
   // Keyed on the UUID, which survives name changes.
-  const playerTag = `${serverId}:player:${player?.uuid ?? 'someone'}`;
+  const playerTag = `${serverId}:player:${player?.uuid ?? "someone"}`;
   // The server comes first, so notifications from several servers are easy to tell apart.
   switch (kind) {
-    case 'player_joined':
-      return { title: serverName, body: t('notification.joined', { name }), tag: playerTag };
-    case 'player_left':
-      return { title: serverName, body: t('notification.left', { name }), tag: playerTag };
-    case 'server_started':
-      return { title: serverName, body: t('notification.serverStarted'), tag: `${serverId}:status` };
-    case 'server_stopping':
-      return { title: serverName, body: t('notification.serverStopping'), tag: `${serverId}:status` };
+    case "player_joined":
+      return {
+        title: serverName,
+        body: t("notification.joined", { name }),
+        tag: playerTag,
+      };
+    case "player_left":
+      return {
+        title: serverName,
+        body: t("notification.left", { name }),
+        tag: playerTag,
+      };
+    case "server_started":
+      return {
+        title: serverName,
+        body: t("notification.serverStarted"),
+        tag: `${serverId}:status`,
+      };
+    case "server_stopping":
+      return {
+        title: serverName,
+        body: t("notification.serverStopping"),
+        tag: `${serverId}:status`,
+      };
   }
 }

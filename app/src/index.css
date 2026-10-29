@@ -1,12 +1,12 @@
 @font-face {
-  font-family: 'Monocraft';
-  src: url('./assets/fonts/Monocraft.woff2') format('woff2');
+  font-family: "Monocraft";
+  src: url("./assets/fonts/Monocraft.woff2") format("woff2");
   font-display: swap;
 }
 
 :root {
   color-scheme: light dark;
-  --font-heading: 'Monocraft', ui-monospace, monospace;
+  --font-heading: "Monocraft", ui-monospace, monospace;
   --bg: light-dark(#f4f5f7, #111318);
   --surface: light-dark(#ffffff, #1a1d23);
   --text: light-dark(#1b1d22, #e6e8ec);
@@ -20,17 +20,22 @@
   --ok: light-dark(#2e9d3a, #5ccf66);
   --off: light-dark(#9aa0aa, #696f7a);
 
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
 
-[data-theme='light'] {
+[data-theme="light"] {
   color-scheme: light;
 }
 
-[data-theme='dark'] {
+[data-theme="dark"] {
   color-scheme: dark;
 }
 
@@ -57,7 +62,7 @@ a {
 }
 
 code {
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 0.9em;
   background: var(--accent-soft);
   padding: 1px 5px;
@@ -477,7 +482,7 @@ h2 {
   transition: transform 0.15s;
 }
 
-[aria-expanded='true'] > .dropdown-chevron {
+[aria-expanded="true"] > .dropdown-chevron {
   transform: rotate(180deg);
 }
 
@@ -559,7 +564,7 @@ h2 {
 }
 
 .switch::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 3px;
   left: 3px;
@@ -634,7 +639,7 @@ h2 {
 }
 
 .world-stars::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -642,9 +647,18 @@ h2 {
   height: 2px;
   background: #fff;
   box-shadow:
-    24px 14px #fff, 70px 34px #cfd8ff, 118px 10px #fff, 160px 44px #fff, 205px 18px #cfd8ff,
-    250px 38px #fff, 296px 8px #fff, 340px 30px #cfd8ff, 386px 16px #fff, 430px 40px #fff,
-    476px 12px #cfd8ff, 520px 28px #fff;
+    24px 14px #fff,
+    70px 34px #cfd8ff,
+    118px 10px #fff,
+    160px 44px #fff,
+    205px 18px #cfd8ff,
+    250px 38px #fff,
+    296px 8px #fff,
+    340px 30px #cfd8ff,
+    386px 16px #fff,
+    430px 40px #fff,
+    476px 12px #cfd8ff,
+    520px 28px #fff;
   opacity: 0.85;
 }
 
@@ -735,8 +749,13 @@ h2 {
   right: 0;
   bottom: 0;
   height: 12px;
-  background:
-    linear-gradient(#6aaa3a 0 4px, #4f8a2a 4px 6px, #866043 6px 9px, #6f4e35 9px) 0 0 / 100% 100%;
+  background: linear-gradient(
+      #6aaa3a 0 4px,
+      #4f8a2a 4px 6px,
+      #866043 6px 9px,
+      #6f4e35 9px
+    )
+    0 0 / 100% 100%;
 }
 
 .world-info {

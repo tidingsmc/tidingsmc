@@ -1,14 +1,14 @@
-import { useTranslation } from 'react-i18next';
-import { Screen } from './components';
-import { navigate, paths, useRoute } from './lib/router';
-import { useSubscriptionSync } from './lib/notifications';
-import { useServers } from './lib/storage';
-import { useTimeZoneSync } from './lib/timeZone';
-import { AppSettingsScreen } from './screens/AppSettingsScreen';
-import { PairScreen } from './screens/PairScreen';
-import { ServerListScreen } from './screens/ServerListScreen';
-import { ServerScreen } from './screens/ServerScreen';
-import { SettingsScreen } from './screens/SettingsScreen';
+import { useTranslation } from "react-i18next";
+import { Screen } from "./components";
+import { navigate, paths, useRoute } from "./lib/router";
+import { useSubscriptionSync } from "./lib/notifications";
+import { useServers } from "./lib/storage";
+import { useTimeZoneSync } from "./lib/timeZone";
+import { AppSettingsScreen } from "./screens/AppSettingsScreen";
+import { PairScreen } from "./screens/PairScreen";
+import { ServerListScreen } from "./screens/ServerListScreen";
+import { ServerScreen } from "./screens/ServerScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
 
 export default function App() {
   const { t } = useTranslation();
@@ -19,10 +19,10 @@ export default function App() {
 
   let screen;
   switch (route.name) {
-    case 'appSettings':
+    case "appSettings":
       screen = <AppSettingsScreen />;
       break;
-    case 'pair':
+    case "pair":
       screen = (
         <PairScreen
           key={`${route.url}|${route.code}`}
@@ -36,14 +36,14 @@ export default function App() {
         />
       );
       break;
-    case 'server':
-    case 'settings': {
+    case "server":
+    case "settings": {
       const server = servers.find((s) => s.id === route.id);
       screen = !server ? (
-        <Screen title={t('server.notFound')} back={paths.servers}>
-          <p className="muted">{t('server.notPaired')}</p>
+        <Screen title={t("server.notFound")} back={paths.servers}>
+          <p className="muted">{t("server.notPaired")}</p>
         </Screen>
-      ) : route.name === 'settings' ? (
+      ) : route.name === "settings" ? (
         <SettingsScreen
           // Keyed so moving between servers doesn't show the previous one's data while loading.
           key={server.id}

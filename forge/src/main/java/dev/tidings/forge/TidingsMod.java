@@ -1,12 +1,15 @@
 package dev.tidings.forge;
 
 import com.mojang.logging.LogUtils;
+
 import dev.tidings.core.Tidings;
+
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+
 import org.slf4j.Logger;
 
 @Mod(TidingsMod.MOD_ID)
@@ -24,7 +27,10 @@ public final class TidingsMod {
     public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         Player player = event.getEntity();
         tidings.playerJoined(player.getUUID(), player.getGameProfile().getName());
-        LOGGER.info("{} joined, online: {}", player.getGameProfile().getName(), tidings.onlinePlayers().size());
+        LOGGER.info(
+                "{} joined, online: {}",
+                player.getGameProfile().getName(),
+                tidings.onlinePlayers().size());
     }
 
     @SubscribeEvent

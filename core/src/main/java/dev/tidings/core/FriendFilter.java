@@ -4,11 +4,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Join and leave notifications for chosen players only. The list is kept while the filter is off. */
+/**
+ * Join and leave notifications for chosen players only. The list is kept while the filter is off.
+ */
 public record FriendFilter(boolean enabled, List<Friend> players) {
 
     public FriendFilter {
-        if (players == null || players.stream().anyMatch(Objects::isNull)) throw new IllegalArgumentException("Missing friend");
+        if (players == null || players.stream().anyMatch(Objects::isNull))
+            throw new IllegalArgumentException("Missing friend");
         players = List.copyOf(players);
     }
 

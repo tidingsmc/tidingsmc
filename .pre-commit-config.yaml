@@ -1,0 +1,78 @@
+repos:
+  # ── Generic hygiene ─────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+        # Gradle template: ${...} is expanded at build time
+        exclude: ^forge/src/main/resources/META-INF/mods\.toml$
+      - id: check-json
+        # tsconfig files are JSONC (comments, trailing commas)
+        exclude: tsconfig.*\.json$
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=lf]
+        # Windows launcher, kept CRLF on purpose
+        exclude: ^gradlew\.bat$
+
+  # ── Secret scanning ─────────────────────────────────────────────────────────
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  # ── Java ────────────────────────────────────────────────────────────────────
+  # AOSP style: google-java-format with the 4-space indent the code already uses
+  - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+    rev: v2.15.0
+    hooks:
+      - id: pretty-format-java
+        args: [--autofix, --aosp]
+
+  - repo: local
+    hooks:
+      - id: core-test
+        name: core tests
+        entry: ./gradlew --quiet :core:test
+        language: system
+        files: ^(core/|settings\.gradle$|gradle\.properties$)
+        pass_filenames: false
+
+      - id: forge-compile
+        name: forge compile
+        entry: ./gradlew --quiet :forge:compileJava
+        language: system
+        files: ^(core/src/main/|forge/|settings\.gradle$|gradle\.properties$)
+        pass_filenames: false
+
+      # ── App — npm exec so the lockfile-pinned versions are used ────────────
+      - id: prettier
+        name: prettier
+        entry: bash -c 'cd app && exec npm exec --no -- prettier --write --ignore-unknown "${@#app/}"' --
+        language: system
+        files: ^app/
+        exclude: ^app/(dist/|public/|package-lock\.json$)
+        types: [text]
+
+      - id: eslint
+        name: eslint
+        entry: bash -c 'cd app && exec npm exec --no -- eslint --fix "${@#app/}"' --
+        language: system
+        files: ^app/.*\.(ts|tsx|js|jsx|mjs|cjs)$
+        exclude: ^app/dist/
+
+      - id: tsc
+        name: tsc typecheck
+        entry: bash -c 'cd app && exec npm exec --no -- tsc -b --noEmit'
+        language: system
+        files: ^app/.*\.(ts|tsx)$|^app/tsconfig.*\.json$
+        pass_filenames: false

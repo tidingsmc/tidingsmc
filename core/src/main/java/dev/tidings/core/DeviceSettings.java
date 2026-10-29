@@ -8,8 +8,9 @@ import java.util.UUID;
 /**
  * What a paired device wants to be notified about. Mirrors the app's DeviceSettings.
  *
- * <p>The settings come from the app, so invalid values throw {@link IllegalArgumentException}, here and in
- * {@link FriendFilter} and {@link QuietHours}; the HTTP API answers those with 400 Bad Request.
+ * <p>The settings come from the app, so invalid values throw {@link IllegalArgumentException}, here
+ * and in {@link FriendFilter} and {@link QuietHours}; the HTTP API answers those with 400 Bad
+ * Request.
  *
  * @param timeZone the device's time zone, kept up to date by the app; quiet hours are in this zone
  */
@@ -39,7 +40,8 @@ public record DeviceSettings(
     }
 
     public static DeviceSettings defaults() {
-        return new DeviceSettings(true, false, true, true, FriendFilter.off(), QuietHours.off(), ZoneId.of("UTC"));
+        return new DeviceSettings(
+                true, false, true, true, FriendFilter.off(), QuietHours.off(), ZoneId.of("UTC"));
     }
 
     /**
@@ -47,7 +49,8 @@ public record DeviceSettings(
      * @param owner the player this device belongs to (the one who paired it)
      * @param ownerOnline whether the owner is on the server right now
      */
-    public boolean wants(NotificationKind kind, UUID player, Instant now, UUID owner, boolean ownerOnline) {
+    public boolean wants(
+            NotificationKind kind, UUID player, Instant now, UUID owner, boolean ownerOnline) {
         // Nobody needs telling that they joined or left.
         if (owner.equals(player)) return false;
         if (quietHours.isQuietAt(now, timeZone)) return false;

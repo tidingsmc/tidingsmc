@@ -1,17 +1,17 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
-import { initLanguage } from './lib/i18n'
-import { listenForNotificationClicks } from './lib/notifications'
-import { initTheme } from './lib/theme'
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import "./index.css";
+import App from "./App.tsx";
+import { initLanguage } from "./lib/i18n";
+import { listenForNotificationClicks } from "./lib/notifications";
+import { initTheme } from "./lib/theme";
 
-initTheme()
-initLanguage()
-listenForNotificationClicks()
+initTheme();
+initLanguage();
+listenForNotificationClicks();
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
   </StrictMode>,
-)
+);

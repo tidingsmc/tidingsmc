@@ -1,12 +1,25 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { BellRing, Check, ChevronDown, ChevronLeft, SettingsCog } from 'pixelarticons/react';
-import { useTranslation } from 'react-i18next';
-import type { LinkedPlayer, MotdSegment, PairedServer } from './lib/api';
-import { errorText } from './lib/i18n';
-import { enableNotifications, usePushState } from './lib/notifications';
-import { skinFace } from './lib/skin';
-import type { OnlineState } from './lib/useOnline';
-import { hashString, safeSkinUrl } from './lib/util';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
+import {
+  BellRing,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  SettingsCog,
+} from "pixelarticons/react";
+import { useTranslation } from "react-i18next";
+import type { LinkedPlayer, MotdSegment, PairedServer } from "./lib/api";
+import { errorText } from "./lib/i18n";
+import { enableNotifications, usePushState } from "./lib/notifications";
+import { skinFace } from "./lib/skin";
+import type { OnlineState } from "./lib/useOnline";
+import { hashString, safeSkinUrl } from "./lib/util";
 
 interface ScreenProps {
   title: string;
@@ -24,7 +37,7 @@ export function Screen({ title, back, action, logo, children }: ScreenProps) {
     <>
       <header className="topbar">
         {back && (
-          <a className="back" href={back} aria-label={t('common.back')}>
+          <a className="back" href={back} aria-label={t("common.back")}>
             <ChevronLeft />
           </a>
         )}
@@ -40,7 +53,7 @@ export function Screen({ title, back, action, logo, children }: ScreenProps) {
 export function SettingsLink({ href }: { href: string }) {
   const { t } = useTranslation();
   return (
-    <a className="icon-button" href={href} aria-label={t('common.settings')}>
+    <a className="icon-button" href={href} aria-label={t("common.settings")}>
       <SettingsCog />
     </a>
   );
@@ -54,7 +67,13 @@ interface ToggleProps {
   onChange: (checked: boolean) => void;
 }
 
-export function Toggle({ label, description, checked, disabled, onChange }: ToggleProps) {
+export function Toggle({
+  label,
+  description,
+  checked,
+  disabled,
+  onChange,
+}: ToggleProps) {
   return (
     <label className="toggle-row">
       <span className="toggle-text">
@@ -92,7 +111,12 @@ interface DropdownProps<T extends string> {
  * A button that opens a list to pick one option from, drawn by the app rather than the phone's own picker.
  * Works like a native select from the keyboard: arrows to move, Enter to pick, Escape to close.
  */
-export function Dropdown<T extends string>({ label, value, options, onChange }: DropdownProps<T>) {
+export function Dropdown<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: DropdownProps<T>) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -100,7 +124,10 @@ export function Dropdown<T extends string>({ label, value, options, onChange }: 
   const button = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLUListElement>(null);
   const id = useId();
-  const selected = Math.max(0, options.findIndex((o) => o.value === value));
+  const selected = Math.max(
+    0,
+    options.findIndex((o) => o.value === value),
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -109,8 +136,8 @@ export function Dropdown<T extends string>({ label, value, options, onChange }: 
     const onPointerDown = (e: PointerEvent) => {
       if (!root.current?.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open]);
 
   function show() {
@@ -130,26 +157,26 @@ export function Dropdown<T extends string>({ label, value, options, onChange }: 
 
   function onListKeyDown(e: KeyboardEvent) {
     switch (e.key) {
-      case 'ArrowDown':
+      case "ArrowDown":
         setActive((i) => Math.min(i + 1, options.length - 1));
         break;
-      case 'ArrowUp':
+      case "ArrowUp":
         setActive((i) => Math.max(i - 1, 0));
         break;
-      case 'Home':
+      case "Home":
         setActive(0);
         break;
-      case 'End':
+      case "End":
         setActive(options.length - 1);
         break;
-      case 'Enter':
-      case ' ':
+      case "Enter":
+      case " ":
         choose(active);
         break;
-      case 'Escape':
+      case "Escape":
         close();
         break;
-      case 'Tab':
+      case "Tab":
         setOpen(false);
         return;
       default:
@@ -167,10 +194,13 @@ export function Dropdown<T extends string>({ label, value, options, onChange }: 
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? `${id}-list` : undefined}
-        aria-label={t('common.labelValue', { label, value: options[selected].label })}
+        aria-label={t("common.labelValue", {
+          label,
+          value: options[selected].label,
+        })}
         onClick={() => (open ? close() : show())}
         onKeyDown={(e) => {
-          if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+          if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
             e.preventDefault();
             show();
           }
@@ -204,13 +234,18 @@ export function Dropdown<T extends string>({ label, value, options, onChange }: 
               role="option"
               aria-selected={i === selected}
               lang={option.lang}
-              className={i === active ? 'dropdown-option active' : 'dropdown-option'}
+              className={
+                i === active ? "dropdown-option active" : "dropdown-option"
+              }
               onPointerMove={() => setActive(i)}
               onClick={() => choose(i)}
             >
               {option.label}
               {/* Kept in place when hidden, so labels line up. */}
-              <Check aria-hidden style={{ visibility: i === selected ? 'visible' : 'hidden' }} />
+              <Check
+                aria-hidden
+                style={{ visibility: i === selected ? "visible" : "hidden" }}
+              />
             </li>
           ))}
         </ul>
@@ -220,7 +255,15 @@ export function Dropdown<T extends string>({ label, value, options, onChange }: 
 }
 
 /** The player's face from their skin, or a colored letter until it loads or if there's no skin. */
-export function Avatar({ name, skinUrl, size = 32 }: { name: string; skinUrl?: string; size?: number }) {
+export function Avatar({
+  name,
+  skinUrl,
+  size = 32,
+}: {
+  name: string;
+  skinUrl?: string;
+  size?: number;
+}) {
   const src = safeSkinUrl(skinUrl);
   const [face, setFace] = useState<{ src: string; url: string } | null>(null);
 
@@ -237,12 +280,24 @@ export function Avatar({ name, skinUrl, size = 32 }: { name: string; skinUrl?: s
   }, [src]);
 
   if (src && face?.src === src) {
-    return <img className="avatar skin" src={face.url} alt="" style={{ width: size, height: size }} />;
+    return (
+      <img
+        className="avatar skin"
+        src={face.url}
+        alt=""
+        style={{ width: size, height: size }}
+      />
+    );
   }
   return (
     <span
       className="avatar"
-      style={{ width: size, height: size, fontSize: size / 2, background: `hsl(${hashString(name) % 360} 45% 42%)` }}
+      style={{
+        width: size,
+        height: size,
+        fontSize: size / 2,
+        background: `hsl(${hashString(name) % 360} 45% 42%)`,
+      }}
       aria-hidden
     >
       {name.charAt(0).toUpperCase()}
@@ -254,15 +309,27 @@ export function Avatar({ name, skinUrl, size = 32 }: { name: string; skinUrl?: s
  * The server's icon, or its first letter if it has none.
  * Only inline PNGs are accepted, so a server can't make the app load URLs.
  */
-export function ServerIcon({ name, icon, size = 48 }: { name: string; icon?: string; size?: number }) {
+export function ServerIcon({
+  name,
+  icon,
+  size = 48,
+}: {
+  name: string;
+  icon?: string;
+  size?: number;
+}) {
   const style = { width: size, height: size };
-  if (icon?.startsWith('data:image/png;base64,')) {
+  if (icon?.startsWith("data:image/png;base64,")) {
     return <img className="server-icon" src={icon} alt="" style={style} />;
   }
   return (
     <span
       className="server-icon letter"
-      style={{ ...style, background: `hsl(${hashString(name) % 360} 40% 38%)`, fontSize: size / 2 }}
+      style={{
+        ...style,
+        background: `hsl(${hashString(name) % 360} 40% 38%)`,
+        fontSize: size / 2,
+      }}
       aria-hidden
     >
       {name.charAt(0).toUpperCase()}
@@ -272,22 +339,22 @@ export function ServerIcon({ name, icon, size = 48 }: { name: string; icon?: str
 
 // Minecraft's chat colors.
 const MC_COLORS: Record<string, string> = {
-  black: '#000000',
-  dark_blue: '#0000AA',
-  dark_green: '#00AA00',
-  dark_aqua: '#00AAAA',
-  dark_red: '#AA0000',
-  dark_purple: '#AA00AA',
-  gold: '#FFAA00',
-  gray: '#AAAAAA',
-  dark_gray: '#555555',
-  blue: '#5555FF',
-  green: '#55FF55',
-  aqua: '#55FFFF',
-  red: '#FF5555',
-  light_purple: '#FF55FF',
-  yellow: '#FFFF55',
-  white: '#FFFFFF',
+  black: "#000000",
+  dark_blue: "#0000AA",
+  dark_green: "#00AA00",
+  dark_aqua: "#00AAAA",
+  dark_red: "#AA0000",
+  dark_purple: "#AA00AA",
+  gold: "#FFAA00",
+  gray: "#AAAAAA",
+  dark_gray: "#555555",
+  blue: "#5555FF",
+  green: "#55FF55",
+  aqua: "#55FFFF",
+  red: "#FF5555",
+  light_purple: "#FF55FF",
+  yellow: "#FFFF55",
+  white: "#FFFFFF",
 };
 
 function mcColor(color?: string): string | undefined {
@@ -306,8 +373,11 @@ export function Motd({ segments }: { segments: MotdSegment[] }) {
           style={{
             color: mcColor(s.color),
             fontWeight: s.bold ? 700 : undefined,
-            fontStyle: s.italic ? 'italic' : undefined,
-            textDecoration: [s.underlined && 'underline', s.strikethrough && 'line-through'].filter(Boolean).join(' ') || undefined,
+            fontStyle: s.italic ? "italic" : undefined,
+            textDecoration:
+              [s.underlined && "underline", s.strikethrough && "line-through"]
+                .filter(Boolean)
+                .join(" ") || undefined,
           }}
         >
           {s.text}
@@ -323,7 +393,7 @@ export function LinkedAs({ player }: { player: LinkedPlayer }) {
   return (
     <span className="linked-as">
       <Avatar name={player.name} skinUrl={player.skinUrl} size={16} />
-      {t('common.linkedAs', { name: player.name })}
+      {t("common.linkedAs", { name: player.name })}
     </span>
   );
 }
@@ -331,18 +401,18 @@ export function LinkedAs({ player }: { player: LinkedPlayer }) {
 /** Compact status for a server card, under its name: a dot and the player count. */
 export function OnlineSummary({ state }: { state: OnlineState }) {
   const { t } = useTranslation();
-  if (state.status === 'loading') {
+  if (state.status === "loading") {
     return (
       <div className="status">
-        <span className="status-line muted">{t('common.checking')}</span>
+        <span className="status-line muted">{t("common.checking")}</span>
       </div>
     );
   }
-  if (state.status === 'error') {
+  if (state.status === "error") {
     return (
       <div className="status">
         <span className="status-line">
-          <span className="dot error" /> {t('online.unreachable')}
+          <span className="dot error" /> {t("online.unreachable")}
         </span>
       </div>
     );
@@ -351,8 +421,10 @@ export function OnlineSummary({ state }: { state: OnlineState }) {
   return (
     <div className="status">
       <span className="status-line">
-        <span className={players.length > 0 ? 'dot ok' : 'dot'} />
-        {players.length > 0 ? t('online.count', { count: players.length }) : t('online.nobody')}
+        <span className={players.length > 0 ? "dot ok" : "dot"} />
+        {players.length > 0
+          ? t("online.count", { count: players.length })
+          : t("online.nobody")}
       </span>
     </div>
   );
@@ -365,7 +437,7 @@ export function NotificationsOff({ server }: { server: PairedServer }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  if (state === null || state === 'on') return null;
+  if (state === null || state === "on") return null;
 
   async function turnOn() {
     setBusy(true);
@@ -382,11 +454,15 @@ export function NotificationsOff({ server }: { server: PairedServer }) {
   return (
     <div className="notice">
       <p className="warning">
-        {state === 'unsupported' ? t('push.unsupported') : state === 'blocked' ? t('push.blocked') : t('push.notYet')}
+        {state === "unsupported"
+          ? t("push.unsupported")
+          : state === "blocked"
+            ? t("push.blocked")
+            : t("push.notYet")}
       </p>
-      {state === 'off' && (
+      {state === "off" && (
         <button className="button" onClick={turnOn} disabled={busy}>
-          {busy ? t('push.turningOn') : t('push.turnOn')}
+          {busy ? t("push.turningOn") : t("push.turnOn")}
         </button>
       )}
       {error && <p className="error small">{errorText(error, t)}</p>}

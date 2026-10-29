@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
-import { api, type OnlinePlayer, type PairedServer } from './api';
-import { TranslatedError } from './i18n';
-import type { PushMessage } from './push';
-import { navigate } from './router';
-import { sentToServers } from './storage';
+import { useCallback, useEffect, useState } from "react";
+import { api, type OnlinePlayer, type PairedServer } from "./api";
+import { TranslatedError } from "./i18n";
+import type { PushMessage } from "./push";
+import { navigate } from "./router";
+import { sentToServers } from "./storage";
 
 export function pushSupported(): boolean {
-  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  return (
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window
+  );
 }
 
 /** Each server gets its own service worker registration, so each can have its own push subscription. */
@@ -16,33 +20,40 @@ function scopeOf(serverId: string): string {
 
 /** Registers the server's service worker, if it isn't yet, and waits until it runs. */
 async function register(serverId: string): Promise<ServiceWorkerRegistration> {
-  const registration = await navigator.serviceWorker.register(new URL('./sw.js', location.href), {
-    scope: scopeOf(serverId),
-    // In dev, Vite serves the worker as an ES module.
-    type: import.meta.env.DEV ? 'module' : 'classic',
-  });
+  const registration = await navigator.serviceWorker.register(
+    new URL("./sw.js", location.href),
+    {
+      scope: scopeOf(serverId),
+      // In dev, Vite serves the worker as an ES module.
+      type: import.meta.env.DEV ? "module" : "classic",
+    },
+  );
   // The newest worker, so a just-updated one is used rather than the one it replaces.
-  const worker = registration.installing ?? registration.waiting ?? registration.active;
-  if (!worker) throw new TranslatedError((t) => t('push.couldntStart'));
-  if (worker.state === 'activated') return registration;
+  const worker =
+    registration.installing ?? registration.waiting ?? registration.active;
+  if (!worker) throw new TranslatedError((t) => t("push.couldntStart"));
+  if (worker.state === "activated") return registration;
   return new Promise((resolve, reject) => {
-    worker.addEventListener('statechange', () => {
-      if (worker.state === 'activated') resolve(registration);
+    worker.addEventListener("statechange", () => {
+      if (worker.state === "activated") resolve(registration);
       // Failed to install, or replaced by a newer one before activating.
-      if (worker.state === 'redundant') reject(new TranslatedError((t) => t('push.couldntStart')));
+      if (worker.state === "redundant")
+        reject(new TranslatedError((t) => t("push.couldntStart")));
     });
   });
 }
 
 /** The server's own registration, if any; getRegistration alone would also return one of an enclosing scope. */
-async function ownRegistration(serverId: string): Promise<ServiceWorkerRegistration | undefined> {
+async function ownRegistration(
+  serverId: string,
+): Promise<ServiceWorkerRegistration | undefined> {
   const scope = scopeOf(serverId);
   const registration = await navigator.serviceWorker?.getRegistration(scope);
   return registration?.scope === scope ? registration : undefined;
 }
 
 /** The endpoint of the push subscription each pairing last sent its server. */
-const sentSubscriptions = sentToServers('tidings.sentSubscriptions');
+const sentSubscriptions = sentToServers("tidings.sentSubscriptions");
 
 /**
  * Asks for permission to notify, unless already answered. Call it while handling a tap: iPhones only ask then.
@@ -50,7 +61,7 @@ const sentSubscriptions = sentToServers('tidings.sentSubscriptions');
  */
 export async function askPermission(): Promise<boolean> {
   if (!pushSupported()) return false;
-  return (await Notification.requestPermission()) === 'granted';
+  return (await Notification.requestPermission()) === "granted";
 }
 
 /**
@@ -71,14 +82,18 @@ export async function subscribe(server: PairedServer): Promise<void> {
 }
 
 function base64UrlToBytes(s: string): Uint8Array<ArrayBuffer> {
-  const base64 = s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=');
+  const base64 = s
+    .replace(/-/g, "+")
+    .replace(/_/g, "/")
+    .padEnd(Math.ceil(s.length / 4) * 4, "=");
   return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
 }
 
 /** Asks for permission and subscribes, with a message saying why if it can't. Call it while handling a tap. */
 export async function enableNotifications(server: PairedServer): Promise<void> {
-  if (!pushSupported()) throw new TranslatedError((t) => t('push.unsupported'));
-  if (!(await askPermission())) throw new TranslatedError((t) => t('push.blocked'));
+  if (!pushSupported()) throw new TranslatedError((t) => t("push.unsupported"));
+  if (!(await askPermission()))
+    throw new TranslatedError((t) => t("push.blocked"));
   await subscribe(server);
 }
 
@@ -90,34 +105,43 @@ export async function enableNotifications(server: PairedServer): Promise<void> {
 export function useSubscriptionSync(servers: PairedServer[]) {
   useEffect(() => {
     const sync = () => {
-      if (document.visibilityState !== 'visible' || !pushSupported() || Notification.permission !== 'granted') return;
+      if (
+        document.visibilityState !== "visible" ||
+        !pushSupported() ||
+        Notification.permission !== "granted"
+      )
+        return;
       sentSubscriptions.keepOnly(servers);
       for (const server of servers) {
         subscribe(server).catch(() => {}); // tried again next time the app is opened
       }
     };
     sync();
-    document.addEventListener('visibilitychange', sync);
-    return () => document.removeEventListener('visibilitychange', sync);
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
   }, [servers]);
 }
 
 /** 'on' once the server has this device's current subscription. */
-export type PushState = 'unsupported' | 'blocked' | 'off' | 'on';
+export type PushState = "unsupported" | "blocked" | "off" | "on";
 
 async function pushState(server: PairedServer): Promise<PushState> {
-  if (!pushSupported()) return 'unsupported';
-  if (Notification.permission === 'denied') return 'blocked';
-  if (Notification.permission !== 'granted') return 'off';
-  const subscription = await (await ownRegistration(server.id))?.pushManager.getSubscription();
-  return subscription && sentSubscriptions.get(server) === subscription.endpoint ? 'on' : 'off';
+  if (!pushSupported()) return "unsupported";
+  if (Notification.permission === "denied") return "blocked";
+  if (Notification.permission !== "granted") return "off";
+  const subscription = await (
+    await ownRegistration(server.id)
+  )?.pushManager.getSubscription();
+  return subscription && sentSubscriptions.get(server) === subscription.endpoint
+    ? "on"
+    : "off";
 }
 
 /** Whether this device gets the server's notifications; null while checking. */
 export function usePushState(server: PairedServer) {
   const [state, setState] = useState<PushState | null>(null);
   const refresh = useCallback(
-    () => pushState(server).then(setState, () => setState('off')),
+    () => pushState(server).then(setState, () => setState("off")),
     [server],
   );
   useEffect(() => {
@@ -131,20 +155,31 @@ export function usePushState(server: PairedServer) {
  * The app's page isn't under any registration's scope, so the worker can't navigate it itself.
  */
 export function listenForNotificationClicks() {
-  navigator.serviceWorker?.addEventListener('message', (event) => {
-    if (event.data?.type === 'open') navigate(event.data.path);
+  navigator.serviceWorker?.addEventListener("message", (event) => {
+    if (event.data?.type === "open") navigate(event.data.path);
   });
 }
 
 /** Shows a "player joined" notification through the server's service worker, as a real push would. */
-export async function sendTestNotification(server: PairedServer, player?: OnlinePlayer) {
-  if (!pushSupported()) throw new TranslatedError((t) => t('push.unsupported'));
-  if (!(await askPermission())) throw new TranslatedError((t) => t('push.blocked'));
+export async function sendTestNotification(
+  server: PairedServer,
+  player?: OnlinePlayer,
+) {
+  if (!pushSupported()) throw new TranslatedError((t) => t("push.unsupported"));
+  if (!(await askPermission()))
+    throw new TranslatedError((t) => t("push.blocked"));
   const message: PushMessage = {
-    kind: 'player_joined',
-    player: player && { uuid: player.uuid, name: player.name, skinUrl: player.skinUrl },
+    kind: "player_joined",
+    player: player && {
+      uuid: player.uuid,
+      name: player.name,
+      skinUrl: player.skinUrl,
+    },
   };
-  (await register(server.id)).active?.postMessage({ type: 'test-push', message });
+  (await register(server.id)).active?.postMessage({
+    type: "test-push",
+    message,
+  });
 }
 
 /**

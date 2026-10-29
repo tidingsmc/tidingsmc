@@ -5,12 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import dev.tidings.core.QuietHours.Period;
+
+import org.junit.jupiter.api.Test;
+
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
-import org.junit.jupiter.api.Test;
 
 class QuietHoursTest {
     private static final ZoneId PARIS = ZoneId.of("Europe/Paris");
@@ -61,7 +63,9 @@ class QuietHoursTest {
 
     @Test
     void periodMustNotStartAndEndAtTheSameTime() {
-        assertThrows(IllegalArgumentException.class, () -> new Period(LocalTime.of(22, 0), LocalTime.of(22, 0)));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new Period(LocalTime.of(22, 0), LocalTime.of(22, 0)));
     }
 
     @Test

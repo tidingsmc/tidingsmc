@@ -1,6 +1,6 @@
-import type { TFunction } from 'i18next';
-import { TranslatedError } from './i18n';
-import { currentTimeZone, hashString, hostOf } from './util';
+import type { TFunction } from "i18next";
+import { TranslatedError } from "./i18n";
+import { currentTimeZone, hashString, hostOf } from "./util";
 
 /** A server this device is paired with, as stored on the device. */
 export interface PairedServer {
@@ -78,7 +78,7 @@ export interface WorldInfo {
   dayTime: number;
   /** Days since the world was created. */
   day: number;
-  weather: 'clear' | 'rain' | 'thunder';
+  weather: "clear" | "rain" | "thunder";
 }
 
 /** GET {url}/api/players  (authenticated): everyone who has played on the server, to pick friends from. */
@@ -134,14 +134,20 @@ export interface TidingsApi {
   players(server: PairedServer): Promise<PlayersResponse>;
   settings(server: PairedServer): Promise<DeviceSettings>;
   /** Returns the settings as saved by the server. */
-  updateSettings(server: PairedServer, changes: Partial<DeviceSettings>): Promise<DeviceSettings>;
+  updateSettings(
+    server: PairedServer,
+    changes: Partial<DeviceSettings>,
+  ): Promise<DeviceSettings>;
   /**
    * PUT {url}/api/devices/me/push  (authenticated)  body: the subscription as JSON,
    * `{ endpoint, expirationTime, keys: { p256dh, auth } }`. Replaces the device's push subscription.
    * Sent after pairing, and again whenever the browser changes the subscription. Until then the mod
    * has nowhere to send this device's notifications.
    */
-  updatePush(server: PairedServer, subscription: PushSubscriptionJSON): Promise<void>;
+  updatePush(
+    server: PairedServer,
+    subscription: PushSubscriptionJSON,
+  ): Promise<void>;
   /**
    * DELETE {url}/api/devices/me  (authenticated)
    * The app also drops its push subscription, even if this call fails; the mod must then forget
@@ -167,12 +173,12 @@ export function normalizeServerUrl(input: string): string {
   try {
     url = new URL(s);
   } catch {
-    throw new ApiError((t) => t('errors.invalidAddress'));
+    throw new ApiError((t) => t("errors.invalidAddress"));
   }
-  if (url.protocol !== 'https:' && url.hostname !== 'localhost') {
-    throw new ApiError((t) => t('errors.httpsRequired'));
+  if (url.protocol !== "https:" && url.hostname !== "localhost") {
+    throw new ApiError((t) => t("errors.httpsRequired"));
   }
-  return url.origin + url.pathname.replace(/\/+$/, '');
+  return url.origin + url.pathname.replace(/\/+$/, "");
 }
 
 async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
@@ -180,45 +186,57 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
   try {
     res = await fetch(url, init);
   } catch {
-    throw new ApiError((t) => t('errors.unreachable'));
+    throw new ApiError((t) => t("errors.unreachable"));
   }
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     const reason = body?.error;
     throw new ApiError(
-      typeof reason === 'string' ? () => reason : (t) => t('errors.serverAnswered', { status: res.status }),
+      typeof reason === "string"
+        ? () => reason
+        : (t) => t("errors.serverAnswered", { status: res.status }),
       res.status,
     );
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
-const auth = (server: PairedServer) => ({ authorization: `Bearer ${server.token}` });
+const auth = (server: PairedServer) => ({
+  authorization: `Bearer ${server.token}`,
+});
 
 const httpApi: TidingsApi = {
   pair: (url, code, deviceName) =>
     request(`${url}/api/pair`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      method: "POST",
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ code, deviceName }),
     }),
-  info: (server) => request(`${server.url}/api/info`, { headers: auth(server) }),
-  online: (server) => request(`${server.url}/api/online`, { headers: auth(server) }),
-  players: (server) => request(`${server.url}/api/players`, { headers: auth(server) }),
-  settings: (server) => request(`${server.url}/api/devices/me/settings`, { headers: auth(server) }),
+  info: (server) =>
+    request(`${server.url}/api/info`, { headers: auth(server) }),
+  online: (server) =>
+    request(`${server.url}/api/online`, { headers: auth(server) }),
+  players: (server) =>
+    request(`${server.url}/api/players`, { headers: auth(server) }),
+  settings: (server) =>
+    request(`${server.url}/api/devices/me/settings`, { headers: auth(server) }),
   updateSettings: (server, changes) =>
     request(`${server.url}/api/devices/me/settings`, {
-      method: 'PATCH',
-      headers: { ...auth(server), 'content-type': 'application/json' },
+      method: "PATCH",
+      headers: { ...auth(server), "content-type": "application/json" },
       body: JSON.stringify(changes),
     }),
   updatePush: (server, subscription) =>
     request(`${server.url}/api/devices/me/push`, {
-      method: 'PUT',
-      headers: { ...auth(server), 'content-type': 'application/json' },
+      method: "PUT",
+      headers: { ...auth(server), "content-type": "application/json" },
       body: JSON.stringify(subscription),
     }),
-  unpair: (server) => request(`${server.url}/api/devices/me`, { method: 'DELETE', headers: auth(server) }),
+  unpair: (server) =>
+    request(`${server.url}/api/devices/me`, {
+      method: "DELETE",
+      headers: auth(server),
+    }),
 };
 
 // Demo mode: fake servers and players, so the app can be developed without a running mod.
@@ -227,30 +245,55 @@ const skin = (hash: string) => `http://textures.minecraft.net/texture/${hash}`;
 // Real accounts with their real skins (Notch's is an old 64×32 skin with a solid hat area),
 // plus players without skins, like on offline-mode servers.
 const MOCK_PLAYERS: { name: string; skinUrl?: string }[] = [
-  { name: 'Poppy2105', skinUrl: skin('5937297dc3b25ac3c6027bf1783f2aadc9a7f23389cf3f426c64216228e8655d') },
-  { name: 'Notch', skinUrl: skin('292009a4925b58f02c77dadc3ecef07ea4c7472f64e0fdc32ce5522489362680') },
-  { name: 'jeb_', skinUrl: skin('7fd9ba42a7c81eeea22f1524271ae85a8e045ce0af5a6ae16c6406ae917e68b5') },
-  { name: 'Dinnerbone', skinUrl: skin('50c410fad8d9d8825ad56b0e443e2777a6b46bfa20dacd1d2f55edc71fbeb06d') },
-  { name: 'Steve' },
-  { name: 'Alex' },
-  { name: 'Kai' },
-  { name: 'Zuri' },
-  { name: 'Noor' },
+  {
+    name: "Poppy2105",
+    skinUrl: skin(
+      "5937297dc3b25ac3c6027bf1783f2aadc9a7f23389cf3f426c64216228e8655d",
+    ),
+  },
+  {
+    name: "Notch",
+    skinUrl: skin(
+      "292009a4925b58f02c77dadc3ecef07ea4c7472f64e0fdc32ce5522489362680",
+    ),
+  },
+  {
+    name: "jeb_",
+    skinUrl: skin(
+      "7fd9ba42a7c81eeea22f1524271ae85a8e045ce0af5a6ae16c6406ae917e68b5",
+    ),
+  },
+  {
+    name: "Dinnerbone",
+    skinUrl: skin(
+      "50c410fad8d9d8825ad56b0e443e2777a6b46bfa20dacd1d2f55edc71fbeb06d",
+    ),
+  },
+  { name: "Steve" },
+  { name: "Alex" },
+  { name: "Kai" },
+  { name: "Zuri" },
+  { name: "Noor" },
 ];
-const mockPlayer = (p: (typeof MOCK_PLAYERS)[number]): LinkedPlayer => ({ uuid: `mock-${p.name}`, ...p });
+const mockPlayer = (p: (typeof MOCK_PLAYERS)[number]): LinkedPlayer => ({
+  uuid: `mock-${p.name}`,
+  ...p,
+});
 /** Who the demo servers are paired as. Always online, so the app can show "you" in the list. */
 export const MOCK_ME = mockPlayer(MOCK_PLAYERS[0]);
 /**
  * A real P-256 public key (its private key was thrown away), so demo servers subscribe to pushes
  * like real ones do. Nothing can ever be sent to those subscriptions.
  */
-const MOCK_VAPID_KEY = 'BP39TOvu9eBZ5Aw4AUbx7xMxSio5HyM0Ay1ml5kRlmJ4zbu9dU2k1lbtRDsqIFgr9N1vfjl_t3i0k47zs-MHfvY';
+const MOCK_VAPID_KEY =
+  "BP39TOvu9eBZ5Aw4AUbx7xMxSio5HyM0Ay1ml5kRlmJ4zbu9dU2k1lbtRDsqIFgr9N1vfjl_t3i0k47zs-MHfvY"; // gitleaks:allow (public key, no private half)
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const mockApi: TidingsApi = {
   async pair(url, code) {
     await delay(600);
-    if (!/^\d{6}$/.test(code) || code === '000000') throw new ApiError((t) => t('errors.invalidCode'), 403);
+    if (!/^\d{6}$/.test(code) || code === "000000")
+      throw new ApiError((t) => t("errors.invalidCode"), 403);
     const host = hostOf(url);
     return {
       serverId: mockServerId(host),
@@ -263,29 +306,32 @@ const mockApi: TidingsApi = {
   },
   async info(server) {
     await delay(200 + (hashString(server.id) % 300));
-    if (server.url.includes('offline')) throw new ApiError((t) => t('errors.unreachable'));
+    if (server.url.includes("offline"))
+      throw new ApiError((t) => t("errors.unreachable"));
     return {
       motd: [
-        { text: 'Welcome to ', color: 'gray' },
-        { text: server.name, color: 'gold', bold: true },
-        { text: '!\n', color: 'gray' },
-        { text: 'Survival', color: 'green' },
-        { text: ' · ', color: 'dark_gray' },
-        { text: 'Season 3', color: '#ff88cc', italic: true },
-        { text: ' · ', color: 'dark_gray' },
-        { text: 'new spawn', color: 'aqua', underlined: true },
+        { text: "Welcome to ", color: "gray" },
+        { text: server.name, color: "gold", bold: true },
+        { text: "!\n", color: "gray" },
+        { text: "Survival", color: "green" },
+        { text: " · ", color: "dark_gray" },
+        { text: "Season 3", color: "#ff88cc", italic: true },
+        { text: " · ", color: "dark_gray" },
+        { text: "new spawn", color: "aqua", underlined: true },
       ],
-      version: '1.20.1 (Forge 47.4.10)',
+      version: "1.20.1 (Forge 47.4.10)",
     };
   },
   async online(server) {
     await delay(300 + (hashString(server.id) % 500));
-    if (server.url.includes('offline')) throw new ApiError((t) => t('errors.unreachable'));
+    if (server.url.includes("offline"))
+      throw new ApiError((t) => t("errors.unreachable"));
     // Changes every minute, so refreshing shows players coming and going.
     let seed = hashString(server.id) + Math.floor(Date.now() / 60_000);
     // Poppy2105 is always online; the others come and go.
     const players = MOCK_PLAYERS.filter(
-      (_, i) => i === 0 || (seed = (seed * 1103515245 + 12345) % 2 ** 31) % 3 === 0,
+      (_, i) =>
+        i === 0 || (seed = (seed * 1103515245 + 12345) % 2 ** 31) % 3 === 0,
     );
     return {
       players: players.map(mockPlayer),
@@ -295,7 +341,8 @@ const mockApi: TidingsApi = {
   },
   async players(server) {
     await delay(300);
-    if (server.url.includes('offline')) throw new ApiError((t) => t('errors.unreachable'));
+    if (server.url.includes("offline"))
+      throw new ApiError((t) => t("errors.unreachable"));
     return { players: MOCK_PLAYERS.map(mockPlayer) };
   },
   async settings(server) {
@@ -305,7 +352,10 @@ const mockApi: TidingsApi = {
   async updateSettings(server, changes) {
     await delay(250);
     const saved = { ...mockSettings(server), ...changes };
-    localStorage.setItem(`tidings.mock.settings.${server.id}`, JSON.stringify(saved));
+    localStorage.setItem(
+      `tidings.mock.settings.${server.id}`,
+      JSON.stringify(saved),
+    );
     return saved;
   },
   async updatePush() {
@@ -322,19 +372,19 @@ function mockServerId(host: string): string {
 }
 
 function mockServerName(host: string): string {
-  const label = host.split('.')[0];
+  const label = host.split(".")[0];
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 // Demo servers paired on first launch, each showing a different time of day and weather.
-const MOCK_WORLDS: Record<string, Pick<WorldInfo, 'dayTime' | 'weather'>> = {
-  'survival.example.com': { dayTime: 6000, weather: 'clear' }, // noon
-  'creative.example.com': { dayTime: 18000, weather: 'clear' }, // midnight, stars
-  'skyblock.example.com': { dayTime: 12300, weather: 'rain' }, // sunset
-  'hardcore.example.com': { dayTime: 16000, weather: 'thunder' }, // night
-  'modded.example.com': { dayTime: 23300, weather: 'clear' }, // sunrise
-  'adventure.example.com': { dayTime: 3000, weather: 'rain' }, // morning
-  'offline.example.com': { dayTime: 0, weather: 'clear' }, // unreachable
+const MOCK_WORLDS: Record<string, Pick<WorldInfo, "dayTime" | "weather">> = {
+  "survival.example.com": { dayTime: 6000, weather: "clear" }, // noon
+  "creative.example.com": { dayTime: 18000, weather: "clear" }, // midnight, stars
+  "skyblock.example.com": { dayTime: 12300, weather: "rain" }, // sunset
+  "hardcore.example.com": { dayTime: 16000, weather: "thunder" }, // night
+  "modded.example.com": { dayTime: 23300, weather: "clear" }, // sunrise
+  "adventure.example.com": { dayTime: 3000, weather: "rain" }, // morning
+  "offline.example.com": { dayTime: 0, weather: "clear" }, // unreachable
 };
 
 const mockStartedAt = Date.now();
@@ -344,8 +394,11 @@ function mockWorld(server: PairedServer): WorldInfo {
   const host = hostOf(server.url);
   const scenario = MOCK_WORLDS[host];
   const elapsedTicks = Math.floor((Date.now() - mockStartedAt) / 50);
-  const ticks = (scenario?.dayTime ?? hashString(host) % 24000) + elapsedTicks + 24000 * (hashString(host) % 300);
-  const weathers = ['clear', 'clear', 'rain', 'thunder'] as const;
+  const ticks =
+    (scenario?.dayTime ?? hashString(host) % 24000) +
+    elapsedTicks +
+    24000 * (hashString(host) % 300);
+  const weathers = ["clear", "clear", "rain", "thunder"] as const;
   return {
     dayTime: ticks % 24000,
     day: Math.floor(ticks / 24000),
@@ -358,9 +411,9 @@ export function mockServers(): PairedServer[] {
     id: mockServerId(host),
     name: mockServerName(host),
     url: `https://${host}`,
-    token: 'mock',
+    token: "mock",
     vapidPublicKey: MOCK_VAPID_KEY,
-    deviceName: 'Demo device',
+    deviceName: "Demo device",
     pairedAt: Date.now(),
     player: MOCK_ME,
   }));
@@ -373,12 +426,12 @@ function mockSettings(server: PairedServer): DeviceSettings {
     notifyServerStatus: true,
     quietWhileOnline: true,
     friends: { enabled: false, players: [] },
-    quietHours: { enabled: false, periods: [{ start: '22:00', end: '08:00' }] },
+    quietHours: { enabled: false, periods: [{ start: "22:00", end: "08:00" }] },
     timeZone: currentTimeZone(),
   };
   const saved = localStorage.getItem(`tidings.mock.settings.${server.id}`);
   return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
 }
 
-export const usingMockApi = import.meta.env.VITE_MOCK_API === 'true';
+export const usingMockApi = import.meta.env.VITE_MOCK_API === "true";
 export const api: TidingsApi = usingMockApi ? mockApi : httpApi;

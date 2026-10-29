@@ -1,11 +1,16 @@
-import { useState, type FormEvent } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
-import { LinkedAs, Screen } from '../components';
-import { api, normalizeServerUrl, usingMockApi, type PairedServer } from '../lib/api';
-import { errorText } from '../lib/i18n';
-import { askPermission, subscribe } from '../lib/notifications';
-import { paths } from '../lib/router';
-import { defaultDeviceName, hostOf } from '../lib/util';
+import { useState, type FormEvent } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import { LinkedAs, Screen } from "../components";
+import {
+  api,
+  normalizeServerUrl,
+  usingMockApi,
+  type PairedServer,
+} from "../lib/api";
+import { errorText } from "../lib/i18n";
+import { askPermission, subscribe } from "../lib/notifications";
+import { paths } from "../lib/router";
+import { defaultDeviceName, hostOf } from "../lib/util";
 
 interface Props {
   /** Filled in when the app was opened from the in-game QR code. */
@@ -17,7 +22,10 @@ interface Props {
 }
 
 /** The pairing this device already has with the server at `address`, if any. */
-function pairedAt(servers: PairedServer[], address: string): PairedServer | undefined {
+function pairedAt(
+  servers: PairedServer[],
+  address: string,
+): PairedServer | undefined {
   try {
     const url = normalizeServerUrl(address);
     return servers.find((s) => s.url === url);
@@ -26,11 +34,16 @@ function pairedAt(servers: PairedServer[], address: string): PairedServer | unde
   }
 }
 
-export function PairScreen({ initialUrl, initialCode, servers, onPaired }: Props) {
+export function PairScreen({
+  initialUrl,
+  initialCode,
+  servers,
+  onPaired,
+}: Props) {
   const { t } = useTranslation();
   const fromLink = Boolean(initialUrl && initialCode);
-  const [address, setAddress] = useState(initialUrl ?? '');
-  const [code, setCode] = useState(initialCode ?? '');
+  const [address, setAddress] = useState(initialUrl ?? "");
+  const [code, setCode] = useState(initialCode ?? "");
   const [deviceName, setDeviceName] = useState(() => defaultDeviceName(t));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -58,7 +71,9 @@ export function PairScreen({ initialUrl, initialCode, servers, onPaired }: Props
       const sameServer = servers.find((s) => s.id === res.serverId);
       if (sameServer) {
         // Best effort: don't leave the pairing we just made dangling on the server.
-        await api.unpair({ ...sameServer, url, token: res.token }).catch(() => {});
+        await api
+          .unpair({ ...sameServer, url, token: res.token })
+          .catch(() => {});
         setAlreadyPaired(sameServer);
         setBusy(false);
         return;
@@ -84,24 +99,34 @@ export function PairScreen({ initialUrl, initialCode, servers, onPaired }: Props
 
   if (alreadyPaired) {
     return (
-      <Screen title={t('pair.title')} back={paths.servers}>
+      <Screen title={t("pair.title")} back={paths.servers}>
         <p>
-          <Trans i18nKey="pair.alreadyPaired" values={{ server: alreadyPaired.name }} components={{ strong: <strong /> }} />
+          <Trans
+            i18nKey="pair.alreadyPaired"
+            values={{ server: alreadyPaired.name }}
+            components={{ strong: <strong /> }}
+          />
         </p>
         <LinkedAs player={alreadyPaired.player} />
-        <p className="muted">{t('pair.onlyOnce', { server: alreadyPaired.name })}</p>
+        <p className="muted">
+          {t("pair.onlyOnce", { server: alreadyPaired.name })}
+        </p>
         <a className="button" href={paths.settings(alreadyPaired.id)}>
-          {t('pair.openSettings', { server: alreadyPaired.name })}
+          {t("pair.openSettings", { server: alreadyPaired.name })}
         </a>
       </Screen>
     );
   }
 
   return (
-    <Screen title={t('pair.title')} back={paths.servers}>
+    <Screen title={t("pair.title")} back={paths.servers}>
       {fromLink ? (
         <p>
-          <Trans i18nKey="pair.confirm" values={{ host: hostOf(initialUrl!) }} components={{ strong: <strong /> }} />
+          <Trans
+            i18nKey="pair.confirm"
+            values={{ host: hostOf(initialUrl!) }}
+            components={{ strong: <strong /> }}
+          />
         </p>
       ) : (
         <p className="muted">
@@ -113,7 +138,7 @@ export function PairScreen({ initialUrl, initialCode, servers, onPaired }: Props
         {!fromLink && (
           <>
             <label className="field">
-              {t('pair.address')}
+              {t("pair.address")}
               <input
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
@@ -126,11 +151,13 @@ export function PairScreen({ initialUrl, initialCode, servers, onPaired }: Props
               />
             </label>
             <label className="field">
-              {t('pair.code')}
+              {t("pair.code")}
               <input
                 className="code-input"
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onChange={(e) =>
+                  setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
                 placeholder="123456"
                 inputMode="numeric"
                 autoComplete="one-time-code"
@@ -141,14 +168,18 @@ export function PairScreen({ initialUrl, initialCode, servers, onPaired }: Props
           </>
         )}
         <label className="field">
-          {t('pair.deviceName')}
-          <input value={deviceName} onChange={(e) => setDeviceName(e.target.value)} maxLength={40} />
+          {t("pair.deviceName")}
+          <input
+            value={deviceName}
+            onChange={(e) => setDeviceName(e.target.value)}
+            maxLength={40}
+          />
         </label>
 
         {error != null && <p className="error">{errorText(error, t)}</p>}
 
         <button className="button primary" disabled={busy}>
-          {busy ? t('pair.submitting') : t('pair.submit')}
+          {busy ? t("pair.submitting") : t("pair.submit")}
         </button>
       </form>
 

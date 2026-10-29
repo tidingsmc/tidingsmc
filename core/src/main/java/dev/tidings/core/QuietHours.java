@@ -10,18 +10,22 @@ import java.util.Objects;
 public record QuietHours(boolean enabled, List<Period> periods) {
 
     public QuietHours {
-        if (periods == null || periods.stream().anyMatch(Objects::isNull)) throw new IllegalArgumentException("Missing quiet period");
+        if (periods == null || periods.stream().anyMatch(Objects::isNull))
+            throw new IllegalArgumentException("Missing quiet period");
         periods = List.copyOf(periods);
     }
 
-    /** May cross midnight (22:00 → 08:00). Start is included, end is not. Start and end must differ. */
+    /**
+     * May cross midnight (22:00 → 08:00). Start is included, end is not. Start and end must differ.
+     */
     public record Period(LocalTime start, LocalTime end) {
         public Period {
             if (start == null || end == null) {
                 throw new IllegalArgumentException("A quiet period needs a start and an end");
             }
             if (start.equals(end)) {
-                throw new IllegalArgumentException("A quiet period can't start and end at the same time");
+                throw new IllegalArgumentException(
+                        "A quiet period can't start and end at the same time");
             }
         }
 

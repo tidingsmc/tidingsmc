@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
-import { api, type PairedServer } from './api';
-import { sentToServers } from './storage';
-import { currentTimeZone } from './util';
+import { useEffect } from "react";
+import { api, type PairedServer } from "./api";
+import { sentToServers } from "./storage";
+import { currentTimeZone } from "./util";
 
 /** Which time zone each pairing last told its server. */
-const synced = sentToServers('tidings.syncedTimeZones');
+const synced = sentToServers("tidings.syncedTimeZones");
 
 /**
  * Servers apply quiet hours in this device's time zone. When it changes (travelling), tell every server,
@@ -13,11 +13,11 @@ const synced = sentToServers('tidings.syncedTimeZones');
 export function useTimeZoneSync(servers: PairedServer[]) {
   useEffect(() => {
     const sync = () => {
-      if (document.visibilityState === 'visible') syncTimeZone(servers);
+      if (document.visibilityState === "visible") syncTimeZone(servers);
     };
     sync();
-    document.addEventListener('visibilitychange', sync);
-    return () => document.removeEventListener('visibilitychange', sync);
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
   }, [servers]);
 }
 

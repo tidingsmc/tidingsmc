@@ -1,33 +1,35 @@
-import { useEffect, useState } from 'react';
-import { api, type OnlineResponse, type PairedServer } from './api';
+import { useEffect, useState } from "react";
+import { api, type OnlineResponse, type PairedServer } from "./api";
 
 export type OnlineState =
-  | { status: 'loading' }
-  | { status: 'ok'; data: OnlineResponse; receivedAt: number }
-  | { status: 'error'; error: Error };
+  | { status: "loading" }
+  | { status: "ok"; data: OnlineResponse; receivedAt: number }
+  | { status: "error"; error: Error };
 
 const REFRESH_MS = 30_000;
 
 /** Who's online on a server, refreshed periodically while the app is visible. */
 export function useOnline(server: PairedServer): OnlineState {
-  const [state, setState] = useState<OnlineState>({ status: 'loading' });
+  const [state, setState] = useState<OnlineState>({ status: "loading" });
 
   useEffect(() => {
     let cancelled = false;
     const load = () => {
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== "visible") return;
       api.online(server).then(
-        (data) => !cancelled && setState({ status: 'ok', data, receivedAt: Date.now() }),
-        (err: Error) => !cancelled && setState({ status: 'error', error: err }),
+        (data) =>
+          !cancelled &&
+          setState({ status: "ok", data, receivedAt: Date.now() }),
+        (err: Error) => !cancelled && setState({ status: "error", error: err }),
       );
     };
     load();
     const timer = setInterval(load, REFRESH_MS);
-    document.addEventListener('visibilitychange', load);
+    document.addEventListener("visibilitychange", load);
     return () => {
       cancelled = true;
       clearInterval(timer);
-      document.removeEventListener('visibilitychange', load);
+      document.removeEventListener("visibilitychange", load);
     };
   }, [server]);
 

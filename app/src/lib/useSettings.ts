@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, type DeviceSettings, type PairedServer } from './api';
-import { TranslatedError, errorText } from './i18n';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api, type DeviceSettings, type PairedServer } from "./api";
+import { TranslatedError, errorText } from "./i18n";
 
 /**
  * This device's settings on a server. Changes show immediately; once every save has answered,
@@ -10,7 +10,9 @@ export function useSettings(server: PairedServer) {
   const [settings, setSettings] = useState<DeviceSettings | null>(null);
   const [error, setError] = useState<Error | null>(null);
   // Settings as the server last confirmed them, and which save confirmed them (answers can arrive out of order).
-  const confirmed = useRef<{ settings: DeviceSettings; save: number } | null>(null);
+  const confirmed = useRef<{ settings: DeviceSettings; save: number } | null>(
+    null,
+  );
   const saves = useRef({ sent: 0, pending: 0 });
 
   useEffect(() => {
@@ -37,11 +39,17 @@ export function useSettings(server: PairedServer) {
       setError(null);
       try {
         const saved = await api.updateSettings(server, changes);
-        if (save > confirmed.current.save) confirmed.current = { settings: saved, save };
+        if (save > confirmed.current.save)
+          confirmed.current = { settings: saved, save };
       } catch (err) {
-        setError(new TranslatedError((t) => t('errors.couldntSave', { reason: errorText(err, t) })));
+        setError(
+          new TranslatedError((t) =>
+            t("errors.couldntSave", { reason: errorText(err, t) }),
+          ),
+        );
       }
-      if (--saves.current.pending === 0) setSettings(confirmed.current.settings);
+      if (--saves.current.pending === 0)
+        setSettings(confirmed.current.settings);
     },
     [server],
   );

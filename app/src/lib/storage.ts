@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
-import { mockServers, usingMockApi, type PairedServer } from './api';
-import { saveServerNames } from './workerStore';
+import { useCallback, useEffect, useState } from "react";
+import { mockServers, usingMockApi, type PairedServer } from "./api";
+import { saveServerNames } from "./workerStore";
 
-const KEY = 'tidings.servers';
+const KEY = "tidings.servers";
 
 function load(): PairedServer[] {
   try {
@@ -30,11 +30,16 @@ export function useServers() {
   const upsert = useCallback(
     (server: PairedServer) =>
       setServers((list) =>
-        list.some((s) => s.id === server.id) ? list.map((s) => (s.id === server.id ? server : s)) : [...list, server],
+        list.some((s) => s.id === server.id)
+          ? list.map((s) => (s.id === server.id ? server : s))
+          : [...list, server],
       ),
     [],
   );
-  const remove = useCallback((id: string) => setServers((list) => list.filter((s) => s.id !== id)), []);
+  const remove = useCallback(
+    (id: string) => setServers((list) => list.filter((s) => s.id !== id)),
+    [],
+  );
 
   return { servers, upsert, remove };
 }
@@ -49,20 +54,27 @@ const pairingKey = (server: PairedServer) => `${server.id}:${server.pairedAt}`;
 export function sentToServers(key: string) {
   const load = (): Record<string, string> => {
     try {
-      return JSON.parse(localStorage.getItem(key) ?? '{}');
+      return JSON.parse(localStorage.getItem(key) ?? "{}");
     } catch {
       return {};
     }
   };
-  const save = (sent: Record<string, string>) => localStorage.setItem(key, JSON.stringify(sent));
+  const save = (sent: Record<string, string>) =>
+    localStorage.setItem(key, JSON.stringify(sent));
 
   return {
-    get: (server: PairedServer): string | undefined => load()[pairingKey(server)],
-    set: (server: PairedServer, value: string) => save({ ...load(), [pairingKey(server)]: value }),
+    get: (server: PairedServer): string | undefined =>
+      load()[pairingKey(server)],
+    set: (server: PairedServer, value: string) =>
+      save({ ...load(), [pairingKey(server)]: value }),
     /** Forgets pairings that are gone (left, or paired again). */
     keepOnly(servers: PairedServer[]) {
       const current = new Set(servers.map(pairingKey));
-      save(Object.fromEntries(Object.entries(load()).filter(([key]) => current.has(key))));
+      save(
+        Object.fromEntries(
+          Object.entries(load()).filter(([key]) => current.has(key)),
+        ),
+      );
     },
   };
 }

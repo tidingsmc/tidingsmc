@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { api, type PairedServer, type ServerInfo } from './api';
+import { useEffect, useState } from "react";
+import { api, type PairedServer, type ServerInfo } from "./api";
 
 /** The server's icon, description and version. Fetched once: they rarely change. */
 export function useInfo(server: PairedServer): ServerInfo | null {
