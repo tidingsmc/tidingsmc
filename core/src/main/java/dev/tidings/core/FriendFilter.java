@@ -15,7 +15,6 @@ public record FriendFilter(boolean enabled, List<Friend> players) {
         players = List.copyOf(players);
     }
 
-    /** The name is only for showing the list in the app; players are matched on their UUID. */
     public record Friend(UUID uuid, String name) {
         public Friend {
             if (uuid == null) throw new IllegalArgumentException("A friend needs a UUID");

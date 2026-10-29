@@ -1,6 +1,12 @@
 import { Plus } from "pixelarticons/react";
 import { useTranslation } from "react-i18next";
-import { OnlineSummary, Screen, ServerIcon, SettingsLink } from "../components";
+import {
+  NotificationsOff,
+  OnlineSummary,
+  Screen,
+  ServerIcon,
+  SettingsLink,
+} from "../components";
 import type { PairedServer } from "../lib/api";
 import { paths } from "../lib/router";
 import { useInfo } from "../lib/useInfo";
@@ -20,13 +26,16 @@ export function ServerListScreen({ servers }: { servers: PairedServer[] }) {
           <p>{t("serverList.emptyHelp")}</p>
         </div>
       ) : (
-        <ul className="server-list">
-          {servers.map((server) => (
-            <li key={server.id}>
-              <ServerCard server={server} />
-            </li>
-          ))}
-        </ul>
+        <>
+          <NotificationsOff servers={servers} snoozable />
+          <ul className="server-list">
+            {servers.map((server) => (
+              <li key={server.id}>
+                <ServerCard server={server} />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
       <div className="bottom-bar">
         <a className="button primary" href={paths.pair}>

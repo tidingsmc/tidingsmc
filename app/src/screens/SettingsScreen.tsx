@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Plus, Trash } from "pixelarticons/react";
 import { useTranslation } from "react-i18next";
 import { LinkedAs, NotificationsOff, Screen, Toggle } from "../components";
@@ -23,6 +23,7 @@ export function SettingsScreen({
   server: PairedServer;
   onLeft: () => void;
 }) {
+  const serverAsList = useMemo(() => [server], [server]);
   const { t } = useTranslation();
   const { settings, error, update } = useSettings(server);
   const info = useInfo(server);
@@ -78,7 +79,7 @@ export function SettingsScreen({
     <Screen title={t("common.settings")} back={paths.server(server.id)}>
       <section className="section">
         <h2>{t("settings.notifications")}</h2>
-        <NotificationsOff server={server} />
+        <NotificationsOff servers={serverAsList} />
         {!settings && !error && <p className="muted">{t("common.loading")}</p>}
         {settings && (
           <div className="settings-group">

@@ -21,6 +21,7 @@
   --off: light-dark(#9aa0aa, #696f7a);
 
   font-family:
+    "Rubik Variable",
     system-ui,
     -apple-system,
     "Segoe UI",
@@ -157,6 +158,43 @@ svg {
   font-family: var(--font-heading);
 }
 
+/* Rows whose controls share a column, so they all get the widest one's width, and the same height. */
+.settings-list {
+  --row-height: 44px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--font-heading);
+}
+
+.settings-list > .info-row {
+  display: contents;
+}
+
+.settings-list > .info-row > :not(.button) {
+  min-height: var(--row-height);
+  display: flex;
+  align-items: center;
+}
+
+.settings-list > .info-row > :last-child:not(.button) {
+  justify-content: flex-end;
+}
+
+.settings-list .button {
+  height: var(--row-height);
+  width: 100%;
+}
+
+.settings-list .dropdown-button {
+  justify-content: space-between;
+}
+
+.settings-list .theme-option {
+  justify-content: flex-start;
+}
+
 .error {
   color: var(--danger);
   margin: 0;
@@ -175,6 +213,64 @@ svg {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
+}
+
+.notice.warn {
+  gap: 14px;
+  border-color: color-mix(in srgb, var(--warning) 40%, var(--border));
+  background: color-mix(in srgb, var(--warning) 7%, var(--surface));
+}
+
+.notice-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.notice-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+}
+
+.notice-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.notice-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.notice-title,
+.notice .button {
+  font-family: var(--font-heading);
+  font-weight: 400;
+}
+
+.notice-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.notice-actions .button {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 44px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.notice-actions .button:not(.primary) {
+  border-color: color-mix(in srgb, var(--text) 30%, transparent);
 }
 
 .section .notice {
@@ -196,6 +292,10 @@ h2 {
 .section {
   display: flex;
   flex-direction: column;
+}
+
+.online-section {
+  margin-top: 12px;
 }
 
 .server-list,

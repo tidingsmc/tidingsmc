@@ -22,11 +22,15 @@
     "browser": "Navigateur"
   },
   "push": {
+    "title": "Notifications désactivées",
     "unsupported": "Ce navigateur ne peut pas recevoir de notifications. Sur iPhone, ajoutez Tidings à l'écran d'accueil et ouvrez-le depuis là.",
     "blocked": "Les notifications de Tidings sont bloquées dans les réglages de votre navigateur",
     "notYet": "Cet appareil ne reçoit pas encore les notifications de ce serveur.",
-    "turnOn": "Activer les notifications",
+    "notYetAny": "Cet appareil ne reçoit pas encore les notifications de vos serveurs.",
+    "notYetSome": "Cet appareil ne reçoit pas encore les notifications de {{servers}}.",
+    "turnOn": "Activer",
     "turningOn": "Activation…",
+    "notNow": "Plus tard",
     "couldntStart": "Impossible de démarrer le service de notifications"
   },
   "notification": {
@@ -57,7 +61,8 @@
   "server": {
     "notFound": "Introuvable",
     "notPaired": "Cet appareil n'est pas associé à ce serveur.",
-    "onlineNow": "En ligne",
+    "online": "En ligne",
+    "onlineCount": "En ligne ({{count}})",
     "nobodyOnline": "Personne n'est en ligne pour le moment.",
     "you": "vous"
   },
@@ -67,13 +72,12 @@
     "onlyOnce": "Un appareil ne peut être associé qu'une fois à chaque serveur. Pour l'associer en tant que quelqu'un d'autre, quittez d'abord {{server}} dans ses réglages, puis associez-le à nouveau.",
     "openSettings": "Ouvrir les réglages de {{server}}",
     "confirm": "Associer cet appareil à <strong>{{host}}</strong>\u00a0?",
-    "howTo": "Dans Minecraft, tapez <code>/tidings pair</code> pour obtenir un code.",
+    "howTo": "Connectez-vous à un serveur qui utilise Tidings, puis tapez <code>/tidings pair</code> pour obtenir un code.",
     "address": "Adresse du serveur",
     "code": "Code d'association",
     "deviceName": "Nom de cet appareil",
     "submit": "Associer",
-    "submitting": "Association…",
-    "demo": "Mode démo\u00a0: n'importe quelle adresse et n'importe quel code à 6 chiffres fonctionnent. <code>000000</code> est refusé, et une adresse contenant «\u00a0offline\u00a0» est injoignable."
+    "submitting": "Association…"
   },
   "settings": {
     "notifications": "Notifications",
@@ -114,7 +118,11 @@
   },
   "appSettings": {
     "theme": "Thème",
-    "themes": { "system": "Système", "light": "Clair", "dark": "Sombre" },
+    "themes": {
+      "system": "Système",
+      "light": "Clair",
+      "dark": "Sombre"
+    },
     "language": "Langue",
     "systemLanguage": "Système",
     "version": "Version",

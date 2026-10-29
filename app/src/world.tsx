@@ -104,7 +104,6 @@ function PixelSun() {
       shapeRendering="crispEdges"
       aria-hidden
     >
-      {/* In screen pixels, so the border can be 4px, a bit more than one 3px grid pixel. */}
       <rect x={6} y={6} width={36} height={36} fill="#ffd966" />
       <rect x={10} y={10} width={28} height={28} fill="#fff8c9" />
     </svg>
@@ -270,7 +269,6 @@ export function WorldCard({
         {!sunUp && world.weather === "clear" && (
           <span className="world-stars" />
         )}
-        {/* Keyed so the moon doesn't slide back across the sky when it replaces the sun. */}
         <span
           key={sunUp ? "sun" : "moon"}
           className={`world-celestial ${sunUp ? "sun" : "moon"}`}

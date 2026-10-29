@@ -1,12 +1,5 @@
 import { useTranslation } from "react-i18next";
-import {
-  Avatar,
-  Motd,
-  NotificationsOff,
-  Screen,
-  ServerIcon,
-  SettingsLink,
-} from "../components";
+import { Avatar, Motd, Screen, ServerIcon, SettingsLink } from "../components";
 import type { PairedServer } from "../lib/api";
 import { errorText } from "../lib/i18n";
 import { paths } from "../lib/router";
@@ -31,16 +24,15 @@ export function ServerScreen({ server }: { server: PairedServer }) {
         <ServerIcon name={server.name} icon={info?.icon} size={64} />
         {info && <Motd segments={info.motd} />}
       </div>
-      <NotificationsOff server={server} />
       {online.status === "ok" && online.data.world && (
         <WorldCard world={online.data.world} receivedAt={online.receivedAt} />
       )}
 
-      <section className="section">
+      <section className="section online-section">
         <h2>
-          {t("server.onlineNow")}
-          {online.status === "ok" &&
-            ` · ${online.data.players.length}/${online.data.maxPlayers}`}
+          {online.status === "ok"
+            ? t("server.onlineCount", { count: online.data.players.length })
+            : t("server.online")}
         </h2>
         {online.status === "loading" && (
           <p className="muted">{t("common.checking")}</p>

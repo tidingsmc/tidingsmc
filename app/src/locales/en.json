@@ -22,11 +22,15 @@
     "browser": "Browser"
   },
   "push": {
+    "title": "Notifications are off",
     "unsupported": "This browser can't get notifications. On iPhone, add Tidings to the home screen and open it from there.",
     "blocked": "Notifications are blocked for Tidings in your browser settings",
     "notYet": "This device doesn't get this server's notifications yet.",
-    "turnOn": "Turn on notifications",
+    "notYetAny": "This device doesn't get your servers' notifications yet.",
+    "notYetSome": "This device doesn't get notifications from {{servers}} yet.",
+    "turnOn": "Turn on",
     "turningOn": "Turning on…",
+    "notNow": "Not now",
     "couldntStart": "Couldn't start the notification service"
   },
   "notification": {
@@ -57,7 +61,8 @@
   "server": {
     "notFound": "Not found",
     "notPaired": "This device isn't paired with that server.",
-    "onlineNow": "Online now",
+    "online": "Online",
+    "onlineCount": "Online ({{count}})",
     "nobodyOnline": "Nobody is online right now.",
     "you": "you"
   },
@@ -67,13 +72,12 @@
     "onlyOnce": "A device can only be paired once with each server. To pair it as someone else, leave {{server}} in its settings first, then pair again.",
     "openSettings": "Open {{server}}'s settings",
     "confirm": "Pair this device with <strong>{{host}}</strong>?",
-    "howTo": "In Minecraft, run <code>/tidings pair</code> to get a code.",
+    "howTo": "Connect to a server using Tidings, and run <code>/tidings pair</code> to get a code.",
     "address": "Server address",
     "code": "Pairing code",
     "deviceName": "Name of this device",
     "submit": "Pair",
-    "submitting": "Pairing…",
-    "demo": "Demo mode: any address and any 6-digit code work. <code>000000</code> is rejected, and an address containing \"offline\" acts unreachable."
+    "submitting": "Pairing…"
   },
   "settings": {
     "notifications": "Notifications",
@@ -114,7 +118,11 @@
   },
   "appSettings": {
     "theme": "Theme",
-    "themes": { "system": "System", "light": "Light", "dark": "Dark" },
+    "themes": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
     "language": "Language",
     "systemLanguage": "System",
     "version": "Version",

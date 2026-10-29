@@ -1,12 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { LinkedAs, Screen } from "../components";
-import {
-  api,
-  normalizeServerUrl,
-  usingMockApi,
-  type PairedServer,
-} from "../lib/api";
+import { api, normalizeServerUrl, type PairedServer } from "../lib/api";
 import { errorText } from "../lib/i18n";
 import { askPermission, subscribe } from "../lib/notifications";
 import { paths } from "../lib/router";
@@ -88,7 +83,7 @@ export function PairScreen({
         pairedAt: Date.now(),
         player: res.player,
       };
-      // Without it, the server screen says notifications are off and offers to turn them on.
+      // Without it, the server list and settings say notifications are off and offer to turn them on.
       if (await notificationsAllowed) await subscribe(server).catch(() => {});
       onPaired(server);
     } catch (err) {
@@ -178,16 +173,12 @@ export function PairScreen({
 
         {error != null && <p className="error">{errorText(error, t)}</p>}
 
-        <button className="button primary" disabled={busy}>
-          {busy ? t("pair.submitting") : t("pair.submit")}
-        </button>
+        <div className="bottom-bar">
+          <button className="button primary" disabled={busy}>
+            {busy ? t("pair.submitting") : t("pair.submit")}
+          </button>
+        </div>
       </form>
-
-      {usingMockApi && (
-        <p className="muted small">
-          <Trans i18nKey="pair.demo" components={{ code: <code /> }} />
-        </p>
-      )}
     </Screen>
   );
 }

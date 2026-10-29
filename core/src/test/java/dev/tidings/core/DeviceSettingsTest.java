@@ -22,7 +22,6 @@ class DeviceSettingsTest {
     private static final UUID STEVE = UUID.randomUUID();
     private static final UUID ALEX = UUID.randomUUID();
 
-    /** Who the device belongs to. */
     private static final UUID ME = UUID.randomUUID();
 
     private static DeviceSettings everything(
@@ -51,7 +50,6 @@ class DeviceSettingsTest {
 
     @Test
     void neverAboutTheOwnerThemselves() {
-        // Even with quietWhileOnline off, and after leaving (no longer online).
         DeviceSettings settings = everything(FriendFilter.off(), QuietHours.off(), UTC);
 
         assertFalse(settings.wants(NotificationKind.PLAYER_JOINED, STEVE, NOON_UTC, STEVE, true));

@@ -115,14 +115,12 @@ async function show(message: PushMessage) {
   } as NotificationOptions & { renotify: boolean }); // missing from TypeScript's types
 }
 
-/** The player's face, or nothing (the browser then shows the app's icon). */
 async function playerIcon(message: PushMessage): Promise<string | undefined> {
   const src = safeSkinUrl(message.player?.skinUrl);
   if (!src) return undefined;
   try {
     return await skinFace(src);
   } catch {
-    // A notification without a face beats no notification.
     return undefined;
   }
 }

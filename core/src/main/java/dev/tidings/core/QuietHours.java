@@ -6,7 +6,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 
-/** Daily periods, in the device's time zone, during which it gets no notifications. */
+/** Daily periods in the device's time zone during which it gets no notifications. */
 public record QuietHours(boolean enabled, List<Period> periods) {
 
     public QuietHours {
@@ -15,9 +15,6 @@ public record QuietHours(boolean enabled, List<Period> periods) {
         periods = List.copyOf(periods);
     }
 
-    /**
-     * May cross midnight (22:00 → 08:00). Start is included, end is not. Start and end must differ.
-     */
     public record Period(LocalTime start, LocalTime end) {
         public Period {
             if (start == null || end == null) {

@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  BellOff,
   BellRing,
   Check,
   ChevronDown,
@@ -16,7 +17,11 @@ import {
 import { useTranslation } from "react-i18next";
 import type { LinkedPlayer, MotdSegment, PairedServer } from "./lib/api";
 import { errorText } from "./lib/i18n";
-import { enableNotifications, usePushState } from "./lib/notifications";
+import {
+  enableNotifications,
+  useNotificationsSnooze,
+  usePushStates,
+} from "./lib/notifications";
 import { skinFace } from "./lib/skin";
 import type { OnlineState } from "./lib/useOnline";
 import { hashString, safeSkinUrl } from "./lib/util";
@@ -430,42 +435,108 @@ export function OnlineSummary({ state }: { state: OnlineState }) {
   );
 }
 
-/** Says when this device doesn't get the server's notifications, with a button to turn them on if it can. */
-export function NotificationsOff({ server }: { server: PairedServer }) {
-  const { t } = useTranslation();
-  const { state, refresh } = usePushState(server);
+/**
+ * Says when this device doesn't get some of the servers' notifications, with a button to turn them on if
+ * it can. Permission is the whole app's, so one banner covers every server. `servers` must keep its identity.
+ * A snoozable banner can be put off for a few days with "Not now".
+ */
+export function NotificationsOff({
+  servers,
+  snoozable,
+}: {
+  servers: PairedServer[];
+  snoozable?: boolean;
+}) {
+  const { t, i18n } = useTranslation();
+  const { states, refresh } = usePushStates(servers);
+  const { snoozed, snooze } = useNotificationsSnooze();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  // Each with the server it's for, unless it's the same for all.
+  const [errors, setErrors] = useState<
+    { server?: PairedServer; error: Error }[]
+  >([]);
 
-  if (state === null || state === "on") return null;
+  if (!states || (snoozable && snoozed)) return null;
+  // A server just added has no state until it's been checked: not counted as off meanwhile.
+  const off = servers.filter((server) => {
+    const state = states.get(server.id);
+    return state !== undefined && state !== "on";
+  });
+  if (off.length === 0) return null;
+  // Unsupported and blocked are the browser's, so the same for every server.
+  const state = states.get(off[0].id);
 
   async function turnOn() {
     setBusy(true);
-    setError(null);
-    try {
-      await enableNotifications(server);
-    } catch (err) {
-      setError(err as Error);
+    setErrors([]);
+    // All started within the tap, so the permission prompt is allowed; it's only shown once.
+    const results = await Promise.allSettled(off.map(enableNotifications));
+    const failures = off.flatMap((server, i) => {
+      const result = results[i];
+      return result.status === "rejected"
+        ? [{ server, error: result.reason as Error }]
+        : [];
+    });
+    if (Notification.permission === "denied") {
+      // The banner then says notifications are blocked.
+      setErrors([]);
+    } else if (Notification.permission !== "granted") {
+      // The prompt was dismissed: the same error for every server.
+      setErrors(failures.slice(0, 1).map(({ error }) => ({ error })));
+    } else {
+      setErrors(failures);
     }
     setBusy(false);
     refresh();
   }
 
+  let message;
+  if (state === "unsupported") message = t("push.unsupported");
+  else if (state === "blocked") message = t("push.blocked");
+  else if (servers.length === 1) message = t("push.notYet");
+  else if (off.length === servers.length) message = t("push.notYetAny");
+  else
+    message = t("push.notYetSome", {
+      servers: new Intl.ListFormat(i18n.language).format(
+        off.map((server) => server.name),
+      ),
+    });
+
   return (
-    <div className="notice">
-      <p className="warning">
-        {state === "unsupported"
-          ? t("push.unsupported")
-          : state === "blocked"
-            ? t("push.blocked")
-            : t("push.notYet")}
-      </p>
-      {state === "off" && (
-        <button className="button" onClick={turnOn} disabled={busy}>
-          {busy ? t("push.turningOn") : t("push.turnOn")}
-        </button>
+    <div className="notice warn" role="status">
+      <div className="notice-row">
+        <span className="notice-icon" aria-hidden>
+          <BellOff />
+        </span>
+        <div className="notice-main">
+          <p className="notice-title">{t("push.title")}</p>
+          <p className="muted small">{message}</p>
+        </div>
+      </div>
+      {errors.map(({ server, error }, i) => (
+        <p key={server?.id ?? i} className="error small">
+          {server && servers.length > 1
+            ? t("common.labelValue", {
+                label: server.name,
+                value: errorText(error, t),
+              })
+            : errorText(error, t)}
+        </p>
+      ))}
+      {(snoozable || state === "off") && (
+        <div className="notice-actions">
+          {snoozable && (
+            <button className="button" onClick={snooze}>
+              {t("push.notNow")}
+            </button>
+          )}
+          {state === "off" && (
+            <button className="button primary" onClick={turnOn} disabled={busy}>
+              {busy ? t("push.turningOn") : t("push.turnOn")}
+            </button>
+          )}
+        </div>
       )}
-      {error && <p className="error small">{errorText(error, t)}</p>}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type OnlinePlayer, type PairedServer } from "./api";
 import { TranslatedError } from "./i18n";
 import type { PushMessage } from "./push";
@@ -55,6 +55,9 @@ async function ownRegistration(
 /** The endpoint of the push subscription each pairing last sent its server. */
 const sentSubscriptions = sentToServers("tidings.sentSubscriptions");
 
+/** Fires "change" each time a server is sent a new subscription, so push states are checked again. */
+const subscriptionChanges = new EventTarget();
+
 /**
  * Asks for permission to notify, unless already answered. Call it while handling a tap: iPhones only ask then.
  * @returns whether notifications are allowed
@@ -79,6 +82,7 @@ export async function subscribe(server: PairedServer): Promise<void> {
   if (sentSubscriptions.get(server) === subscription.endpoint) return;
   await api.updatePush(server, subscription.toJSON());
   sentSubscriptions.set(server, subscription.endpoint);
+  subscriptionChanges.dispatchEvent(new Event("change"));
 }
 
 function base64UrlToBytes(s: string): Uint8Array<ArrayBuffer> {
@@ -137,17 +141,62 @@ async function pushState(server: PairedServer): Promise<PushState> {
     : "off";
 }
 
-/** Whether this device gets the server's notifications; null while checking. */
-export function usePushState(server: PairedServer) {
-  const [state, setState] = useState<PushState | null>(null);
-  const refresh = useCallback(
-    () => pushState(server).then(setState, () => setState("off")),
-    [server],
-  );
+/**
+ * Whether this device gets each server's notifications, by server id; null while checking.
+ * Checked again when the app comes back to the foreground, as notifications may have been allowed meanwhile,
+ * and whenever a server is sent a new subscription, as useSubscriptionSync may still be sending it.
+ * `servers` must keep its identity between renders.
+ */
+export function usePushStates(servers: PairedServer[]) {
+  const [states, setStates] = useState<Map<string, PushState> | null>(null);
+  // Only the latest check's result is kept: an older one finishing last would undo a change.
+  const latest = useRef(0);
+  const refresh = useCallback(async () => {
+    const check = ++latest.current;
+    const list = await Promise.all(
+      servers.map((server) => pushState(server).catch((): PushState => "off")),
+    );
+    if (check !== latest.current) return;
+    setStates(new Map(servers.map((server, i) => [server.id, list[i]])));
+  }, [servers]);
   useEffect(() => {
     refresh();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    subscriptionChanges.addEventListener("change", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      subscriptionChanges.removeEventListener("change", refresh);
+    };
   }, [refresh]);
-  return { state, refresh };
+  return { states, refresh };
+}
+
+const SNOOZE_KEY = "tidings.notificationsSnoozedUntil";
+/** How long "Not now" hides the reminder to turn notifications on. */
+const SNOOZE_MS = 3 * 24 * 60 * 60 * 1000;
+
+/** Whether the reminder to turn notifications on was put off, and a way to put it off. */
+export function useNotificationsSnooze() {
+  const [snoozedUntil, setSnoozedUntil] = useState(() => {
+    try {
+      return Number(localStorage.getItem(SNOOZE_KEY)) || 0;
+    } catch {
+      return 0;
+    }
+  });
+  const snooze = useCallback(() => {
+    const until = Date.now() + SNOOZE_MS;
+    try {
+      localStorage.setItem(SNOOZE_KEY, String(until));
+    } catch {
+      // Hidden until the app is opened again, then.
+    }
+    setSnoozedUntil(until);
+  }, []);
+  return { snoozed: snoozedUntil > Date.now(), snooze };
 }
 
 /**

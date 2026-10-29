@@ -48,7 +48,6 @@ export interface PairResponse {
 /** GET {url}/api/online  (authenticated) */
 export interface OnlineResponse {
   players: OnlinePlayer[];
-  maxPlayers: number;
   world?: WorldInfo;
 }
 
@@ -335,7 +334,6 @@ const mockApi: TidingsApi = {
     );
     return {
       players: players.map(mockPlayer),
-      maxPlayers: 20,
       world: mockWorld(server),
     };
   },

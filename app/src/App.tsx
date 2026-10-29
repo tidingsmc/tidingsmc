@@ -20,7 +20,7 @@ export default function App() {
   let screen;
   switch (route.name) {
     case "appSettings":
-      screen = <AppSettingsScreen />;
+      screen = <AppSettingsScreen servers={servers} />;
       break;
     case "pair":
       screen = (
