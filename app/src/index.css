@@ -1,5 +1,3 @@
-/* Monocraft by Idrees Hassan, SIL Open Font License 1.1 (see assets/fonts/Monocraft-OFL.txt).
-   Subset to Latin characters and converted to WOFF2. */
 @font-face {
   font-family: 'Monocraft';
   src: url('./assets/fonts/Monocraft.woff2') format('woff2');
@@ -9,19 +7,18 @@
 :root {
   color-scheme: light dark;
   --font-heading: 'Monocraft', ui-monospace, monospace;
-  --bg: #f4f5f7;
-  --surface: #ffffff;
-  --text: #1b1d22;
-  --muted: #60656f;
-  --border: #dcdfe5;
-  /* Lapis blue. Green is kept for "online". */
-  --accent: #2f5bb7;
-  --accent-text: #ffffff;
-  --accent-soft: #e6ecf8;
-  --danger: #c62828;
-  --warning: #9a5b00;
-  --ok: #2e9d3a;
-  --off: #9aa0aa;
+  --bg: light-dark(#f4f5f7, #111318);
+  --surface: light-dark(#ffffff, #1a1d23);
+  --text: light-dark(#1b1d22, #e6e8ec);
+  --muted: light-dark(#60656f, #969ca8);
+  --border: light-dark(#dcdfe5, #2b2f37);
+  --accent: light-dark(#2f5bb7, #7ea2ec);
+  --accent-text: light-dark(#ffffff, #0b1430);
+  --accent-soft: light-dark(#e6ecf8, #1c2540);
+  --danger: light-dark(#c62828, #ef6b6b);
+  --warning: light-dark(#9a5b00, #f0b45a);
+  --ok: light-dark(#2e9d3a, #5ccf66);
+  --off: light-dark(#9aa0aa, #696f7a);
 
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.45;
@@ -29,21 +26,12 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #111318;
-    --surface: #1a1d23;
-    --text: #e6e8ec;
-    --muted: #969ca8;
-    --border: #2b2f37;
-    --accent: #7ea2ec;
-    --accent-text: #0b1430;
-    --accent-soft: #1c2540;
-    --danger: #ef6b6b;
-    --warning: #f0b45a;
-    --ok: #5ccf66;
-    --off: #696f7a;
-  }
+[data-theme='light'] {
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 * {
@@ -60,6 +48,8 @@ body {
   max-width: 560px;
   margin: 0 auto;
   min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 a {
@@ -109,7 +99,6 @@ code {
   margin-left: -6px;
 }
 
-/* Pixelarticons are drawn on a 24px grid: keep them at 24px and unsmoothed. */
 svg {
   flex-shrink: 0;
   shape-rendering: crispEdges;
@@ -122,8 +111,11 @@ svg {
   width: 40px;
   height: 40px;
   margin-right: -8px;
+  border: none;
   border-radius: 50%;
+  background: none;
   color: var(--muted);
+  cursor: pointer;
 }
 
 .icon-button:active {
@@ -135,6 +127,7 @@ svg {
   flex-direction: column;
   gap: 16px;
   padding: 16px 16px max(24px, env(safe-area-inset-bottom));
+  flex: 1;
 }
 
 .muted {
@@ -144,6 +137,19 @@ svg {
 
 .small {
   font-size: 0.85rem;
+}
+
+.footer-note {
+  margin-top: auto;
+  text-align: center;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-family: var(--font-heading);
 }
 
 .error {
@@ -243,7 +249,6 @@ h2 {
   font-family: var(--font-heading);
 }
 
-/* Like the multiplayer server list: always dark, so Minecraft's colors stay readable in light mode too. */
 .motd {
   margin: 0;
   padding: 8px 10px;
@@ -257,7 +262,6 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-/* The server page's description sits next to the icon and takes the rest of the row. */
 .server-header .motd {
   flex: 1;
   min-width: 0;
@@ -282,7 +286,6 @@ h2 {
   border-radius: 3px;
 }
 
-/* Above the icon and description on the server page, closer to them than the page's usual gap. */
 .server-address {
   margin-bottom: -6px;
   color: var(--muted);
@@ -291,7 +294,6 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-/* Under the server name on its card. */
 .status {
   display: flex;
   margin-top: 2px;
@@ -333,7 +335,6 @@ h2 {
   font-family: var(--font-heading);
 }
 
-/* Pushed to the right of the player's row. */
 .player .you {
   margin-left: auto;
 }
@@ -354,7 +355,6 @@ h2 {
   border-radius: 4px;
 }
 
-/* Pinned to the bottom of the screen; the spacer keeps the last card from hiding behind it. */
 .bottom-bar {
   position: fixed;
   left: 0;
@@ -366,7 +366,6 @@ h2 {
   background: linear-gradient(to bottom, transparent, var(--bg) 16px);
 }
 
-/* The home screen's main action, in the pixel heading font. */
 .bottom-bar .button {
   font-family: var(--font-heading);
   font-weight: 400;
@@ -441,6 +440,26 @@ h2 {
   border-top: 1px solid var(--border);
 }
 
+.theme-button {
+  display: grid;
+  width: auto;
+  padding: 8px 14px;
+  font-family: var(--font-heading);
+  font-weight: 400;
+}
+
+.theme-option {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.theme-option[hidden] {
+  visibility: hidden;
+}
+
 .toggle-text {
   display: flex;
   flex-direction: column;
@@ -502,7 +521,6 @@ h2 {
   position: absolute;
   transform: translate(-50%, -50%);
   display: grid;
-  /* Glides between the once-a-second updates. */
   transition:
     left 1s linear,
     top 1s linear;
@@ -516,7 +534,6 @@ h2 {
   filter: drop-shadow(0 0 4px rgb(223 230 242 / 0.35));
 }
 
-/* Each cloud crosses the whole sky from right to left, then starts over. */
 .world-cloud {
   position: absolute;
   left: 0;
@@ -536,7 +553,6 @@ h2 {
   }
 }
 
-/* A few 2px pixel stars. */
 .world-stars::before {
   content: '';
   position: absolute;
@@ -552,7 +568,6 @@ h2 {
   opacity: 0.85;
 }
 
-/* Raindrops fall from above the sky to the grass line. */
 .world-rain {
   position: absolute;
   inset: 0 0 12px;
@@ -580,7 +595,6 @@ h2 {
   }
 }
 
-/* Lightning: a quick double flash every few seconds. */
 .world-flash {
   position: absolute;
   inset: 0;
@@ -624,13 +638,11 @@ h2 {
     transition: none;
   }
 
-  /* Paused rather than removed, so the clouds stay spread across the sky. */
   .world-cloud {
     animation-play-state: paused;
   }
 }
 
-/* Grass on top of dirt, like a block's side. */
 .world-ground {
   position: absolute;
   left: 0;
@@ -699,12 +711,8 @@ h2 {
 
 .remove-period {
   margin: 0 -8px 4px 0;
-  border: none;
-  background: none;
-  cursor: pointer;
 }
 
-/* A full-width button at the bottom of a settings group. */
 .group-button {
   display: flex;
   align-items: center;
@@ -748,16 +756,12 @@ h2 {
 
 .remove-friend {
   margin-right: -8px;
-  border: none;
-  background: none;
-  cursor: pointer;
 }
 
 .friend-picker {
   border-top: 1px solid var(--border);
 }
 
-/* Big servers have hundreds of players: scroll them rather than the screen. */
 .friend-picker .friend-list {
   max-height: 320px;
   overflow-y: auto;

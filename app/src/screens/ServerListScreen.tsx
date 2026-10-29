@@ -1,5 +1,5 @@
 import { Plus } from 'pixelarticons/react';
-import { OnlineSummary, Screen, ServerIcon } from '../components';
+import { OnlineSummary, Screen, ServerIcon, SettingsLink } from '../components';
 import type { PairedServer } from '../lib/api';
 import { paths } from '../lib/router';
 import { useInfo } from '../lib/useInfo';
@@ -7,7 +7,7 @@ import { useOnline } from '../lib/useOnline';
 
 export function ServerListScreen({ servers }: { servers: PairedServer[] }) {
   return (
-    <Screen title="Tidings" logo>
+    <Screen title="Tidings" logo action={<SettingsLink href={paths.appSettings} />}>
       {servers.length === 0 ? (
         <div className="empty">
           <p className="empty-title">No servers yet</p>

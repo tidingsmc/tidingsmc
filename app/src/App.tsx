@@ -3,6 +3,7 @@ import { navigate, paths, useRoute } from './lib/router';
 import { useSubscriptionSync } from './lib/notifications';
 import { useServers } from './lib/storage';
 import { useTimeZoneSync } from './lib/timeZone';
+import { AppSettingsScreen } from './screens/AppSettingsScreen';
 import { PairScreen } from './screens/PairScreen';
 import { ServerListScreen } from './screens/ServerListScreen';
 import { ServerScreen } from './screens/ServerScreen';
@@ -16,6 +17,9 @@ export default function App() {
 
   let screen;
   switch (route.name) {
+    case 'appSettings':
+      screen = <AppSettingsScreen />;
+      break;
     case 'pair':
       screen = (
         <PairScreen

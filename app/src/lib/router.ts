@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 export type Route =
   | { name: 'servers' }
+  | { name: 'appSettings' }
   | { name: 'server'; id: string }
   | { name: 'settings'; id: string }
   | { name: 'pair'; url?: string; code?: string };
@@ -19,6 +20,7 @@ export function parseRoute(hash: string): Route {
   }
   const [, first, second, third] = h.split('/');
   if (first === 'pair') return { name: 'pair' };
+  if (first === 'settings') return { name: 'appSettings' };
   if (first === 'server' && second && third === 'settings') return { name: 'settings', id: decodeURIComponent(second) };
   if (first === 'server' && second) return { name: 'server', id: decodeURIComponent(second) };
   return { name: 'servers' };
@@ -27,6 +29,7 @@ export function parseRoute(hash: string): Route {
 export const paths = {
   servers: '#/',
   pair: '#/pair',
+  appSettings: '#/settings',
   server: (id: string) => `#/server/${encodeURIComponent(id)}`,
   settings: (id: string) => `#/server/${encodeURIComponent(id)}/settings`,
 };
