@@ -1,4 +1,3 @@
-// Only the version is bundled: Vite tree-shakes named imports from JSON.
 import { version } from "../../package.json";
 import type { ReactNode } from "react";
 import { Moon, Smartphone, Sun } from "pixelarticons/react";
@@ -16,7 +15,6 @@ const themes: Record<Theme, { icon: ReactNode; next: Theme }> = {
   dark: { icon: <Moon />, next: "system" },
 };
 
-/** Settings for the app itself, on this device; each server's are on its own settings screen. */
 export function AppSettingsScreen({ servers }: { servers: PairedServer[] }) {
   const { t } = useTranslation();
   const [theme, setTheme] = useTheme();
@@ -24,7 +22,6 @@ export function AppSettingsScreen({ servers }: { servers: PairedServer[] }) {
 
   return (
     <Screen title={t("common.settings")} back={paths.servers}>
-      {/* Not snoozable, so it can still be turned on here after "Not now" on the list. */}
       <NotificationsOff servers={servers} />
       <div className="settings-list">
         <div className="info-row">
@@ -37,7 +34,6 @@ export function AppSettingsScreen({ servers }: { servers: PairedServer[] }) {
             })}
             onClick={() => setTheme(themes[theme].next)}
           >
-            {/* All stacked, only the current one shown: the button keeps the widest one's width as it changes. */}
             {Object.entries(themes).map(([value, { icon }]) => (
               <span
                 key={value}
@@ -58,7 +54,6 @@ export function AppSettingsScreen({ servers }: { servers: PairedServer[] }) {
             onChange={setLanguage}
             options={[
               { value: "system", label: t("appSettings.systemLanguage") },
-              // Each in its own language, so anyone can find theirs.
               ...Object.entries(LOCALE_NAMES).map(([locale, name]) => ({
                 value: locale as Locale,
                 label: name,

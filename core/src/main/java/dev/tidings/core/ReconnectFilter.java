@@ -12,14 +12,6 @@ import java.util.UUID;
 /**
  * Hides quick reconnects (lag, crashes): a player who leaves and comes back within the grace period
  * is announced neither as leaving nor as joining again.
- *
- * <p>Joins are announced right away, unless the player left less than the grace period ago. Leaves
- * are held back for the grace period and only announced if the player hasn't come back; call {@link
- * #dueLeaves} regularly to collect them. A leave that is already due but wasn't collected yet when
- * the player rejoins is handed back by {@link #onJoin} instead, so it isn't lost.
- *
- * <p>When the server stops, call {@link #onServerStopping}: everyone is about to leave, and the
- * "server is shutting down" notification says so better than one leave per player.
  */
 public final class ReconnectFilter {
     private final Duration grace;

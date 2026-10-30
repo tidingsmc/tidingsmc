@@ -13,12 +13,10 @@ import { errorText } from "../lib/i18n";
 interface Props {
   server: PairedServer;
   friends: FriendFilter;
-  /** Join and leave notifications are both off, so the filter has nothing to filter. */
   disabled: boolean;
   onChange: (friends: FriendFilter) => void;
 }
 
-/** Everyone who has played on the server, fetched once the filter is on. */
 function useKnownPlayers(server: PairedServer, enabled: boolean) {
   const [state, setState] = useState<{
     players?: OnlinePlayer[];
@@ -40,14 +38,12 @@ function useKnownPlayers(server: PairedServer, enabled: boolean) {
   return state;
 }
 
-/** Join and leave notifications for chosen players only. */
 export function FriendsSection({ server, friends, disabled, onChange }: Props) {
   const { t } = useTranslation();
   const known = useKnownPlayers(server, friends.enabled);
   const [picking, setPicking] = useState(false);
   const [query, setQuery] = useState("");
 
-  // Friends are stored with the name they had when picked; show their current name and skin when known.
   const knownPlayer = (uuid: string) =>
     known.players?.find((p) => p.uuid === uuid);
   const isFriend = (uuid: string) =>
