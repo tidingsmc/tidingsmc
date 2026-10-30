@@ -2,6 +2,9 @@ package dev.tidings.forge;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 final class TidingsConfig {
     static final ForgeConfigSpec SPEC;
     static final ForgeConfigSpec.IntValue PORT;
@@ -40,8 +43,11 @@ final class TidingsConfig {
                                         + " which only works for testing.")
                         .define("public-url", "");
         APP_URL =
-                builder.comment("Where the Tidings app is hosted. Pairing links open it.")
-                        .define("app-url", "http://localhost:5173/");
+                builder.comment(
+                                "Where the Tidings app is hosted, e.g."
+                                        + " https://<user>.github.io/tidingsmc/. Pairing links"
+                                        + " open it. Required: Tidings doesn't start without it.")
+                        .define("app-url", "");
         SERVER_NAME =
                 builder.comment(
                                 "Name the app suggests when a player pairs. Empty: players"
@@ -60,6 +66,35 @@ final class TidingsConfig {
     }
 
     private TidingsConfig() {}
+
+    /** What's wrong with the settings, or null if Tidings can start with them. */
+    static String problem() {
+        if (appUrl().isEmpty()) return "app-url isn't set";
+        if (!isWebAddress(appUrl())) return "app-url " + appUrl() + " isn't a web address";
+        if (!relayUrl().isEmpty() && !isWebAddress(relayUrl())) {
+            return "relay-url " + relayUrl() + " isn't a web address (it starts with https://)";
+        }
+        String publicUrl = PUBLIC_URL.get().strip();
+        if (!publicUrl.isEmpty() && !isWebAddress(publicUrl)) {
+            return "public-url " + publicUrl + " isn't a web address (it starts with https://)";
+        }
+        return null;
+    }
+
+    private static boolean isWebAddress(String url) {
+        try {
+            URI uri = new URI(url);
+            return ("https".equals(uri.getScheme()) || "http".equals(uri.getScheme()))
+                    && uri.getHost() != null;
+        } catch (URISyntaxException e) {
+            return false;
+        }
+    }
+
+    /** Without its fragment: pairing links put theirs. */
+    static String appUrl() {
+        return APP_URL.get().strip().replaceAll("#.*$", "");
+    }
 
     /** Empty without a relay. */
     static String relayUrl() {

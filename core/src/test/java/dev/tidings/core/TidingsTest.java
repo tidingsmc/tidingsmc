@@ -36,9 +36,8 @@ class TidingsTest {
     @Test
     void remembersEveryoneWhoPlayed() {
         Tidings tidings = new Tidings(Store.inMemory(), new FakeGame());
-        tidings.playerJoined(steve, Instant.EPOCH);
-        tidings.playerJoined(alex, Instant.EPOCH);
-        tidings.playerLeft(steve.id(), Instant.EPOCH);
+        tidings.rememberPlayer(steve);
+        tidings.rememberPlayer(alex);
 
         assertEquals(List.of(alex, steve), tidings.store().knownPlayers());
     }
@@ -78,8 +77,7 @@ class TidingsTest {
     void tellsFirstJoinsApart() {
         Tidings tidings = new Tidings(Store.inMemory(), new FakeGame());
 
-        assertTrue(tidings.playerJoined(steve, Instant.EPOCH));
-        tidings.playerLeft(steve.id(), Instant.EPOCH);
-        assertFalse(tidings.playerJoined(steve, Instant.EPOCH));
+        assertTrue(tidings.rememberPlayer(steve));
+        assertFalse(tidings.rememberPlayer(steve));
     }
 }

@@ -92,13 +92,22 @@ public final class Tidings {
     }
 
     /**
-     * @return whether it's the player's first time here since Tidings was installed
+     * Then {@link #rememberPlayer}, which saves to disk: it can be called off the game's thread.
      */
-    public boolean playerJoined(PlayerProfile player, Instant now) {
+    public void playerJoined(PlayerProfile player, Instant now) {
         synchronized (this) {
             online.put(player.id(), player);
         }
         notifier.notify(NotificationKind.PLAYER_JOINED, player, onlineIds(), now);
+    }
+
+    /**
+     * Records a player who joined, or their new name or skin.
+     *
+     * @return whether it's the player's first time here since Tidings was installed
+     * @throws java.io.UncheckedIOException if it couldn't be saved
+     */
+    public boolean rememberPlayer(PlayerProfile player) {
         return store.rememberPlayer(player);
     }
 
@@ -139,7 +148,7 @@ public final class Tidings {
      *
      * @return empty if the player already has {@link #MAX_DEVICES_PER_PLAYER} devices
      */
-    public Optional<String> startPairing(PlayerProfile player, Instant now) {
+    public Optional<Pairing.Issued> startPairing(PlayerProfile player, Instant now) {
         if (store.hasMaxDevices(player.id(), MAX_DEVICES_PER_PLAYER)) return Optional.empty();
         return Optional.of(pairing.issue(player, now));
     }

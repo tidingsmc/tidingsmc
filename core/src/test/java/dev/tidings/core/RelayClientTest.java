@@ -3,6 +3,7 @@ package dev.tidings.core;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -36,7 +37,7 @@ class RelayClientTest {
 
     @Test
     void answersAPairingRequest() {
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
         JsonObject request = new JsonObject();
         request.addProperty("id", "r1");
         request.addProperty("method", "POST");
@@ -70,7 +71,7 @@ class RelayClientTest {
 
     @Test
     void noContentHasNoBody() {
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
         JsonObject pair = new JsonObject();
         pair.addProperty("id", "a");
         pair.addProperty("method", "POST");
@@ -92,6 +93,17 @@ class RelayClientTest {
 
         assertEquals(204, reply.get("status").getAsInt());
         assertFalse(reply.has("body"));
+    }
+
+    @Test
+    void refusesARelayUrlWithoutHttps() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () ->
+                        new RelayClient(
+                                new Api(tidings),
+                                tidings.store().vapidKeys(),
+                                URI.create("tidings-relay.someone.workers.dev")));
     }
 
     @Test

@@ -39,6 +39,8 @@ export interface OnlinePlayer {
 
 /**
  * POST {url}/api/pair  body: { code, deviceName }
+ * `code` is the 6 digits the player typed, or the token from the QR code: long enough not to be
+ * guessed, it keeps working while someone floods the server with wrong codes.
  * The token works once the player approves the device in game, see `TidingsApi.approval`.
  */
 export interface PairResponse {
@@ -410,7 +412,8 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const mockApi: TidingsApi = {
   async pair(url, code) {
     await delay(600);
-    if (!/^\d{6}$/.test(code) || code === "000000")
+    const valid = /^\d{6}$/.test(code) || /^[\w-]{22,}$/.test(code);
+    if (!valid || code === "000000")
       throw new ApiError((t) => t("errors.invalidCode"), 403);
     const host = hostOf(url);
     return {
@@ -419,7 +422,7 @@ const mockApi: TidingsApi = {
       token: crypto.randomUUID(),
       vapidPublicKey: MOCK_VAPID_KEY,
       // In game, whoever ran /tidings pair; here the code picks a player.
-      player: mockPlayer(MOCK_PLAYERS[Number(code) % MOCK_PLAYERS.length]),
+      player: mockPlayer(MOCK_PLAYERS[hashString(code) % MOCK_PLAYERS.length]),
     };
   },
   async approval() {

@@ -10,16 +10,23 @@ import com.google.gson.JsonParser;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
 
@@ -30,6 +37,9 @@ import java.util.function.UnaryOperator;
  */
 public final class Store {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+
+    private static final Set<PosixFilePermission> OWNER_ONLY =
+            PosixFilePermissions.fromString("rw-------");
 
     private final Path file;
     private final String serverId;
@@ -50,6 +60,8 @@ public final class Store {
             store.save();
             return store;
         }
+        // Saved by a version that left it readable by everyone.
+        if (isPosix(file)) Files.setPosixFilePermissions(file, OWNER_ONLY);
         try {
             JsonObject json =
                     Json.object(
@@ -205,6 +217,36 @@ public final class Store {
                 .toList();
     }
 
+    /**
+     * Readable by the server's owner only: it holds the push keys, which also prove the relay is
+     * this server's. On disk before it's renamed, or a power cut could leave an empty file.
+     */
+    private static void write(Path path, byte[] bytes) throws IOException {
+        boolean posix = isPosix(path);
+        FileAttribute<?>[] attributes =
+                posix
+                        ? new FileAttribute<?>[] {PosixFilePermissions.asFileAttribute(OWNER_ONLY)}
+                        : new FileAttribute<?>[0];
+        try (FileChannel channel =
+                FileChannel.open(
+                        path,
+                        Set.of(
+                                StandardOpenOption.CREATE,
+                                StandardOpenOption.TRUNCATE_EXISTING,
+                                StandardOpenOption.WRITE),
+                        attributes)) {
+            // A file left by an earlier version or a crash keeps its permissions otherwise.
+            if (posix) Files.setPosixFilePermissions(path, OWNER_ONLY);
+            ByteBuffer buffer = ByteBuffer.wrap(bytes);
+            while (buffer.hasRemaining()) channel.write(buffer);
+            channel.force(true);
+        }
+    }
+
+    private static boolean isPosix(Path path) {
+        return path.getFileSystem().supportedFileAttributeViews().contains("posix");
+    }
+
     private void save() {
         if (file == null) return;
         JsonObject json = new JsonObject();
@@ -221,7 +263,7 @@ public final class Store {
             Files.createDirectories(file.toAbsolutePath().getParent());
             // Write then rename, so a crash mid-write can't leave half a file.
             Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
-            Files.writeString(tmp, GSON.toJson(json), StandardCharsets.UTF_8);
+            write(tmp, GSON.toJson(json).getBytes(StandardCharsets.UTF_8));
             Files.move(
                     tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {

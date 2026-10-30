@@ -23,12 +23,12 @@ class PairingTest {
 
     @Test
     void codesAreSixDigits() {
-        assertTrue(pairing.issue(steve, NOW).matches("\\d{6}"));
+        assertTrue(pairing.issue(steve, NOW).code().matches("\\d{6}"));
     }
 
     @Test
     void aCodePairsItsPlayerOnce() {
-        String code = pairing.issue(steve, NOW);
+        String code = pairing.issue(steve, NOW).code();
 
         assertEquals(new Pairing.Redemption.Paired(steve), redeem(code, ALEX_PHONE, NOW));
         assertInstanceOf(Pairing.Redemption.Invalid.class, redeem(code, ALEX_PHONE, NOW));
@@ -36,7 +36,7 @@ class PairingTest {
 
     @Test
     void aRefusedPairingKeepsTheCode() {
-        String code = pairing.issue(steve, NOW);
+        String code = pairing.issue(steve, NOW).code();
 
         assertEquals(
                 new Pairing.Redemption.Refused(),
@@ -46,14 +46,14 @@ class PairingTest {
 
     @Test
     void ignoresSurroundingSpaces() {
-        String code = pairing.issue(steve, NOW);
+        String code = pairing.issue(steve, NOW).code();
 
         assertEquals(new Pairing.Redemption.Paired(steve), redeem(" " + code, ALEX_PHONE, NOW));
     }
 
     @Test
     void codesExpire() {
-        String code = pairing.issue(steve, NOW);
+        String code = pairing.issue(steve, NOW).code();
 
         assertInstanceOf(
                 Pairing.Redemption.Invalid.class,
@@ -62,8 +62,8 @@ class PairingTest {
 
     @Test
     void aNewCodeReplacesThePlayersPreviousOne() {
-        String first = pairing.issue(steve, NOW);
-        String second = pairing.issue(steve, NOW);
+        String first = pairing.issue(steve, NOW).code();
+        String second = pairing.issue(steve, NOW).code();
 
         if (!first.equals(second)) {
             assertInstanceOf(Pairing.Redemption.Invalid.class, redeem(first, ALEX_PHONE, NOW));
@@ -73,7 +73,7 @@ class PairingTest {
 
     @Test
     void tooManyWrongCodesBlockThatClientForAWhile() {
-        String code = pairing.issue(steve, NOW);
+        String code = pairing.issue(steve, NOW).code();
         String wrong = code.equals("000000") ? "000001" : "000000";
         for (int i = 0; i < Pairing.MAX_FAILURES; i++) redeem(wrong, ALEX_PHONE, NOW);
 
@@ -85,7 +85,7 @@ class PairingTest {
 
     @Test
     void oneClientGuessingDoesntBlockOthers() {
-        String code = pairing.issue(steve, NOW);
+        String code = pairing.issue(steve, NOW).code();
         String wrong = code.equals("000000") ? "000001" : "000000";
         for (int i = 0; i < Pairing.MAX_FAILURES; i++) redeem(wrong, TROLL, NOW);
 
@@ -94,7 +94,7 @@ class PairingTest {
 
     @Test
     void tooManyWrongCodesOverallBlockEveryone() {
-        String code = pairing.issue(steve, NOW);
+        String code = pairing.issue(steve, NOW).code();
         String wrong = code.equals("000000") ? "000001" : "000000";
         for (int i = 0; i < Pairing.MAX_FAILURES_OVERALL; i++) {
             redeem(wrong, "198.51.100." + i, NOW);
@@ -107,8 +107,45 @@ class PairingTest {
     }
 
     @Test
+    void theTokenRedeemsTheSamePairingAsTheCode() {
+        Pairing.Issued issued = pairing.issue(steve, NOW);
+
+        assertTrue(issued.token().length() >= 22);
+        assertEquals(new Pairing.Redemption.Paired(steve), redeem(issued.token(), ALEX_PHONE, NOW));
+        assertInstanceOf(Pairing.Redemption.Invalid.class, redeem(issued.code(), ALEX_PHONE, NOW));
+    }
+
+    @Test
+    void theTokenExpiresWithTheCode() {
+        Pairing.Issued issued = pairing.issue(steve, NOW);
+
+        assertInstanceOf(
+                Pairing.Redemption.Invalid.class,
+                redeem(issued.token(), ALEX_PHONE, NOW.plus(Pairing.CODE_LIFETIME)));
+    }
+
+    @Test
+    void aNewCodeReplacesThePreviousToken() {
+        Pairing.Issued first = pairing.issue(steve, NOW);
+        pairing.issue(steve, NOW);
+
+        assertInstanceOf(Pairing.Redemption.Invalid.class, redeem(first.token(), ALEX_PHONE, NOW));
+    }
+
+    @Test
+    void theTokenStillWorksWhileEveryoneIsBlocked() {
+        Pairing.Issued issued = pairing.issue(steve, NOW);
+        String wrong = issued.code().equals("000000") ? "000001" : "000000";
+        for (int i = 0; i < Pairing.MAX_FAILURES_OVERALL; i++) {
+            redeem(wrong, "198.51.100." + i, NOW);
+        }
+
+        assertEquals(new Pairing.Redemption.Paired(steve), redeem(issued.token(), ALEX_PHONE, NOW));
+    }
+
+    @Test
     void knowsThePlayersValidCode() {
-        String code = pairing.issue(steve, NOW);
+        String code = pairing.issue(steve, NOW).code();
 
         assertEquals(Optional.of(code), pairing.codeOf(steve.id(), NOW));
         assertEquals(Optional.empty(), pairing.codeOf(steve.id(), NOW.plus(Pairing.CODE_LIFETIME)));

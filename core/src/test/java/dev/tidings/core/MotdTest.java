@@ -42,6 +42,14 @@ class MotdTest {
                 Motd.parse("§ba§zb"));
     }
 
+    /** Not a hex color in game: "x" means nothing, then each digit is a color code. */
+    @Test
+    void readsSpigotHexCodesLikeTheGame() {
+        assertEquals(
+                List.of(new Segment("Hi", "red", false, false, false, false)),
+                Motd.parse("§x§f§f§5§5§5§cHi"));
+    }
+
     @Test
     void dropsALoneSectionSignAtTheEnd() {
         assertEquals(

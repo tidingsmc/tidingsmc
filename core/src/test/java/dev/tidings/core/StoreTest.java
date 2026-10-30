@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -17,6 +18,7 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -127,6 +129,33 @@ class StoreTest {
 
         assertThrows(UncheckedIOException.class, () -> store.removeDevice(steve.id(), "a"));
         assertEquals(List.of(device("a")), store.devices());
+    }
+
+    @Test
+    void onlyTheOwnerCanReadTheFile() throws IOException {
+        Path file = dir.resolve("data.json");
+        assumeTrue(dir.getFileSystem().supportedFileAttributeViews().contains("posix"));
+        Files.writeString(file.resolveSibling("data.json.tmp"), "left by a crash");
+        Files.setPosixFilePermissions(
+                file.resolveSibling("data.json.tmp"), PosixFilePermissions.fromString("rw-r--r--"));
+
+        Store.open(file);
+
+        assertEquals(
+                PosixFilePermissions.fromString("rw-------"), Files.getPosixFilePermissions(file));
+    }
+
+    @Test
+    void anExistingFileIsMadeOwnerOnly() throws IOException {
+        Path file = dir.resolve("data.json");
+        assumeTrue(dir.getFileSystem().supportedFileAttributeViews().contains("posix"));
+        Store.open(file);
+        Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-r--r--"));
+
+        Store.open(file);
+
+        assertEquals(
+                PosixFilePermissions.fromString("rw-------"), Files.getPosixFilePermissions(file));
     }
 
     @Test

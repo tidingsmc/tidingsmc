@@ -63,7 +63,11 @@ public final class ApiServer implements AutoCloseable {
         server.start();
     }
 
-    public static void limitRequestTime() {
+    /**
+     * Without a limit, slow clients could hold every thread. The JDK's server only takes it as a
+     * system property, read when it first starts: for the whole JVM, so it's left alone if set.
+     */
+    private static void limitRequestTime() {
         if (System.getProperty("sun.net.httpserver.maxReqTime") == null) {
             System.setProperty("sun.net.httpserver.maxReqTime", MAX_REQUEST_SECONDS);
         }

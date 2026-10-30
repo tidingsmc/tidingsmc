@@ -19,6 +19,7 @@ import dev.tidings.core.Tidings;
 import dev.tidings.core.WebPush;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.Util;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.ClickEvent;
@@ -58,6 +59,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -78,13 +80,17 @@ public final class TidingsMod {
 
     public TidingsMod(FMLJavaModLoadingContext context) {
         context.registerConfig(ModConfig.Type.COMMON, TidingsConfig.SPEC);
-        ApiServer.limitRequestTime();
         MinecraftForge.EVENT_BUS.register(this);
     }
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         MinecraftServer server = event.getServer();
+        String configProblem = TidingsConfig.problem();
+        if (configProblem != null) {
+            LOGGER.error("Tidings is disabled: {} in config/tidings-common.toml", configProblem);
+            return;
+        }
         Path dataFile = FMLPaths.GAMEDIR.get().resolve("tidings").resolve("data.json");
         Store store;
         try {
@@ -119,13 +125,8 @@ public final class TidingsMod {
 
         String relayUrl = TidingsConfig.relayUrl();
         if (!relayUrl.isEmpty()) {
-            try {
-                api = new RelayClient(new Api(tidings), store.vapidKeys(), URI.create(relayUrl));
-                LOGGER.info("Tidings API served through the relay {}", relayUrl);
-            } catch (IllegalArgumentException e) {
-                LOGGER.error("Tidings is disabled: relay-url {} is invalid", relayUrl, e);
-                this.tidings = null;
-            }
+            api = new RelayClient(new Api(tidings), store.vapidKeys(), URI.create(relayUrl));
+            LOGGER.info("Tidings API served through the relay {}", relayUrl);
             return;
         }
         String bindAddress = TidingsConfig.BIND_ADDRESS.get();
@@ -189,21 +190,35 @@ public final class TidingsMod {
 
     @SubscribeEvent
     public void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        Tidings tidings = this.tidings;
         if (tidings == null || !(event.getEntity() instanceof ServerPlayer player)) return;
-        boolean firstTime;
-        try {
-            firstTime = tidings.playerJoined(profile(player), Instant.now());
-        } catch (UncheckedIOException e) {
-            LOGGER.error("Tidings couldn't save that {} joined", player.getScoreboardName(), e);
-            firstTime = false;
-        }
-        if (firstTime) {
-            player.sendSystemMessage(
-                    Component.literal(
-                            "This server uses Tidings: get a notification on your phone when"
-                                    + " friends join."));
-            pair(player);
-        }
+        PlayerProfile profile = profile(player);
+        tidings.playerJoined(profile, Instant.now());
+        MinecraftServer server = player.server;
+        // Saving writes the data file: not on the game's thread.
+        CompletableFuture.supplyAsync(() -> tidings.rememberPlayer(profile), Util.ioPool())
+                .whenCompleteAsync(
+                        (firstTime, error) -> {
+                            if (error != null) {
+                                LOGGER.error(
+                                        "Tidings couldn't save that {} joined",
+                                        profile.name(),
+                                        error);
+                                return;
+                            }
+                            // They may have left meanwhile, or the server stopped.
+                            if (!firstTime
+                                    || this.tidings != tidings
+                                    || server.getPlayerList().getPlayer(profile.id()) != player) {
+                                return;
+                            }
+                            player.sendSystemMessage(
+                                    Component.literal(
+                                            "This server uses Tidings: get a notification on your"
+                                                    + " phone when friends join."));
+                            pair(player);
+                        },
+                        server);
     }
 
     @SubscribeEvent
@@ -290,9 +305,9 @@ public final class TidingsMod {
     }
 
     /** Their map shows the previous code, which stops working. Null if they can't pair. */
-    private String newCode(ServerPlayer player) {
+    private Pairing.Issued newCode(ServerPlayer player) {
         if (notRunning(player)) return null;
-        String code = tidings.startPairing(profile(player), Instant.now()).orElse(null);
+        Pairing.Issued code = tidings.startPairing(profile(player), Instant.now()).orElse(null);
         if (code == null) {
             player.sendSystemMessage(tooManyDevices());
             return null;
@@ -301,18 +316,18 @@ public final class TidingsMod {
     }
 
     private int pair(ServerPlayer player) {
-        String code = newCode(player);
+        Pairing.Issued code = newCode(player);
         if (code == null) return 0;
         String publicUrl = TidingsConfig.publicUrl();
         String link =
-                TidingsConfig.APP_URL.get().replaceAll("#.*$", "")
+                TidingsConfig.appUrl()
                         + "#pair="
                         + URLEncoder.encode(publicUrl, StandardCharsets.UTF_8)
                         + "&code="
-                        + code;
+                        + code.token();
 
         try {
-            if (PairingMap.give(player, link, code)) {
+            if (PairingMap.give(player, link, code.code())) {
                 player.sendSystemMessage(
                         Component.literal(
                                 "Open the Tidings app, tap \"Pair a server\" and follow the"
@@ -335,7 +350,7 @@ public final class TidingsMod {
 
     /** The server's address and a pairing code, to type in the app. */
     private int code(ServerPlayer player) {
-        String code = newCode(player);
+        Pairing.Issued code = newCode(player);
         if (code == null) return 0;
         // The app adds https:// itself.
         String address = TidingsConfig.publicUrl().replaceFirst("^https://", "");
@@ -346,7 +361,7 @@ public final class TidingsMod {
                         .append("\n  Server address: ")
                         .append(copyable(address, ChatFormatting.GREEN))
                         .append("\n  Code: ")
-                        .append(copyable(code, ChatFormatting.GOLD))
+                        .append(copyable(code.code(), ChatFormatting.GOLD))
                         .append(
                                 "\nThe code works once, for "
                                         + Pairing.CODE_LIFETIME.toMinutes()

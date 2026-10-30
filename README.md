@@ -24,7 +24,8 @@ Everything is self-hosted: there is no central Tidings service.
 - **Server owners** add the mod and either deploy their own free relay on Cloudflare (the mod connects out to it, so rented hosting works), or expose the mod's HTTP port over HTTPS themselves (Cloudflare Tunnel, Tailscale Funnel, or a reverse proxy such as Caddy).
 - **Pairing**: on first join (or `/tidings pair`), the player gets a map showing a QR code that opens the PWA with a single-use, short-lived pairing code. Without a camera, `/tidings pair code` gives the server's address and a 6-digit code to type instead. The player then approves the device in the game chat before it's paired.
 - **Notifications**: the mod sends Web Push directly with its own key (encrypted per RFC 8291, signed with VAPID): when someone joins or leaves, and when the server starts or stops, depending on each device's settings. The PWA keeps one service worker registration per paired server (scope `/s/<serverId>/`), so one app can receive pushes from many servers.
-- **Security**: every API call except pairing requires a per-device token (stored hashed on the server). Pairing codes expire, are single-use and rate-limited, and a device only pairs once its player approves it in game.
+- **Security**: every API call except pairing requires a per-device token (stored hashed on the server). Pairing codes expire, are single-use and rate-limited, and a device only pairs once its player approves it in game. The QR code carries a 128-bit token instead of the 6 digits, so it keeps working even while someone floods the server with wrong codes.
+- **Privacy**: every paired device can see who's online and the list of everyone who has played on the server since the mod was installed (names, UUIDs and skins), to pick friends from.
 
 Not supported: Aternos, which only allows mods from its own list.
 
@@ -37,7 +38,7 @@ Not supported: Aternos, which only allows mods from its own list.
 
    **Directly.** The API listens on `127.0.0.1:8765` (`port`, `bind-address`). Expose it over HTTPS and set `public-url` to that address.
 
-   Either way, set `app-url` to where the app is hosted: pairing QR codes open it. The server must also be able to make outgoing HTTPS requests, to the relay and the browsers' push services (Google, Mozilla, Apple).
+   Either way, set `app-url` to where the app is hosted: pairing QR codes open it. It's required: until it's set, Tidings logs why and stays off. The server must also be able to make outgoing HTTPS requests, to the relay and the browsers' push services (Google, Mozilla, Apple).
 3. On their first join, or with `/tidings pair`, players get a map with a QR code to scan with their phone. `/tidings pair code` gives the server's address and a 6-digit code to type in the app instead. `/tidings devices` lists their paired devices and unpairs them.
 
 The API itself is described in `app/src/lib/api.ts`.
@@ -58,7 +59,8 @@ Requirements: a JDK (17+; Gradle downloads Java 17 for Forge automatically) and 
 ```sh
 ./gradlew :core:test          # core unit tests
 ./gradlew :forge:build        # mod jar in forge/build/libs/
-./gradlew :forge:runServer    # dev Minecraft server with the mod (accept the EULA in forge/run/eula.txt)
+./gradlew :forge:runServer    # dev Minecraft server with the mod (accept the EULA in forge/run/eula.txt,
+                              # set app-url = "http://localhost:5173/" in forge/run/config/tidings-common.toml)
 
 cd app && npm install && npm run dev
 ```

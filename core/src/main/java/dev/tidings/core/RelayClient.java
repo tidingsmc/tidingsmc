@@ -19,6 +19,7 @@ import java.security.Signature;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
@@ -57,8 +58,11 @@ public final class RelayClient implements AutoCloseable {
     private final URI connectUri;
     private final String host;
     private final Clock clock;
-    private final HttpClient http =
+
+    /** Shared, like {@link WebPush}'s: Java 17 can't close an HttpClient. */
+    private static final HttpClient HTTP =
             HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+
     private final ScheduledExecutorService scheduler;
     private final ExecutorService workers;
 
@@ -85,13 +89,16 @@ public final class RelayClient implements AutoCloseable {
         this.keys = keys;
         this.clock = clock;
         String scheme =
-                switch (relayUrl.getScheme()) {
+                switch (Objects.requireNonNullElse(relayUrl.getScheme(), "")) {
                     case "https" -> "wss";
                     case "http" -> "ws";
                     default ->
                             throw new IllegalArgumentException(
                                     "The relay URL must start with https://");
                 };
+        if (relayUrl.getRawAuthority() == null) {
+            throw new IllegalArgumentException("The relay URL has no host");
+        }
         String path = relayUrl.getPath().replaceAll("/+$", "");
         connectUri = URI.create(scheme + "://" + relayUrl.getRawAuthority() + path + "/connect");
         host = relayUrl.getRawAuthority();
@@ -129,6 +136,15 @@ public final class RelayClient implements AutoCloseable {
 
     private void connect() {
         if (closed) return;
+        try {
+            startConnecting();
+        } catch (RuntimeException e) {
+            // Thrown on the scheduler, it would silently end the reconnecting for good.
+            retry(e.toString());
+        }
+    }
+
+    private void startConnecting() {
         long time = clock.instant().getEpochSecond();
         String signature;
         try {
@@ -139,7 +155,7 @@ public final class RelayClient implements AutoCloseable {
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("Every JVM has ES256", e);
         }
-        http.newWebSocketBuilder()
+        HTTP.newWebSocketBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .header("X-Tidings-Protocol", Integer.toString(PROTOCOL))
                 .header("X-Tidings-Key", keys.applicationServerKey())

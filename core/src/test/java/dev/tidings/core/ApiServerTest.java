@@ -78,7 +78,7 @@ class ApiServerTest {
     }
 
     private String pair() throws IOException, InterruptedException {
-        String token = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow());
+        String token = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow().code());
         askApproval(token);
         approve(requests.get(requests.size() - 1));
         return token;
@@ -105,7 +105,7 @@ class ApiServerTest {
 
     @Test
     void pairingAnswersWhatTheAppStores() throws IOException, InterruptedException {
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
 
         JsonObject paired =
                 json(
@@ -130,7 +130,7 @@ class ApiServerTest {
     @Test
     void noServerNameUnlessTheOwnerSetOne() throws IOException, InterruptedException {
         game.serverName = "";
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
 
         JsonObject paired = json(call("POST", "/api/pair", null, "{\"code\":\"" + code + "\"}"));
 
@@ -139,7 +139,7 @@ class ApiServerTest {
 
     @Test
     void asksThePlayerToApproveOnceTheAppAsks() throws IOException, InterruptedException {
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
 
         String token =
                 json(call(
@@ -163,7 +163,7 @@ class ApiServerTest {
 
     @Test
     void aDeviceWaitsForApproval() throws IOException, InterruptedException {
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
         String token = sendCode(code);
         askApproval(token);
 
@@ -177,7 +177,7 @@ class ApiServerTest {
 
     @Test
     void aDeniedDeviceIsUnpaired() throws IOException, InterruptedException {
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
         String token = sendCode(code);
         askApproval(token);
 
@@ -191,7 +191,7 @@ class ApiServerTest {
 
     @Test
     void theAppCanWithdrawAPairingWaitingForApproval() throws IOException, InterruptedException {
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
         String token = sendCode(code);
         askApproval(token);
 
@@ -211,7 +211,7 @@ class ApiServerTest {
 
     @Test
     void onlyItsPlayerApprovesADevice() throws IOException, InterruptedException {
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
         askApproval(sendCode(code));
 
         assertTrue(
@@ -222,7 +222,7 @@ class ApiServerTest {
 
     @Test
     void approvalExpires() throws IOException, InterruptedException {
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
         askApproval(sendCode(code));
 
         assertTrue(
@@ -241,18 +241,18 @@ class ApiServerTest {
 
     @Test
     void tellsTheAppWhereItsPairingStands() throws IOException, InterruptedException {
-        String approved = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow());
+        String approved = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow().code());
         askApproval(approved);
         assertEquals("pending", approvalOf(approved));
         approve(requests.get(0));
         assertEquals("approved", approvalOf(approved));
 
-        String denied = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow());
+        String denied = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow().code());
         askApproval(denied);
         tidings.deny(steve.id(), requests.get(1).id(), Instant.now());
         assertEquals("denied", approvalOf(denied));
 
-        String offline = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow());
+        String offline = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow().code());
         askApproval(offline);
         tidings.playerOffline(steve.id(), requests.get(2).id(), Instant.now());
         assertEquals("playerOffline", approvalOf(offline));
@@ -262,7 +262,7 @@ class ApiServerTest {
 
     @Test
     void anExpiredPairingIsForgotten() throws IOException, InterruptedException {
-        String token = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow());
+        String token = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow().code());
         askApproval(token);
 
         assertEquals(
@@ -272,7 +272,7 @@ class ApiServerTest {
 
     @Test
     void aDeniedPairingCantBeApprovedAfter() throws IOException, InterruptedException {
-        String token = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow());
+        String token = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow().code());
         askApproval(token);
         tidings.deny(steve.id(), requests.get(0).id(), Instant.now());
 
@@ -286,7 +286,7 @@ class ApiServerTest {
 
     @Test
     void thePlayerHasTheWholeApprovalTimeOnceAsked() throws IOException, InterruptedException {
-        String token = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow());
+        String token = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow().code());
         Instant later = Instant.now().plus(Tidings.APPROVAL_TIME.minusSeconds(10));
         assertTrue(tidings.askApproval(token, later));
 
@@ -297,7 +297,7 @@ class ApiServerTest {
 
     @Test
     void aDeviceBeyondTheLimitKeepsWaiting() throws IOException, InterruptedException {
-        String token = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow());
+        String token = sendCode(tidings.startPairing(steve, Instant.now()).orElseThrow().code());
         askApproval(token);
         for (int i = 0; i < Tidings.MAX_DEVICES_PER_PLAYER; i++) {
             tidings.store()
@@ -324,7 +324,7 @@ class ApiServerTest {
     @Test
     void noDeviceIsSavedIfTheAnswerCantBeMade() throws IOException, InterruptedException {
         game.serverName = null;
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
 
         HttpResponse<String> response =
                 call("POST", "/api/pair", null, "{\"code\":\"" + code + "\"}");
@@ -338,7 +338,7 @@ class ApiServerTest {
 
     @Test
     void refusesPairingBeyondTheDeviceLimit() throws IOException, InterruptedException {
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
         for (int i = 0; i < Tidings.MAX_DEVICES_PER_PLAYER; i++) {
             tidings.store()
                     .addDevice(
@@ -366,7 +366,7 @@ class ApiServerTest {
 
     @Test
     void cutsLongDeviceNamesBetweenCharacters() throws IOException, InterruptedException {
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
         String name = "a".repeat(63) + "\uD83D\uDE00" + "b";
 
         String token =
@@ -394,7 +394,7 @@ class ApiServerTest {
     @Test
     void someoneGuessingCodesDoesntBlockOthersBehindTheSameProxy()
             throws IOException, InterruptedException {
-        String code = tidings.startPairing(steve, Instant.now()).orElseThrow();
+        String code = tidings.startPairing(steve, Instant.now()).orElseThrow().code();
         String wrong = code.equals("000000") ? "000001" : "000000";
         for (int i = 0; i < Pairing.MAX_FAILURES; i++) {
             call("POST", "/api/pair", null, "{\"code\":\"" + wrong + "\"}", "198.51.100.7");

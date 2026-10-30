@@ -12,7 +12,7 @@ export type PairStep = "scan" | "code";
 
 /**
  * Hash-based routes, so the app works from any static host (GitHub Pages) without server config.
- * Pairing links from the in-game QR code look like `#pair=<server url>&code=<code>`. The mod must
+ * Pairing links from the in-game QR code look like `#pair=<server url>&code=<token>`. The mod must
  * URL-encode the server URL (Java's URLEncoder): an address containing "&" or "#" breaks the link otherwise.
  */
 export function parseRoute(hash: string): Route {
