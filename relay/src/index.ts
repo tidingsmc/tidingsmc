@@ -6,7 +6,10 @@ import { DurableObject } from "cloudflare:workers";
 
 interface Env {
   RELAY: DurableObjectNamespace<Relay>;
-  /** The only server key accepted, if set; otherwise the first server to connect claims the relay. */
+  /**
+   * The only server allowed to connect: its key, as the mod logs it. A secret, so redeploying keeps
+   * it. Until it's set, the relay refuses every server.
+   */
   OWNER_KEY?: string;
 }
 
@@ -21,6 +24,12 @@ const REQUEST_TIMEOUT_MS = 15_000;
 
 /** As in the mod. */
 const MAX_BODY_BYTES = 64 * 1024;
+
+/**
+ * Refuses a server while OWNER_KEY isn't set, so the mod can tell the owner what to set it to. Not
+ * 403: that's for another server's relay.
+ */
+const NOT_SET_UP = 428;
 
 /** WebSocket close code for a connection replaced by a newer one from the same server. */
 const REPLACED = 4000;
@@ -162,12 +171,15 @@ export class Relay extends DurableObject<Env> {
     }
     if (!valid) return new Response("Invalid signature\n", { status: 401 });
 
-    const owner =
-      this.env.OWNER_KEY || (await this.ctx.storage.get<string>("ownerKey"));
+    // Checked once the signature is: only the key's holder learns the relay isn't set up.
+    const owner = this.env.OWNER_KEY?.trim();
     if (!owner) {
-      await this.ctx.storage.put("ownerKey", key);
-      console.log(`Claimed by server key ${key}`);
-    } else if (owner !== key) {
+      return new Response(
+        "Set this relay's OWNER_KEY secret to the key the mod logs\n",
+        { status: NOT_SET_UP },
+      );
+    }
+    if (owner !== key) {
       return new Response("This relay belongs to another server\n", {
         status: 403,
       });

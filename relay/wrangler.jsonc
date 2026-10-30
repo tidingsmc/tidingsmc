@@ -7,9 +7,7 @@
     "bindings": [{ "name": "RELAY", "class_name": "Relay" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Relay"] }],
-  "vars": {
-    // The Minecraft server allowed to connect, as the mod logs it when refused. Empty: the first
-    // server to connect claims this relay.
-    "OWNER_KEY": "",
-  },
+  // OWNER_KEY, the Minecraft server allowed to connect, is a secret rather than a var: deploying
+  // resets vars to what's here, and keeps secrets. Set it with `npx wrangler secret put OWNER_KEY`
+  // or in the dashboard; for `wrangler dev`, in .dev.vars.
 }

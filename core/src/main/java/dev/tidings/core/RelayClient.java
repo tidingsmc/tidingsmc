@@ -34,8 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * that can't be reached from the internet: the mod connects out to the relay over a WebSocket, and
  * the relay passes the app's requests along it.
  *
- * <p>The relay belongs to the first server that connects to it: that server's VAPID key is the only
- * one it accepts afterwards. Every connection proves it holds that key by signing the time.
+ * <p>The relay only accepts the server whose VAPID key its owner set as OWNER_KEY. Every connection
+ * proves it holds that key by signing the time.
  */
 public final class RelayClient implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(RelayClient.class);
@@ -52,6 +52,11 @@ public final class RelayClient implements AutoCloseable {
     private static final Duration MAX_RETRY_DELAY = Duration.ofMinutes(1);
 
     private static final int WORKERS = 4;
+
+    private static final String SET_OWNER_KEY =
+            ": in the Cloudflare dashboard (Workers & Pages, your relay, Settings, Variables and"
+                    + " Secrets, a variable of type Secret), or with `npx wrangler secret put"
+                    + " OWNER_KEY` in relay/. Tidings connects within a minute once it's set";
 
     private final Api api;
     private final VapidKeys keys;
@@ -187,12 +192,16 @@ public final class RelayClient implements AutoCloseable {
         if (cause instanceof WebSocketHandshakeException handshake) {
             int status = handshake.getResponse().statusCode();
             return switch (status) {
+                case 428 ->
+                        "the relay isn't set up yet. Set its OWNER_KEY secret to "
+                                + keys.applicationServerKey()
+                                + SET_OWNER_KEY;
                 case 403 ->
                         "the relay belongs to another server. If it's yours and you moved"
-                                + " servers or lost tidings/data.json, set the relay's OWNER_KEY"
-                                + " variable to "
+                                + " servers or lost tidings/data.json, change its OWNER_KEY"
+                                + " secret to "
                                 + keys.applicationServerKey()
-                                + " in the Cloudflare dashboard";
+                                + SET_OWNER_KEY;
                 case 401 -> "the relay refused this server's signature; is the clock right?";
                 case 426 ->
                         "the relay and the mod don't speak the same version: update both, by"

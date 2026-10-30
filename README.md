@@ -34,7 +34,16 @@ Not supported: Aternos, which only allows mods from its own list.
 1. Put the mod jar in `mods/` and start the server once. It creates `config/tidings-common.toml` and keeps its data (server ID, push keys, paired devices) in `tidings/data.json`. Back that file up: losing it unpairs every device.
 2. Choose how players' phones reach the server: through a relay (easiest), or directly.
 
-   **Relay.** [Deploy your own copy of the relay to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/tidingsmc/tidingsmc/tree/main/relay) (free account, no domain needed). Then set `relay-url` to its address, such as `https://tidings-relay.<you>.workers.dev`, and restart the server. The first server that connects claims the relay: no other server can use it after that. If you move servers or lose `tidings/data.json`, the mod logs its new key; set the relay's `OWNER_KEY` variable to it in the Cloudflare dashboard. The relay sees the app's requests (device tokens, who's online) like any HTTPS proxy, but it runs on your own account.
+   **Relay.** Deploy your own copy of the relay to Cloudflare (free account, no domain needed), with Node 20+:
+
+   ```sh
+   cd relay
+   npm install
+   npx wrangler login
+   npm run deploy
+   ```
+
+   Then set `relay-url` to its address, such as `https://tidings-relay.<you>.workers.dev`, and restart the server. The relay refuses every server until you tell it which one is yours: the mod logs its key, then set the relay's `OWNER_KEY` secret to it, either in the Cloudflare dashboard (Workers & Pages → your relay → Settings → Variables and Secrets → Add, type **Secret**) or with `npx wrangler secret put OWNER_KEY` in `relay/`. The mod connects by itself within a minute. Redeploying the relay keeps the secret. If you move servers, take `tidings/data.json` along; if you lose it, set `OWNER_KEY` to the new key the mod logs. The relay sees the app's requests (device tokens, who's online) like any HTTPS proxy, but it runs on your own account.
 
    **Directly.** The API listens on `127.0.0.1:8765` (`port`, `bind-address`). Expose it over HTTPS and set `public-url` to that address.
 
