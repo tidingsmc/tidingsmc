@@ -40,8 +40,16 @@ export function useServers() {
     (id: string) => setServers((list) => list.filter((s) => s.id !== id)),
     [],
   );
+  /** Removes `server` only if it's still this pairing, not a newer one with the same server. */
+  const removePairing = useCallback(
+    (server: PairedServer) =>
+      setServers((list) =>
+        list.filter((s) => s.id !== server.id || s.token !== server.token),
+      ),
+    [],
+  );
 
-  return { servers, upsert, remove };
+  return { servers, upsert, remove, removePairing };
 }
 
 /** Keyed by pairing rather than server, so pairing with a server again starts afresh. */

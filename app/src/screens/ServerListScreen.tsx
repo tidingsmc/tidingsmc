@@ -1,4 +1,4 @@
-import { Plus } from "pixelarticons/react";
+import { Plus, Unlink } from "pixelarticons/react";
 import { useTranslation } from "react-i18next";
 import {
   NotificationsOff,
@@ -12,7 +12,17 @@ import { paths } from "../lib/router";
 import { useInfo } from "../lib/useInfo";
 import { useOnline } from "../lib/useOnline";
 
-export function ServerListScreen({ servers }: { servers: PairedServer[] }) {
+interface Props {
+  servers: PairedServer[];
+  unpaired: PairedServer[];
+  onDismissUnpaired: (server: PairedServer) => void;
+}
+
+export function ServerListScreen({
+  servers,
+  unpaired,
+  onDismissUnpaired,
+}: Props) {
   const { t } = useTranslation();
   return (
     <Screen
@@ -20,6 +30,13 @@ export function ServerListScreen({ servers }: { servers: PairedServer[] }) {
       logo
       action={<SettingsLink href={paths.appSettings} />}
     >
+      {unpaired.map((server) => (
+        <UnpairedNotice
+          key={`${server.id}:${server.pairedAt}`}
+          server={server}
+          onDismiss={() => onDismissUnpaired(server)}
+        />
+      ))}
       {servers.length === 0 ? (
         <div className="empty">
           <p className="empty-title">{t("serverList.empty")}</p>
@@ -59,5 +76,35 @@ function ServerCard({ server }: { server: PairedServer }) {
         </div>
       </div>
     </a>
+  );
+}
+
+function UnpairedNotice({
+  server,
+  onDismiss,
+}: {
+  server: PairedServer;
+  onDismiss: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="notice warn" role="status">
+      <div className="notice-row">
+        <span className="notice-icon" aria-hidden>
+          <Unlink />
+        </span>
+        <div className="notice-main">
+          <p className="notice-title">
+            {t("serverList.unpairedTitle", { server: server.name })}
+          </p>
+          <p className="muted small">{t("serverList.unpaired")}</p>
+        </div>
+      </div>
+      <div className="notice-actions">
+        <button className="button" onClick={onDismiss}>
+          {t("common.ok")}
+        </button>
+      </div>
+    </div>
   );
 }

@@ -33,12 +33,18 @@ export interface OnlinePlayer {
   skinUrl?: string;
 }
 
-// The HTTP contract the mod implements.
+// The HTTP contract the mod implements. Errors answer `{ error, reason? }`: `error` is shown as is,
+// `reason: "unpaired"` (with 401) means the mod doesn't know this device's token anymore, and
+// `reason: "pending"` (with 403) that the player hasn't approved this device in game yet.
 
-/** POST {url}/api/pair  body: { code, deviceName } */
+/**
+ * POST {url}/api/pair  body: { code, deviceName }
+ * The token works once the player approves the device in game, see `TidingsApi.approval`.
+ */
 export interface PairResponse {
   serverId: string;
-  serverName: string;
+  /** The name the server's owner chose for it, if any: suggested when naming the server. */
+  serverName?: string;
   token: string;
   vapidPublicKey: string;
   /** Who got the pairing code. */
@@ -126,8 +132,25 @@ export interface QuietPeriod {
   end: string;
 }
 
+/**
+ * Where a new pairing stands: the player approves it in game, or denies it, or lets it expire, or
+ * isn't in game to be asked.
+ */
+export type Approval =
+  "approved" | "pending" | "denied" | "expired" | "playerOffline";
+
 export interface TidingsApi {
   pair(url: string, code: string, deviceName: string): Promise<PairResponse>;
+  /**
+   * GET {url}/api/devices/me/approval  with the token from pairing: `{ approval }`. Answers 401
+   * "unpaired" once the server forgot the request (it restarted, or the request ended long ago).
+   */
+  approval(server: PairedServer): Promise<Approval>;
+  /**
+   * POST {url}/api/devices/me/approval  with the token from pairing, once the player named the server.
+   * The mod asks them in game to approve this device; `approval` then tells when they did.
+   */
+  askApproval(server: PairedServer): Promise<void>;
   info(server: PairedServer): Promise<ServerInfo>;
   online(server: PairedServer): Promise<OnlineResponse>;
   players(server: PairedServer): Promise<PlayersResponse>;
@@ -148,7 +171,7 @@ export interface TidingsApi {
     subscription: PushSubscriptionJSON,
   ): Promise<void>;
   /**
-   * DELETE {url}/api/devices/me  (authenticated)
+   * DELETE {url}/api/devices/me  (authenticated, or a pairing waiting for approval: withdraws it)
    * The app also drops its push subscription, even if this call fails; the mod must then forget
    * the device once its push service answers 404 or 410.
    */
@@ -157,17 +180,27 @@ export interface TidingsApi {
 
 export class ApiError extends TranslatedError {
   readonly status?: number;
+  /** The mod's machine-readable reason, e.g. "unpaired". */
+  readonly reason?: string;
 
-  constructor(text: (t: TFunction) => string, status?: number) {
+  constructor(
+    text: (t: TFunction) => string,
+    status?: number,
+    reason?: string,
+  ) {
     super(text);
     this.status = status;
+    this.reason = reason;
   }
 }
 
 /** Turns what the player typed ("mc.example.com") into the URL we call. */
 export function normalizeServerUrl(input: string): string {
   let s = input.trim();
-  if (!/^https?:\/\//i.test(s)) s = `https://${s}`;
+  if (!/^https?:\/\//i.test(s)) {
+    // A server on this machine (testing) has no HTTPS.
+    s = /^localhost(:|\/|$)/i.test(s) ? `http://${s}` : `https://${s}`;
+  }
   let url: URL;
   try {
     url = new URL(s);
@@ -189,12 +222,13 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
   }
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    const reason = body?.error;
+    const message = body?.error;
     throw new ApiError(
-      typeof reason === "string"
-        ? () => reason
+      typeof message === "string"
+        ? () => message
         : (t) => t("errors.serverAnswered", { status: res.status }),
       res.status,
+      typeof body?.reason === "string" ? body.reason : undefined,
     );
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
@@ -204,6 +238,45 @@ const auth = (server: PairedServer) => ({
   authorization: `Bearer ${server.token}`,
 });
 
+const unpairedListeners = new Set<(server: PairedServer) => void>();
+/** Tokens of pairings this device left itself: their 401s are expected. */
+const leftTokens = new Set<string>();
+
+/**
+ * Calls `listener` when a server says it doesn't know this device anymore: unpaired in game, or
+ * the server lost its data. Not for leaving a server from the app. Returns the unsubscribe function.
+ */
+export function onUnpaired(listener: (server: PairedServer) => void) {
+  unpairedListeners.add(listener);
+  return () => {
+    unpairedListeners.delete(listener);
+  };
+}
+
+async function authed<T>(
+  server: PairedServer,
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  try {
+    return await request<T>(`${server.url}${path}`, {
+      ...init,
+      headers: { ...init.headers, ...auth(server) },
+    });
+  } catch (err) {
+    // Only the mod says "unpaired": a 401 from a proxy in front of it doesn't mean the pairing is gone.
+    if (
+      err instanceof ApiError &&
+      err.status === 401 &&
+      err.reason === "unpaired" &&
+      !leftTokens.has(server.token)
+    ) {
+      unpairedListeners.forEach((listener) => listener(server));
+    }
+    throw err;
+  }
+}
+
 const httpApi: TidingsApi = {
   pair: (url, code, deviceName) =>
     request(`${url}/api/pair`, {
@@ -211,31 +284,57 @@ const httpApi: TidingsApi = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ code, deviceName }),
     }),
-  info: (server) =>
-    request(`${server.url}/api/info`, { headers: auth(server) }),
-  online: (server) =>
-    request(`${server.url}/api/online`, { headers: auth(server) }),
-  players: (server) =>
-    request(`${server.url}/api/players`, { headers: auth(server) }),
-  settings: (server) =>
-    request(`${server.url}/api/devices/me/settings`, { headers: auth(server) }),
+  // Not through authed(): a denied pairing isn't one the player had, to tell them it's gone.
+  async approval(server) {
+    try {
+      const { approval } = await request<{ approval: Approval }>(
+        `${server.url}/api/devices/me/approval`,
+        { headers: auth(server) },
+      );
+      return approval;
+    } catch (err) {
+      if (
+        err instanceof ApiError &&
+        err.status === 401 &&
+        err.reason === "unpaired"
+      )
+        return "expired";
+      throw err;
+    }
+  },
+  // Not through authed(): a pairing that expired meanwhile isn't one the player had, to tell them it's gone.
+  askApproval: (server) =>
+    request(`${server.url}/api/devices/me/approval`, {
+      method: "POST",
+      headers: auth(server),
+    }),
+  info: (server) => authed(server, "/api/info"),
+  online: (server) => authed(server, "/api/online"),
+  players: (server) => authed(server, "/api/players"),
+  settings: (server) => authed(server, "/api/devices/me/settings"),
   updateSettings: (server, changes) =>
-    request(`${server.url}/api/devices/me/settings`, {
+    authed(server, "/api/devices/me/settings", {
       method: "PATCH",
-      headers: { ...auth(server), "content-type": "application/json" },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify(changes),
     }),
   updatePush: (server, subscription) =>
-    request(`${server.url}/api/devices/me/push`, {
+    authed(server, "/api/devices/me/push", {
       method: "PUT",
-      headers: { ...auth(server), "content-type": "application/json" },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify(subscription),
     }),
-  unpair: (server) =>
-    request(`${server.url}/api/devices/me`, {
+  // Not through authed(): leaving a server the mod already forgot isn't news to the player.
+  unpair: (server) => {
+    // Requests still on their way would get a 401 too.
+    leftTokens.add(server.token);
+    return request(`${server.url}/api/devices/me`, {
       method: "DELETE",
       headers: auth(server),
-    }),
+      // Also sent while the page is closing: a pairing left unfinished gets cancelled that way.
+      keepalive: true,
+    });
+  },
 };
 
 // Demo mode: fake servers and players, so the app can be developed without a running mod.
@@ -293,6 +392,14 @@ const mockApi: TidingsApi = {
       // In game, whoever ran /tidings pair; here the code picks a player.
       player: mockPlayer(MOCK_PLAYERS[Number(code) % MOCK_PLAYERS.length]),
     };
+  },
+  async approval() {
+    // As if the player clicked [Approve] in game.
+    await delay(2000);
+    return "approved";
+  },
+  async askApproval() {
+    await delay(200);
   },
   async info(server) {
     await delay(200 + (hashString(server.id) % 300));

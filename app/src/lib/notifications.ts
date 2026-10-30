@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, type OnlinePlayer, type PairedServer } from "./api";
+import { api, type PairedServer } from "./api";
 import { TranslatedError } from "./i18n";
-import type { PushMessage } from "./push";
 import { navigate } from "./router";
 import { sentToServers } from "./storage";
 
@@ -206,28 +205,6 @@ export function useNotificationsSnooze() {
 export function listenForNotificationClicks() {
   navigator.serviceWorker?.addEventListener("message", (event) => {
     if (event.data?.type === "open") navigate(event.data.path);
-  });
-}
-
-/** Shows a "player joined" notification through the server's service worker, as a real push would. */
-export async function sendTestNotification(
-  server: PairedServer,
-  player?: OnlinePlayer,
-) {
-  if (!pushSupported()) throw new TranslatedError((t) => t("push.unsupported"));
-  if (!(await askPermission()))
-    throw new TranslatedError((t) => t("push.blocked"));
-  const message: PushMessage = {
-    kind: "player_joined",
-    player: player && {
-      uuid: player.uuid,
-      name: player.name,
-      skinUrl: player.skinUrl,
-    },
-  };
-  (await register(server.id)).active?.postMessage({
-    type: "test-push",
-    message,
   });
 }
 

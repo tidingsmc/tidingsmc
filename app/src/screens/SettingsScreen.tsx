@@ -1,16 +1,21 @@
 import { Fragment, useMemo, useState } from "react";
 import { Plus, Trash } from "pixelarticons/react";
 import { useTranslation } from "react-i18next";
-import { LinkedAs, NotificationsOff, Screen, Toggle } from "../components";
+import {
+  ConfirmDialog,
+  LinkedAs,
+  NotificationsOff,
+  Screen,
+  Toggle,
+} from "../components";
 import {
   api,
-  usingMockApi,
   type PairedServer,
   type QuietHours,
   type QuietPeriod,
 } from "../lib/api";
 import { errorText } from "../lib/i18n";
-import { sendTestNotification, unregister } from "../lib/notifications";
+import { unregister } from "../lib/notifications";
 import { paths } from "../lib/router";
 import { useInfo } from "../lib/useInfo";
 import { useSettings } from "../lib/useSettings";
@@ -28,20 +33,8 @@ export function SettingsScreen({
   const { settings, error, update } = useSettings(server);
   const info = useInfo(server);
   const [leaving, setLeaving] = useState(false);
-  const [testError, setTestError] = useState<Error | null>(null);
-  // The quiet period whose last change was refused.
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
   const [invalidPeriod, setInvalidPeriod] = useState<number | null>(null);
-
-  // Demo mode only for now: real pushes need the mod.
-  async function testNotification() {
-    setTestError(null);
-    try {
-      const { players } = await api.online(server);
-      await sendTestNotification(server, players[0]);
-    } catch (err) {
-      setTestError(err as Error);
-    }
-  }
 
   function updateQuietHours(changes: Partial<QuietHours>) {
     if (!settings) return;
@@ -53,7 +46,6 @@ export function SettingsScreen({
     updateQuietHours({ periods: change(settings.quietHours.periods) });
   }
 
-  /** Refuses a period that starts when it ends (the server would too); the input then goes back. */
   function updatePeriod(i: number, changes: Partial<QuietPeriod>) {
     if (!settings) return;
     const period = { ...settings.quietHours.periods[i], ...changes };
@@ -66,11 +58,9 @@ export function SettingsScreen({
   }
 
   async function leave() {
-    if (!confirm(t("settings.leaveConfirm", { server: server.name }))) return;
+    setConfirmingLeave(false);
     setLeaving(true);
-    // Best effort: forget the server locally even if it can't be reached.
     await api.unpair(server).catch(() => {});
-    // Even if the server wasn't told, so its pushes stop arriving.
     await unregister(server.id).catch(() => {});
     onLeft();
   }
@@ -113,14 +103,6 @@ export function SettingsScreen({
           </div>
         )}
         {error && <p className="error">{errorText(error, t)}</p>}
-        {usingMockApi && (
-          <>
-            <button className="button" onClick={testNotification}>
-              {t("settings.test")}
-            </button>
-            {testError && <p className="error">{errorText(testError, t)}</p>}
-          </>
-        )}
       </section>
 
       {settings && (
@@ -220,11 +202,24 @@ export function SettingsScreen({
         </p>
       </section>
 
-      <button className="button danger" onClick={leave} disabled={leaving}>
+      <button
+        className="button danger"
+        onClick={() => setConfirmingLeave(true)}
+        disabled={leaving}
+      >
         {leaving
           ? t("settings.leaving")
           : t("settings.leave", { server: server.name })}
       </button>
+      <ConfirmDialog
+        open={confirmingLeave}
+        title={t("settings.leaveConfirmTitle", { server: server.name })}
+        message={t("settings.leaveConfirm")}
+        confirmLabel={t("settings.leaveConfirmButton")}
+        danger
+        onConfirm={leave}
+        onCancel={() => setConfirmingLeave(false)}
+      />
     </Screen>
   );
 }

@@ -5,7 +5,9 @@
     "checking": "Vérification…",
     "loading": "Chargement…",
     "linkedAs": "en tant que {{name}}",
-    "labelValue": "{{label}}\u00a0: {{value}}"
+    "labelValue": "{{label}}\u00a0: {{value}}",
+    "ok": "OK",
+    "cancel": "Annuler"
   },
   "errors": {
     "invalidAddress": "Cette adresse de serveur n'est pas valide",
@@ -19,7 +21,8 @@
     "iPhone": "iPhone",
     "iPad": "iPad",
     "android": "Téléphone Android",
-    "browser": "Navigateur"
+    "browser": "Navigateur",
+    "browserOn": "{{browser}} sur {{os}}"
   },
   "push": {
     "title": "Notifications désactivées",
@@ -55,8 +58,10 @@
   },
   "serverList": {
     "empty": "Aucun serveur",
-    "emptyHelp": "Rejoignez un serveur Minecraft qui a Tidings et scannez le QR code de la carte que vous recevez, ou associez-le avec un code.",
-    "pair": "Associer un serveur"
+    "emptyHelp": "Rejoignez un serveur Minecraft équipé de Tidings et associez-le\u00a0!",
+    "pair": "Associer un serveur",
+    "unpairedTitle": "{{server}} a été retiré",
+    "unpaired": "Cet appareil n'y est plus associé. Associez-le de nouveau pour recevoir ses notifications."
   },
   "server": {
     "notFound": "Introuvable",
@@ -72,19 +77,32 @@
     "onlyOnce": "Un appareil ne peut être associé qu'une fois à chaque serveur. Pour l'associer en tant que quelqu'un d'autre, quittez d'abord {{server}} dans ses réglages, puis associez-le à nouveau.",
     "openSettings": "Ouvrir les réglages de {{server}}",
     "confirm": "Associer cet appareil à <strong>{{host}}</strong>\u00a0?",
-    "howTo": "Connectez-vous à un serveur qui utilise Tidings, puis tapez <code>/tidings pair</code> pour obtenir un code.",
+    "howTo": "Connectez-vous à un serveur qui utilise Tidings, puis tapez <code>/tidings pair</code>.",
     "address": "Adresse du serveur",
     "code": "Code d'association",
     "serverName": "Nom du serveur",
+    "pairingWith": "Association avec <strong>{{host}}</strong>",
+    "next": "Continuer",
+    "missingName": "Donnez un nom à ce serveur",
+    "missingAddress": "Saisissez l'adresse du serveur",
+    "missingCode": "Saisissez le code à 6\u00a0chiffres",
     "submit": "Associer",
     "submitting": "Association…",
-    "scan": "Scanner le QR code",
+    "scan": "Scanner un QR code",
     "scanHelp": "Visez la carte obtenue avec /tidings pair",
     "stopScan": "Annuler",
-    "or": "ou utilisez un code d'association",
+    "or": "ou",
+    "useCode": "Utiliser un code",
+    "codeHowTo": "Dans le jeu, tapez <code>/tidings pair code</code> pour voir l'adresse du serveur et un code.",
     "notPairingQr": "Ce QR code n'est pas un code d'association Tidings.",
     "cameraDenied": "L'accès à la caméra a été refusé. Autorisez-le dans les réglages du navigateur, ou utilisez un code d'association.",
-    "cameraError": "Impossible de démarrer la caméra. Utilisez plutôt un code d'association."
+    "cameraError": "Impossible de démarrer la caméra. Utilisez plutôt un code d'association.",
+    "approveInGame": "Approuvez cet appareil dans le jeu pour l'associer à <strong>{{server}}</strong>\u00a0:",
+    "approveHelp": "Cliquez sur <code>[Approve]</code> dans le chat. Vous devez être connecté au serveur.",
+    "waitingForApproval": "En attente d'approbation…",
+    "denied": "L'association a été refusée dans le jeu. Tapez /tidings pair pour obtenir un nouveau code.",
+    "expired": "La demande d'association a expiré. Tapez /tidings pair dans le jeu pour obtenir un nouveau code.",
+    "playerOffline": "{{player}} n'est pas connecté au serveur, personne n'a donc pu approuver cet appareil. Rejoignez le serveur, tapez /tidings pair et réessayez."
   },
   "settings": {
     "notifications": "Notifications",
@@ -94,7 +112,6 @@
     "serverStatus": "Quand le serveur démarre ou s'arrête",
     "quietWhileOnline": "Pas pendant que je joue",
     "quietWhileOnlineHelp": "Rien pendant que vous êtes vous-même sur ce serveur",
-    "test": "Envoyer une notification de test",
     "quietHours": "Heures de silence",
     "quietHoursHelp": "Aucune notification pendant ces heures, tous les jours",
     "from": "De",
@@ -108,7 +125,9 @@
     "pairedOn": "Associé le {{date, datetime}}",
     "leave": "Quitter {{server}}",
     "leaving": "Départ…",
-    "leaveConfirm": "Quitter {{server}}\u00a0? Vous ne recevrez plus ses notifications et il sera retiré de l'application."
+    "leaveConfirmTitle": "Quitter {{server}}\u00a0?",
+    "leaveConfirm": "Vous ne recevrez plus ses notifications et il sera retiré de l'application.",
+    "leaveConfirmButton": "Quitter"
   },
   "friends": {
     "title": "Amis",

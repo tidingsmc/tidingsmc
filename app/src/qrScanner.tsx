@@ -1,30 +1,38 @@
-import { QrCode } from "pixelarticons/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
+export type CameraProblem = "cameraDenied" | "cameraError";
+
 interface Props {
-  /** Called with the text of the first QR code seen; scanning stops there. */
+  open: boolean;
   onScan: (text: string) => void;
-  /** Shown under the zone, e.g. when the scanned code isn't a pairing link. */
-  error?: string;
+  onCameraProblem: (problem: CameraProblem) => void;
+  onClose: () => void;
 }
 
-/**
- * A zone that turns into a camera view once tapped. The camera is only asked for on tap, so
- * opening the screen doesn't pop up a permission prompt for people who pair with a code.
- */
-export function QrScanner({ onScan, error }: Props) {
+export function QrScanDialog({
+  open,
+  onScan,
+  onCameraProblem,
+  onClose,
+}: Props) {
   const { t } = useTranslation();
-  const [scanning, setScanning] = useState(false);
-  const [cameraError, setCameraError] = useState<
-    "cameraDenied" | "cameraError" | null
-  >(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const onScanRef = useRef(onScan);
-  onScanRef.current = onScan;
+  const callbacks = useRef({ onScan, onCameraProblem });
+  useEffect(() => {
+    callbacks.current = { onScan, onCameraProblem };
+  });
 
   useEffect(() => {
-    if (!scanning) return;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     let stream: MediaStream | undefined;
     let frame = 0;
     let stopped = false;
@@ -44,15 +52,14 @@ export function QrScanner({ onScan, error }: Props) {
         const image = context.getImageData(0, 0, canvas.width, canvas.height);
         const code = decode(image.data, image.width, image.height);
         if (code?.data) {
-          setScanning(false);
-          onScanRef.current(code.data);
+          stopped = true;
+          callbacks.current.onScan(code.data);
           return;
         }
       }
       frame = requestAnimationFrame(tick);
     }
 
-    // The decoder is only downloaded by those who scan.
     Promise.all([
       navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
@@ -71,12 +78,11 @@ export function QrScanner({ onScan, error }: Props) {
       })
       .catch((err: unknown) => {
         if (stopped) return;
-        setCameraError(
+        callbacks.current.onCameraProblem(
           err instanceof DOMException && err.name === "NotAllowedError"
             ? "cameraDenied"
             : "cameraError",
         );
-        setScanning(false);
       });
 
     return () => {
@@ -84,38 +90,26 @@ export function QrScanner({ onScan, error }: Props) {
       cancelAnimationFrame(frame);
       stream?.getTracks().forEach((track) => track.stop());
     };
-  }, [scanning]);
-
-  const message = cameraError ? t(`pair.${cameraError}`) : error;
+  }, [open]);
 
   return (
-    <div className="qr-scanner">
-      {scanning ? (
-        <div className="qr-zone">
-          <video ref={videoRef} muted playsInline />
-          <button
-            type="button"
-            className="button"
-            onClick={() => setScanning(false)}
-          >
-            {t("pair.stopScan")}
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="qr-zone"
-          onClick={() => {
-            setCameraError(null);
-            setScanning(true);
-          }}
-        >
-          <QrCode width={48} height={48} aria-hidden />
-          <strong>{t("pair.scan")}</strong>
-          <span className="muted small">{t("pair.scanHelp")}</span>
+    <dialog
+      ref={dialogRef}
+      className="scan-dialog"
+      aria-label={t("pair.scan")}
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      {open && <video ref={videoRef} muted playsInline />}
+      <div className="scan-overlay">
+        <p className="scan-help">{t("pair.scanHelp")}</p>
+        <div className="viewfinder" aria-hidden />
+        <button type="button" className="button" onClick={onClose}>
+          {t("pair.stopScan")}
         </button>
-      )}
-      {message && <p className="error">{message}</p>}
-    </div>
+      </div>
+    </dialog>
   );
 }

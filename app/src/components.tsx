@@ -29,9 +29,7 @@ import { hashString, safeSkinUrl } from "./lib/util";
 interface ScreenProps {
   title: string;
   back?: string;
-  /** Shown at the right of the top bar. */
   action?: ReactNode;
-  /** Shows the app's icon before the title, for the home screen. */
   logo?: boolean;
   children: ReactNode;
 }
@@ -100,22 +98,16 @@ export function Toggle({
 interface DropdownOption<T extends string> {
   value: T;
   label: string;
-  /** The option's own language, if it's written in one (a language's name). */
   lang?: string;
 }
 
 interface DropdownProps<T extends string> {
-  /** What is being picked, for screen readers. */
   label: string;
   value: T;
   options: DropdownOption<T>[];
   onChange: (value: T) => void;
 }
 
-/**
- * A button that opens a list to pick one option from, drawn by the app rather than the phone's own picker.
- * Works like a native select from the keyboard: arrows to move, Enter to pick, Escape to close.
- */
 export function Dropdown<T extends string>({
   label,
   value,
@@ -137,7 +129,6 @@ export function Dropdown<T extends string>({
   useEffect(() => {
     if (!open) return;
     list.current?.focus();
-    // A tap anywhere else closes it, like a native picker.
     const onPointerDown = (e: PointerEvent) => {
       if (!root.current?.contains(e.target as Node)) setOpen(false);
     };
@@ -211,7 +202,6 @@ export function Dropdown<T extends string>({
           }
         }}
       >
-        {/* All stacked, only the current one shown: the button keeps the widest one's width as it changes. */}
         <span className="dropdown-values">
           {options.map((option, i) => (
             <span key={option.value} lang={option.lang} hidden={i !== selected}>
@@ -259,7 +249,6 @@ export function Dropdown<T extends string>({
   );
 }
 
-/** The player's face from their skin, or a colored letter until it loads or if there's no skin. */
 export function Avatar({
   name,
   skinUrl,
@@ -310,10 +299,6 @@ export function Avatar({
   );
 }
 
-/**
- * The server's icon, or its first letter if it has none.
- * Only inline PNGs are accepted, so a server can't make the app load URLs.
- */
 export function ServerIcon({
   name,
   icon,
@@ -342,7 +327,6 @@ export function ServerIcon({
   );
 }
 
-// Minecraft's chat colors.
 const MC_COLORS: Record<string, string> = {
   black: "#000000",
   dark_blue: "#0000AA",
@@ -368,7 +352,6 @@ function mcColor(color?: string): string | undefined {
   return MC_COLORS[color];
 }
 
-/** The server description, drawn like Minecraft's server list: colored text on a dark background. */
 export function Motd({ segments }: { segments: MotdSegment[] }) {
   return (
     <p className="motd">
@@ -392,7 +375,6 @@ export function Motd({ segments }: { segments: MotdSegment[] }) {
   );
 }
 
-/** Which Minecraft account this device is paired as: a small face and "as <name>". */
 export function LinkedAs({ player }: { player: LinkedPlayer }) {
   const { t } = useTranslation();
   return (
@@ -403,7 +385,6 @@ export function LinkedAs({ player }: { player: LinkedPlayer }) {
   );
 }
 
-/** Compact status for a server card, under its name: a dot and the player count. */
 export function OnlineSummary({ state }: { state: OnlineState }) {
   const { t } = useTranslation();
   if (state.status === "loading") {
@@ -435,11 +416,6 @@ export function OnlineSummary({ state }: { state: OnlineState }) {
   );
 }
 
-/**
- * Says when this device doesn't get some of the servers' notifications, with a button to turn them on if
- * it can. Permission is the whole app's, so one banner covers every server. `servers` must keep its identity.
- * A snoozable banner can be put off for a few days with "Not now".
- */
 export function NotificationsOff({
   servers,
   snoozable,
@@ -451,25 +427,21 @@ export function NotificationsOff({
   const { states, refresh } = usePushStates(servers);
   const { snoozed, snooze } = useNotificationsSnooze();
   const [busy, setBusy] = useState(false);
-  // Each with the server it's for, unless it's the same for all.
   const [errors, setErrors] = useState<
     { server?: PairedServer; error: Error }[]
   >([]);
 
   if (!states || (snoozable && snoozed)) return null;
-  // A server just added has no state until it's been checked: not counted as off meanwhile.
   const off = servers.filter((server) => {
     const state = states.get(server.id);
     return state !== undefined && state !== "on";
   });
   if (off.length === 0) return null;
-  // Unsupported and blocked are the browser's, so the same for every server.
   const state = states.get(off[0].id);
 
   async function turnOn() {
     setBusy(true);
     setErrors([]);
-    // All started within the tap, so the permission prompt is allowed; it's only shown once.
     const results = await Promise.allSettled(off.map(enableNotifications));
     const failures = off.flatMap((server, i) => {
       const result = results[i];
@@ -478,10 +450,8 @@ export function NotificationsOff({
         : [];
     });
     if (Notification.permission === "denied") {
-      // The banner then says notifications are blocked.
       setErrors([]);
     } else if (Notification.permission !== "granted") {
-      // The prompt was dismissed: the same error for every server.
       setErrors(failures.slice(0, 1).map(({ error }) => ({ error })));
     } else {
       setErrors(failures);
@@ -538,5 +508,66 @@ export function NotificationsOff({
         </div>
       )}
     </div>
+  );
+}
+
+export function ConfirmDialog({
+  open,
+  title,
+  message,
+  confirmLabel,
+  danger,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  danger?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  return (
+    <dialog
+      ref={ref}
+      className="dialog"
+      aria-labelledby={titleId}
+      onCancel={(e) => {
+        e.preventDefault();
+        onCancel();
+      }}
+      onClick={(e) => e.target === e.currentTarget && onCancel()}
+    >
+      <div className="dialog-body">
+        <h2 id={titleId} className="dialog-title">
+          {title}
+        </h2>
+        <p className="muted">{message}</p>
+        <div className="dialog-actions">
+          <button type="button" className="button" onClick={onCancel} autoFocus>
+            {t("common.cancel")}
+          </button>
+          <button
+            type="button"
+            className={danger ? "button danger filled" : "button primary"}
+            onClick={onConfirm}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </dialog>
   );
 }

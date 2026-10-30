@@ -5,7 +5,10 @@ export type Route =
   | { name: "appSettings" }
   | { name: "server"; id: string }
   | { name: "settings"; id: string }
-  | { name: "pair"; url?: string; code?: string };
+  | { name: "pair"; step?: PairStep; url?: string; code?: string };
+
+/** The pairing wizard's steps that have their own route, so the back gesture goes between them. */
+export type PairStep = "scan" | "code";
 
 /**
  * Hash-based routes, so the app works from any static host (GitHub Pages) without server config.
@@ -23,7 +26,10 @@ export function parseRoute(hash: string): Route {
     };
   }
   const [, first, second, third] = h.split("/");
-  if (first === "pair") return { name: "pair" };
+  if (first === "pair")
+    return second === "scan" || second === "code"
+      ? { name: "pair", step: second }
+      : { name: "pair" };
   if (first === "settings") return { name: "appSettings" };
   if (first === "server" && second && third === "settings")
     return { name: "settings", id: decodeURIComponent(second) };
@@ -35,6 +41,7 @@ export function parseRoute(hash: string): Route {
 export const paths = {
   servers: "#/",
   pair: "#/pair",
+  pairStep: (step: PairStep) => `#/pair/${step}`,
   appSettings: "#/settings",
   server: (id: string) => `#/server/${encodeURIComponent(id)}`,
   settings: (id: string) => `#/server/${encodeURIComponent(id)}/settings`,

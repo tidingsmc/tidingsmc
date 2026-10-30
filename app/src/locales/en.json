@@ -5,7 +5,9 @@
     "checking": "Checking…",
     "loading": "Loading…",
     "linkedAs": "as {{name}}",
-    "labelValue": "{{label}}: {{value}}"
+    "labelValue": "{{label}}: {{value}}",
+    "ok": "OK",
+    "cancel": "Cancel"
   },
   "errors": {
     "invalidAddress": "Not a valid server address",
@@ -19,7 +21,8 @@
     "iPhone": "iPhone",
     "iPad": "iPad",
     "android": "Android phone",
-    "browser": "Browser"
+    "browser": "Browser",
+    "browserOn": "{{browser}} on {{os}}"
   },
   "push": {
     "title": "Notifications are off",
@@ -55,8 +58,10 @@
   },
   "serverList": {
     "empty": "No servers yet",
-    "emptyHelp": "Join a Minecraft server that has Tidings and scan the QR code on the map you get, or pair with a code.",
-    "pair": "Pair a server"
+    "emptyHelp": "Join a Minecraft server with Tidings and pair it!",
+    "pair": "Pair a server",
+    "unpairedTitle": "{{server}} was removed",
+    "unpaired": "This device is no longer paired with it. Pair it again to get its notifications."
   },
   "server": {
     "notFound": "Not found",
@@ -72,19 +77,32 @@
     "onlyOnce": "A device can only be paired once with each server. To pair it as someone else, leave {{server}} in its settings first, then pair again.",
     "openSettings": "Open {{server}}'s settings",
     "confirm": "Pair this device with <strong>{{host}}</strong>?",
-    "howTo": "Connect to a server using Tidings, and run <code>/tidings pair</code> to get a code.",
+    "howTo": "Join a server using Tidings and run <code>/tidings pair</code>.",
     "address": "Server address",
     "code": "Pairing code",
     "serverName": "Server name",
+    "pairingWith": "Pairing with <strong>{{host}}</strong>",
+    "next": "Continue",
+    "missingName": "Give this server a name",
+    "missingAddress": "Enter the server's address",
+    "missingCode": "Enter the 6-digit code",
     "submit": "Pair",
     "submitting": "Pairing…",
-    "scan": "Scan the QR code",
+    "scan": "Scan a QR code",
     "scanHelp": "Point the camera at the map you got with /tidings pair",
     "stopScan": "Cancel",
-    "or": "or use a pairing code",
+    "or": "or",
+    "useCode": "Use a code",
+    "codeHowTo": "In game, run <code>/tidings pair code</code> to see the server's address and a code.",
     "notPairingQr": "This QR code isn't a Tidings pairing code.",
     "cameraDenied": "Camera access was denied. Allow it in your browser settings, or use a pairing code.",
-    "cameraError": "Couldn't start the camera. Use a pairing code instead."
+    "cameraError": "Couldn't start the camera. Use a pairing code instead.",
+    "approveInGame": "Approve this device in game to pair it with <strong>{{server}}</strong>:",
+    "approveHelp": "Click <code>[Approve]</code> in the chat. You need to be connected to the server.",
+    "waitingForApproval": "Waiting for approval…",
+    "denied": "The pairing was denied in game. Run /tidings pair to get a new code.",
+    "expired": "The pairing request expired. Run /tidings pair in game to get a new code.",
+    "playerOffline": "{{player}} isn't connected to the server, so no one could approve this device. Join the server, run /tidings pair and try again."
   },
   "settings": {
     "notifications": "Notifications",
@@ -94,7 +112,6 @@
     "serverStatus": "When the server starts or stops",
     "quietWhileOnline": "Not while I'm playing",
     "quietWhileOnlineHelp": "Stay quiet while you're on this server yourself",
-    "test": "Send a test notification",
     "quietHours": "Quiet hours",
     "quietHoursHelp": "No notifications at all during these times, every day",
     "from": "From",
@@ -108,7 +125,9 @@
     "pairedOn": "Paired on {{date, datetime}}",
     "leave": "Leave {{server}}",
     "leaving": "Leaving…",
-    "leaveConfirm": "Leave {{server}}? You'll stop getting its notifications and it will be removed from this app."
+    "leaveConfirmTitle": "Leave {{server}}?",
+    "leaveConfirm": "You'll stop getting its notifications and it will be removed from this app.",
+    "leaveConfirmButton": "Leave"
   },
   "friends": {
     "title": "Friends",

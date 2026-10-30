@@ -1,7 +1,9 @@
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Screen } from "./components";
-import { navigate, paths, useRoute } from "./lib/router";
-import { useSubscriptionSync } from "./lib/notifications";
+import { onUnpaired, type PairedServer } from "./lib/api";
+import { navigate, parseRoute, paths, useRoute } from "./lib/router";
+import { unregister, useSubscriptionSync } from "./lib/notifications";
 import { useServers } from "./lib/storage";
 import { useTimeZoneSync } from "./lib/timeZone";
 import { AppSettingsScreen } from "./screens/AppSettingsScreen";
@@ -13,9 +15,36 @@ import { SettingsScreen } from "./screens/SettingsScreen";
 export default function App() {
   const { t } = useTranslation();
   const route = useRoute();
-  const { servers, upsert, remove } = useServers();
+  const { servers, upsert, remove, removePairing } = useServers();
+  const serversRef = useRef(servers);
+  serversRef.current = servers;
   useTimeZoneSync(servers);
   useSubscriptionSync(servers);
+  // Servers that unpaired this device, to tell the player why they're gone from the list.
+  const [unpaired, setUnpaired] = useState<PairedServer[]>([]);
+
+  useEffect(
+    () =>
+      onUnpaired((server) => {
+        const current = serversRef.current.find((s) => s.id === server.id);
+        if (current?.token !== server.token) return;
+        removePairing(server);
+        unregister(server.id).catch(() => {});
+        setUnpaired((list) =>
+          list.some((s) => s.id === server.id && s.pairedAt === server.pairedAt)
+            ? list
+            : [...list, server],
+        );
+        const route = parseRoute(location.hash);
+        if (
+          (route.name === "server" || route.name === "settings") &&
+          route.id === server.id
+        ) {
+          navigate(paths.servers, { replace: true });
+        }
+      }),
+    [removePairing],
+  );
 
   let screen;
   switch (route.name) {
@@ -26,6 +55,7 @@ export default function App() {
       screen = (
         <PairScreen
           key={`${route.url}|${route.code}`}
+          step={route.step}
           initialUrl={route.url}
           initialCode={route.code}
           servers={servers}
@@ -45,7 +75,6 @@ export default function App() {
         </Screen>
       ) : route.name === "settings" ? (
         <SettingsScreen
-          // Keyed so moving between servers doesn't show the previous one's data while loading.
           key={server.id}
           server={server}
           onLeft={() => {
@@ -59,7 +88,15 @@ export default function App() {
       break;
     }
     default:
-      screen = <ServerListScreen servers={servers} />;
+      screen = (
+        <ServerListScreen
+          servers={servers}
+          unpaired={unpaired}
+          onDismissUnpaired={(server) =>
+            setUnpaired((list) => list.filter((s) => s !== server))
+          }
+        />
+      );
   }
 
   return screen;
