@@ -40,20 +40,6 @@ repos:
 
   - repo: local
     hooks:
-      - id: core-test
-        name: core tests
-        entry: ./gradlew --quiet :core:test
-        language: system
-        files: ^(core/|settings\.gradle$|gradle\.properties$)
-        pass_filenames: false
-
-      - id: forge-compile
-        name: forge compile
-        entry: ./gradlew --quiet :forge:compileJava
-        language: system
-        files: ^(core/src/main/|forge/|settings\.gradle$|gradle\.properties$)
-        pass_filenames: false
-
       # ── App — npm exec so the lockfile-pinned versions are used ────────────
       - id: prettier
         name: prettier

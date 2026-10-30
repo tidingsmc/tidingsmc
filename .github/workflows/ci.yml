@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gradle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v5
+      - run: ./gradlew build
+      - uses: actions/upload-artifact@v5
+        with:
+          name: tidings-forge
+          path: forge/build/libs/*.jar
+
+  app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - name: prettier
+        run: npm exec --no -- prettier --check . '!public/**' '!dist/**'
+      - name: eslint
+        run: npm exec --no -- eslint .
+      - name: tsc typecheck
+        run: npm exec --no -- tsc -b --noEmit
