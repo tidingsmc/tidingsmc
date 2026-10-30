@@ -46,7 +46,6 @@
   },
   "online": {
     "count": "{{count}} en ligne",
-    "nobody": "Personne en ligne",
     "unreachable": "Injoignable"
   },
   "world": {
@@ -69,6 +68,7 @@
     "online": "En ligne",
     "onlineCount": "En ligne ({{count}})",
     "nobodyOnline": "Personne n'est en ligne pour le moment.",
+    "unreachableHelp": "Le serveur est hors ligne, ou c'est vous qui l'êtes.",
     "you": "vous"
   },
   "pair": {
@@ -108,12 +108,9 @@
     "notifications": "Notifications",
     "joins": "Quand quelqu'un se connecte",
     "leaves": "Quand quelqu'un se déconnecte",
-    "leavesHelp": "Envoyée quelques minutes après, pour ignorer les reconnexions rapides",
     "serverStatus": "Quand le serveur démarre ou s'arrête",
     "quietWhileOnline": "Pas pendant que je joue",
-    "quietWhileOnlineHelp": "Rien pendant que vous êtes vous-même sur ce serveur",
     "quietHours": "Heures de silence",
-    "quietHoursHelp": "Aucune notification pendant ces heures, tous les jours",
     "from": "De",
     "to": "À",
     "removePeriod": "Supprimer cette plage",
@@ -127,12 +124,12 @@
     "leaving": "Départ…",
     "leaveConfirmTitle": "Quitter {{server}}\u00a0?",
     "leaveConfirm": "Vous ne recevrez plus ses notifications et il sera retiré de l'application.",
-    "leaveConfirmButton": "Quitter"
+    "leaveConfirmUnreachable": "Le serveur est injoignable pour le moment. Il sera retiré de l'application et vous ne recevrez plus ses notifications\u00a0; il sera prévenu la prochaine fois que vous ouvrirez l'application pendant qu'il est en ligne.",
+    "leaveConfirmButton": "Quitter",
+    "readOnly": "Vous pourrez modifier ses réglages quand il sera de retour."
   },
   "friends": {
-    "title": "Amis",
     "only": "Seulement mes amis",
-    "onlyHelp": "Connexions et déconnexions seulement pour les joueurs que vous choisissez",
     "none": "Pas encore d'amis, donc aucune connexion ni déconnexion n'est annoncée.",
     "remove": "Retirer {{name}}",
     "search": "Chercher un joueur",

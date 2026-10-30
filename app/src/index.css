@@ -293,8 +293,66 @@ h2 {
   flex-direction: column;
 }
 
+.settings-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 .online-section {
   margin-top: 12px;
+}
+
+.loading-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 0;
+}
+
+.loading-dots span {
+  width: 8px;
+  height: 8px;
+  background: var(--text);
+  animation: dot-jump 1.2s ease-in-out infinite;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes dot-jump {
+  0%,
+  40%,
+  100% {
+    transform: translateY(0);
+  }
+  20% {
+    transform: translateY(var(--jump, -10px));
+  }
+}
+
+.loading-dots.compact {
+  --jump: -3px;
+  justify-content: flex-start;
+  align-items: flex-end;
+  gap: 4px;
+  height: 1lh;
+  padding: 0 0 0.35em;
+  box-sizing: border-box;
+}
+
+.loading-dots.compact span {
+  width: 4px;
+  height: 4px;
 }
 
 .server-list,
@@ -537,6 +595,10 @@ h2 {
   border-radius: 14px;
 }
 
+.settings-group + .settings-group {
+  margin-top: 12px;
+}
+
 .toggle-row {
   display: flex;
   align-items: center;
@@ -688,7 +750,11 @@ h2 {
   transform: translateX(18px);
 }
 
-.switch:disabled {
+.switch:disabled,
+.group-button:disabled,
+.icon-button:disabled,
+.field input:disabled,
+.time-field input:disabled {
   opacity: 0.4;
   cursor: default;
 }
@@ -824,6 +890,10 @@ h2 {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .loading-dots span {
+    animation-duration: 3.6s;
+  }
+
   .dropdown-menu,
   .dropdown-chevron {
     animation: none;
@@ -900,27 +970,44 @@ h2 {
   color: var(--muted);
 }
 
+/* One line per period: "From [22:00]  To [08:00]  🗑". */
 .time-row {
   display: flex;
+  align-items: center;
   gap: 12px;
-  padding: 0 16px 14px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
 }
 
-.time-row .field {
+.time-field {
+  display: flex;
   flex: 1;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+  color: var(--muted);
 }
 
-.time-row {
-  align-items: flex-end;
+.time-field input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  /* Little on the right: Android puts its dropdown arrow there. */
+  padding: 8px 4px 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.time-field input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
 }
 
 .period-error {
-  padding: 0 16px 14px;
-}
-
-.remove-period {
-  margin: 0 -8px 4px 0;
+  padding: 0 16px 10px;
 }
 
 .group-button {

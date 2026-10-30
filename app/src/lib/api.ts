@@ -164,7 +164,8 @@ export interface TidingsApi {
    * PUT {url}/api/devices/me/push  (authenticated)  body: the subscription as JSON,
    * `{ endpoint, expirationTime, keys: { p256dh, auth } }`. Replaces the device's push subscription.
    * Sent after pairing, and again whenever the browser changes the subscription. Until then the mod
-   * has nowhere to send this device's notifications.
+   * has nowhere to send this device's notifications. The mod forgets a subscription its push service
+   * says expired (404 or 410), and keeps the device paired: the next one sent here replaces it.
    */
   updatePush(
     server: PairedServer,
@@ -172,8 +173,9 @@ export interface TidingsApi {
   ): Promise<void>;
   /**
    * DELETE {url}/api/devices/me  (authenticated, or a pairing waiting for approval: withdraws it)
-   * The app also drops its push subscription, even if this call fails; the mod must then forget
-   * the device once its push service answers 404 or 410.
+   * The app also drops its push subscription, even if this call fails: the mod then gets 404 or 410
+   * from its push service and drops that subscription. The device stays listed in game until its
+   * player unpairs it there.
    */
   unpair(server: PairedServer): Promise<void>;
 }
@@ -192,6 +194,27 @@ export class ApiError extends TranslatedError {
     this.status = status;
     this.reason = reason;
   }
+}
+
+/**
+ * The server couldn't be reached at all, or only the proxy in front of it answered (502–504, and
+ * Cloudflare's 52x): it's most likely stopped, or this device is offline.
+ */
+export function isUnreachable(err: unknown): boolean {
+  if (!(err instanceof ApiError)) return false;
+  const { status } = err;
+  return (
+    status === undefined ||
+    (status >= 502 && status <= 504) ||
+    (status >= 520 && status <= 530)
+  );
+}
+
+/** Asking again later may get another answer: the server is unreachable, busy, or failed this time. */
+export function worthRetrying(err: unknown): boolean {
+  if (isUnreachable(err)) return true;
+  const status = err instanceof ApiError ? err.status : undefined;
+  return status === 429 || (status !== undefined && status >= 500);
 }
 
 /** Turns what the player typed ("mc.example.com") into the URL we call. */
@@ -213,10 +236,16 @@ export function normalizeServerUrl(input: string): string {
   return url.origin + url.pathname.replace(/\/+$/, "");
 }
 
+/** A stopped server can leave a request hanging for a minute or more: past this, it's unreachable. */
+const TIMEOUT_MS = 6_000;
+
 async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(url, init);
+    res = await fetch(url, {
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      ...init,
+    });
   } catch {
     throw new ApiError((t) => t("errors.unreachable"));
   }
@@ -443,6 +472,8 @@ const mockApi: TidingsApi = {
   },
   async settings(server) {
     await delay(250);
+    if (server.url.includes("offline"))
+      throw new ApiError((t) => t("errors.unreachable"));
     return mockSettings(server);
   },
   async updateSettings(server, changes) {
@@ -459,6 +490,8 @@ const mockApi: TidingsApi = {
   },
   async unpair(server) {
     await delay(200);
+    if (server.url.includes("offline"))
+      throw new ApiError((t) => t("errors.unreachable"));
     localStorage.removeItem(`tidings.mock.settings.${server.id}`);
   },
 };

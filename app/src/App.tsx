@@ -4,6 +4,7 @@ import { Screen } from "./components";
 import { onUnpaired, type PairedServer } from "./lib/api";
 import { navigate, parseRoute, paths, useRoute } from "./lib/router";
 import { unregister, useSubscriptionSync } from "./lib/notifications";
+import { useUnpairRetry } from "./lib/pendingUnpairs";
 import { useServers } from "./lib/storage";
 import { useTimeZoneSync } from "./lib/timeZone";
 import { AppSettingsScreen } from "./screens/AppSettingsScreen";
@@ -20,7 +21,8 @@ export default function App() {
   serversRef.current = servers;
   useTimeZoneSync(servers);
   useSubscriptionSync(servers);
-  // Servers that unpaired this device, to tell the player why they're gone from the list.
+  useUnpairRetry();
+  // Servers that unpaired this device
   const [unpaired, setUnpaired] = useState<PairedServer[]>([]);
 
   useEffect(

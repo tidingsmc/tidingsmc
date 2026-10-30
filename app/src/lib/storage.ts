@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { mockServers, usingMockApi, type PairedServer } from "./api";
+import { infoCache } from "./useInfo";
+import { keepOnlineOnly } from "./useOnline";
+import { pairingKey } from "./serverCache";
+import { settingsCache } from "./useSettings";
 import { saveServerNames } from "./workerStore";
 
 const KEY = "tidings.servers";
@@ -25,6 +29,9 @@ export function useServers() {
     localStorage.setItem(KEY, JSON.stringify(servers));
     // Notifications then show the server as "Tidings": not worth bothering the player about.
     saveServerNames(servers).catch(() => {});
+    infoCache.keepOnly(servers);
+    settingsCache.keepOnly(servers);
+    keepOnlineOnly(servers);
   }, [servers]);
 
   const upsert = useCallback(
@@ -51,9 +58,6 @@ export function useServers() {
 
   return { servers, upsert, remove, removePairing };
 }
-
-/** Keyed by pairing rather than server, so pairing with a server again starts afresh. */
-const pairingKey = (server: PairedServer) => `${server.id}:${server.pairedAt}`;
 
 /**
  * What this device last told each of its servers about something (its time zone, its push subscription),

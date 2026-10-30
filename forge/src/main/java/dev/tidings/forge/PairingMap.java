@@ -83,9 +83,7 @@ final class PairingMap {
     }
 
     /**
-     * Frees the maps whose code stopped working, then takes them away from every player: their
-     * inventory, ender chest, what they hold with the cursor and the container they have open, so a
-     * copy left in a chest goes as soon as someone opens it.
+     * Frees the maps whose code stopped working
      *
      * @param codeOf the code a player was given last, if it's still valid
      */
@@ -127,7 +125,6 @@ final class PairingMap {
 
         private final Map<Integer, Use> used = new HashMap<>();
 
-        /** Oldest first, so a freed ID rests while its copies are taken away. */
         private final Deque<Integer> free = new ArrayDeque<>();
 
         static Ids of(ServerLevel level) {
@@ -142,10 +139,6 @@ final class PairingMap {
             return id;
         }
 
-        /**
-         * Only here, right before the copies are taken away: an ID freed anywhere else could go to
-         * a new map while an old copy still shows it.
-         */
         void freeUnused(ServerLevel level, Function<UUID, Optional<String>> codeOf) {
             Iterator<Map.Entry<Integer, Use>> entries = used.entrySet().iterator();
             while (entries.hasNext()) {
@@ -160,7 +153,6 @@ final class PairingMap {
             }
         }
 
-        /** A pairing map whose code stopped working, even if its ID went to a newer map. */
         boolean stale(ItemStack stack) {
             if (!isPairingMap(stack)) return false;
             Integer id = MapItem.getMapId(stack);

@@ -50,11 +50,16 @@ public record VapidKeys(ECPublicKey publicKey, ECPrivateKey privateKey) {
     }
 
     public String applicationServerKey() {
+        return Base64Url.encode(uncompressed(publicKey));
+    }
+
+    /** {@code key} as Web Push writes P-256 public keys: 0x04, then X and Y on 32 bytes each. */
+    static byte[] uncompressed(ECPublicKey key) {
         byte[] point = new byte[65];
         point[0] = 4;
-        copyUnsigned(publicKey.getW().getAffineX(), point, 1);
-        copyUnsigned(publicKey.getW().getAffineY(), point, 33);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(point);
+        copyUnsigned(key.getW().getAffineX(), point, 1);
+        copyUnsigned(key.getW().getAffineY(), point, 33);
+        return point;
     }
 
     private static void copyUnsigned(BigInteger value, byte[] target, int offset) {

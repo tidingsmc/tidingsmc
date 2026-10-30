@@ -12,7 +12,7 @@ export function pushSupported(): boolean {
   );
 }
 
-/** Each server gets its own service worker registration, so each can have its own push subscription. */
+/** Each server gets its own service worker registration so each can have its own push subscription. */
 function scopeOf(serverId: string): string {
   return new URL(`./s/${encodeURIComponent(serverId)}/`, location.href).href;
 }
@@ -23,15 +23,16 @@ async function register(serverId: string): Promise<ServiceWorkerRegistration> {
     new URL("./sw.js", location.href),
     {
       scope: scopeOf(serverId),
-      // In dev, Vite serves the worker as an ES module.
       type: import.meta.env.DEV ? "module" : "classic",
     },
   );
-  // The newest worker, so a just-updated one is used rather than the one it replaces.
   const worker =
     registration.installing ?? registration.waiting ?? registration.active;
   if (!worker) throw new TranslatedError((t) => t("push.couldntStart"));
-  if (worker.state === "activated") return registration;
+  if (worker.state === "activated") {
+    registration.update().catch(() => {});
+    return registration;
+  }
   return new Promise((resolve, reject) => {
     worker.addEventListener("statechange", () => {
       if (worker.state === "activated") resolve(registration);
@@ -42,7 +43,6 @@ async function register(serverId: string): Promise<ServiceWorkerRegistration> {
   });
 }
 
-/** The server's own registration, if any; getRegistration alone would also return one of an enclosing scope. */
 async function ownRegistration(
   serverId: string,
 ): Promise<ServiceWorkerRegistration | undefined> {
@@ -51,10 +51,8 @@ async function ownRegistration(
   return registration?.scope === scope ? registration : undefined;
 }
 
-/** The endpoint of the push subscription each pairing last sent its server. */
 const sentSubscriptions = sentToServers("tidings.sentSubscriptions");
 
-/** Fires "change" each time a server is sent a new subscription, so push states are checked again. */
 const subscriptionChanges = new EventTarget();
 
 /**
@@ -125,7 +123,6 @@ export function useSubscriptionSync(servers: PairedServer[]) {
   }, [servers]);
 }
 
-/** 'on' once the server has this device's current subscription. */
 export type PushState = "unsupported" | "blocked" | "off" | "on";
 
 async function pushState(server: PairedServer): Promise<PushState> {

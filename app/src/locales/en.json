@@ -46,7 +46,6 @@
   },
   "online": {
     "count": "{{count}} online",
-    "nobody": "Nobody online",
     "unreachable": "Unreachable"
   },
   "world": {
@@ -69,6 +68,7 @@
     "online": "Online",
     "onlineCount": "Online ({{count}})",
     "nobodyOnline": "Nobody is online right now.",
+    "unreachableHelp": "The server is offline, or you are.",
     "you": "you"
   },
   "pair": {
@@ -108,12 +108,9 @@
     "notifications": "Notifications",
     "joins": "When someone joins",
     "leaves": "When someone leaves",
-    "leavesHelp": "Sent a few minutes later, so quick reconnects don't count",
     "serverStatus": "When the server starts or stops",
     "quietWhileOnline": "Not while I'm playing",
-    "quietWhileOnlineHelp": "Stay quiet while you're on this server yourself",
     "quietHours": "Quiet hours",
-    "quietHoursHelp": "No notifications at all during these times, every day",
     "from": "From",
     "to": "To",
     "removePeriod": "Remove this period",
@@ -127,12 +124,12 @@
     "leaving": "Leaving…",
     "leaveConfirmTitle": "Leave {{server}}?",
     "leaveConfirm": "You'll stop getting its notifications and it will be removed from this app.",
-    "leaveConfirmButton": "Leave"
+    "leaveConfirmUnreachable": "The server can't be reached right now. It will be removed from this app and you'll stop getting its notifications; the server will be told the next time you open the app while it's up.",
+    "leaveConfirmButton": "Leave",
+    "readOnly": "Its settings can be changed once it's back."
   },
   "friends": {
-    "title": "Friends",
     "only": "Only my friends",
-    "onlyHelp": "Join and leave notifications only for the players you pick",
     "none": "No friends yet, so nobody joining or leaving is announced.",
     "remove": "Remove {{name}}",
     "search": "Search players",

@@ -2,8 +2,12 @@ package dev.tidings.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -44,7 +48,9 @@ class StoreTest {
                 d ->
                         d.withPush(
                                 new PushSubscription(
-                                        URI.create("https://push.example/1"), "key", "secret")));
+                                        URI.create("https://push.example/1"),
+                                        VapidKeys.generate().applicationServerKey(),
+                                        "BTBZMqHH6r4Tts7J_aSIgg")));
         store.addDevice(device("b"));
         store.removeDevice(steve.id(), "b");
         store.rememberPlayer(steve);
@@ -74,6 +80,27 @@ class StoreTest {
         Files.writeString(file, "{not json");
 
         assertThrows(IOException.class, () -> Store.open(file));
+    }
+
+    @Test
+    void dropsASavedPushSubscriptionThatIsNoLongerValid() throws IOException {
+        Path file = dir.resolve("data.json");
+        Store.open(file).addDevice(device("a"));
+        JsonObject json = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+        json.getAsJsonArray("devices")
+                .get(0)
+                .getAsJsonObject()
+                .add(
+                        "push",
+                        JsonParser.parseString(
+                                "{\"endpoint\":\"https://push.example/1\","
+                                        + "\"keys\":{\"p256dh\":\"BKey\",\"auth\":\"secret\"}}"));
+        Files.writeString(file, json.toString());
+
+        Store reopened = Store.open(file);
+
+        assertEquals("a", reopened.devices().get(0).id());
+        assertNull(reopened.devices().get(0).push());
     }
 
     @Test

@@ -55,4 +55,9 @@ final class TidingsConfig {
         String url = PUBLIC_URL.get().strip().replaceAll("/+$", "");
         return url.isEmpty() ? "http://localhost:" + PORT.get() : url;
     }
+
+    static String vapidSubject() {
+        String url = publicUrl();
+        return url.startsWith("https://") ? url : "https://github.com/tidingsmc/tidingsmc";
+    }
 }

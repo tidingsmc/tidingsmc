@@ -37,6 +37,7 @@ async function showFallback() {
   const t = await translator();
   await self.registration.showNotification("Tidings", {
     body: t("notification.unknown"),
+    icon: NO_ICON,
     data: { serverId: serverIdOfScope() },
   });
 }
@@ -94,12 +95,19 @@ async function show(message: PushMessage) {
   } as NotificationOptions & { renotify: boolean });
 }
 
-async function playerIcon(message: PushMessage): Promise<string | undefined> {
+/**
+ * A transparent 1×1 PNG. Without an icon, Chrome on Android makes one up from the first letter of the
+ * app's address: only news about a player gets a picture, their face.
+ */
+const NO_ICON =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=";
+
+async function playerIcon(message: PushMessage): Promise<string> {
   const src = safeSkinUrl(message.player?.skinUrl);
-  if (!src) return undefined;
+  if (!src) return NO_ICON;
   try {
     return await skinFace(src);
   } catch {
-    return undefined;
+    return NO_ICON;
   }
 }

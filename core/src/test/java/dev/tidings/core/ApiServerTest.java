@@ -423,7 +423,7 @@ class ApiServerTest {
     @Test
     void online() throws IOException, InterruptedException {
         String token = pair();
-        tidings.playerJoined(alex);
+        tidings.playerJoined(alex, Instant.EPOCH);
 
         JsonObject online = json(call("GET", "/api/online", token, null));
 
@@ -494,6 +494,44 @@ class ApiServerTest {
         assertEquals("Unknown time zone: Mars/Base", json(response).get("error").getAsString());
     }
 
+    private static final String P256DH = VapidKeys.generate().applicationServerKey();
+
+    @Test
+    void refusesAPushSubscriptionWithBrokenKeys() throws IOException, InterruptedException {
+        String token = pair();
+
+        HttpResponse<String> response =
+                call(
+                        "PUT",
+                        "/api/devices/me/push",
+                        token,
+                        "{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/abc\","
+                                + "\"keys\":{\"p256dh\":\"BKey\",\"auth\":\"secret\"}}");
+
+        assertEquals(400, response.statusCode());
+        assertEquals("Invalid push key p256dh", json(response).get("error").getAsString());
+    }
+
+    @Test
+    void refusesAPushKeyOffTheCurve() throws IOException, InterruptedException {
+        String token = pair();
+        byte[] point = Base64Url.decode(P256DH);
+        point[64] ^= 1;
+
+        HttpResponse<String> response =
+                call(
+                        "PUT",
+                        "/api/devices/me/push",
+                        token,
+                        "{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/abc\","
+                                + "\"keys\":{\"p256dh\":\""
+                                + Base64Url.encode(point)
+                                + "\",\"auth\":\"BTBZMqHH6r4Tts7J_aSIgg\"}}");
+
+        assertEquals(400, response.statusCode());
+        assertEquals("Invalid push key p256dh", json(response).get("error").getAsString());
+    }
+
     @Test
     void storesThePushSubscription() throws IOException, InterruptedException {
         String token = pair();
@@ -505,12 +543,14 @@ class ApiServerTest {
                         token,
                         "{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/abc\","
                                 + "\"expirationTime\":null,"
-                                + "\"keys\":{\"p256dh\":\"BKey\",\"auth\":\"secret\"}}");
+                                + "\"keys\":{\"p256dh\":\""
+                                + P256DH
+                                + "\",\"auth\":\"BTBZMqHH6r4Tts7J_aSIgg\"}}");
 
         assertEquals(204, response.statusCode(), response.body());
         PushSubscription push = tidings.store().devices().get(0).push();
         assertEquals(URI.create("https://fcm.googleapis.com/fcm/send/abc"), push.endpoint());
-        assertEquals("BKey", push.p256dh());
+        assertEquals(P256DH, push.p256dh());
     }
 
     @Test

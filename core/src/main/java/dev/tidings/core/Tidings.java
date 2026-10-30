@@ -7,7 +7,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /** Entry point that platform adapters (Forge, later others) talk to */
@@ -21,7 +23,11 @@ public final class Tidings {
     private final Store store;
     private final Game game;
     private final Pairing pairing = new Pairing();
+    private final Notifier notifier;
     private final Map<UUID, PlayerProfile> online = new LinkedHashMap<>();
+
+    /** Once set, players leaving aren't announced: the server going down says it. */
+    private volatile boolean stopping;
 
     private final Map<String, AwaitingApproval> awaitingApproval = new HashMap<>();
 
@@ -55,9 +61,22 @@ public final class Tidings {
         record TooManyDevices() implements Approval {}
     }
 
-    public Tidings(Store store, Game game) {
+    /**
+     * @param push delivers the notifications, such as a {@link WebPush}
+     */
+    public Tidings(Store store, Game game, PushSender push) {
         this.store = store;
         this.game = game;
+        this.notifier = new Notifier(store, push);
+    }
+
+    /** Sends no notifications, for tests. */
+    Tidings(Store store, Game game) {
+        this(
+                store,
+                game,
+                (to, payload, ttl, topic) ->
+                        CompletableFuture.completedFuture(PushSender.Result.DELIVERED));
     }
 
     public Store store() {
@@ -75,15 +94,39 @@ public final class Tidings {
     /**
      * @return whether it's the player's first time here since Tidings was installed
      */
-    public boolean playerJoined(PlayerProfile player) {
+    public boolean playerJoined(PlayerProfile player, Instant now) {
         synchronized (this) {
             online.put(player.id(), player);
         }
+        notifier.notify(NotificationKind.PLAYER_JOINED, player, onlineIds(), now);
         return store.rememberPlayer(player);
     }
 
-    public synchronized void playerLeft(UUID id) {
-        online.remove(id);
+    public void playerLeft(UUID id, Instant now) {
+        PlayerProfile player;
+        synchronized (this) {
+            player = online.remove(id);
+        }
+        if (player == null || stopping) return;
+        notifier.notify(NotificationKind.PLAYER_LEFT, player, onlineIds(), now);
+    }
+
+    public void serverStarted(Instant now) {
+        notifier.notify(NotificationKind.SERVER_STARTED, null, onlineIds(), now);
+    }
+
+    /**
+     * Players disconnected from now on aren't announced leaving: the server going down says it.
+     *
+     * @return completes once every push got an answer, worth waiting for before the JVM exits
+     */
+    public CompletableFuture<Void> serverStopping(Instant now) {
+        stopping = true;
+        return notifier.notify(NotificationKind.SERVER_STOPPING, null, onlineIds(), now);
+    }
+
+    private synchronized Set<UUID> onlineIds() {
+        return Set.copyOf(online.keySet());
     }
 
     public synchronized List<PlayerProfile> onlinePlayers() {

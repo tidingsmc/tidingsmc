@@ -14,6 +14,7 @@ import dev.tidings.core.PlayerProfile;
 import dev.tidings.core.Skins;
 import dev.tidings.core.Store;
 import dev.tidings.core.Tidings;
+import dev.tidings.core.WebPush;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -33,8 +34,10 @@ import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
@@ -52,6 +55,9 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 
 @Mod(TidingsMod.MOD_ID)
@@ -63,6 +69,8 @@ public final class TidingsMod {
     private Tidings tidings;
 
     private ApiServer api;
+
+    private WebPush push;
 
     public TidingsMod(FMLJavaModLoadingContext context) {
         context.registerConfig(ModConfig.Type.COMMON, TidingsConfig.SPEC);
@@ -82,7 +90,8 @@ public final class TidingsMod {
             return;
         }
         // The field is null once the server stopped, with approval requests maybe still queued.
-        Tidings tidings = new Tidings(store, new ForgeGame(server));
+        push = new WebPush(store.vapidKeys(), TidingsConfig.vapidSubject());
+        Tidings tidings = new Tidings(store, new ForgeGame(server), push);
         this.tidings = tidings;
         tidings.onApprovalNeeded(
                 device ->
@@ -129,9 +138,31 @@ public final class TidingsMod {
     }
 
     @SubscribeEvent
+    public void onServerStarted(ServerStartedEvent event) {
+        if (tidings != null) tidings.serverStarted(Instant.now());
+    }
+
+    @SubscribeEvent
+    public void onServerStopping(ServerStoppingEvent event) {
+        if (tidings == null) return;
+        // The JVM may exit right after the server stops: give the pushes a moment to go. Each one
+        // gives up after WebPush.TIMEOUT, so this only runs out if the game itself is that slow.
+        try {
+            tidings.serverStopping(Instant.now())
+                    .get(WebPush.TIMEOUT.plusSeconds(1).toMillis(), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException | TimeoutException e) {
+            LOGGER.warn("Tidings couldn't send every \"server stopping\" notification in time");
+        }
+    }
+
+    @SubscribeEvent
     public void onServerStopped(ServerStoppedEvent event) {
         if (api != null) api.close();
+        if (push != null) push.close();
         api = null;
+        push = null;
         tidings = null;
     }
 
@@ -140,7 +171,7 @@ public final class TidingsMod {
         if (tidings == null || !(event.getEntity() instanceof ServerPlayer player)) return;
         boolean firstTime;
         try {
-            firstTime = tidings.playerJoined(profile(player));
+            firstTime = tidings.playerJoined(profile(player), Instant.now());
         } catch (UncheckedIOException e) {
             LOGGER.error("Tidings couldn't save that {} joined", player.getScoreboardName(), e);
             firstTime = false;
@@ -179,7 +210,7 @@ public final class TidingsMod {
     @SubscribeEvent
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (tidings == null) return;
-        tidings.playerLeft(event.getEntity().getUUID());
+        tidings.playerLeft(event.getEntity().getUUID(), Instant.now());
     }
 
     @SubscribeEvent

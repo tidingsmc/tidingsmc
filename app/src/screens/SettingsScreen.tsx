@@ -7,15 +7,17 @@ import {
   NotificationsOff,
   Screen,
   Toggle,
+  UnreachableNotice,
 } from "../components";
 import {
-  api,
+  isUnreachable,
   type PairedServer,
   type QuietHours,
   type QuietPeriod,
 } from "../lib/api";
 import { errorText } from "../lib/i18n";
 import { unregister } from "../lib/notifications";
+import { leaveServer } from "../lib/pendingUnpairs";
 import { paths } from "../lib/router";
 import { useInfo } from "../lib/useInfo";
 import { useSettings } from "../lib/useSettings";
@@ -30,7 +32,8 @@ export function SettingsScreen({
 }) {
   const serverAsList = useMemo(() => [server], [server]);
   const { t } = useTranslation();
-  const { settings, error, update } = useSettings(server);
+  const { settings, error, live, update } = useSettings(server);
+  const unreachable = !live && error !== null && isUnreachable(error);
   const info = useInfo(server);
   const [leaving, setLeaving] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
@@ -60,131 +63,136 @@ export function SettingsScreen({
   async function leave() {
     setConfirmingLeave(false);
     setLeaving(true);
-    await api.unpair(server).catch(() => {});
+    await leaveServer(server);
     await unregister(server.id).catch(() => {});
     onLeft();
   }
 
   return (
     <Screen title={t("common.settings")} back={paths.server(server.id)}>
-      <section className="section">
-        <h2>{t("settings.notifications")}</h2>
-        <NotificationsOff servers={serverAsList} />
-        {!settings && !error && <p className="muted">{t("common.loading")}</p>}
-        {settings && (
-          <div className="settings-group">
-            <Toggle
-              label={t("settings.joins")}
-              checked={settings.notifyJoins}
-              onChange={(notifyJoins) => update({ notifyJoins })}
-            />
-            <Toggle
-              label={t("settings.leaves")}
-              description={t("settings.leavesHelp")}
-              checked={settings.notifyLeaves}
-              onChange={(notifyLeaves) => update({ notifyLeaves })}
-            />
-            <Toggle
-              label={t("settings.serverStatus")}
-              checked={settings.notifyServerStatus}
-              onChange={(notifyServerStatus) => update({ notifyServerStatus })}
-            />
-            <Toggle
-              label={t("settings.quietWhileOnline")}
-              description={t("settings.quietWhileOnlineHelp")}
-              checked={settings.quietWhileOnline}
-              disabled={
-                !settings.notifyJoins &&
-                !settings.notifyLeaves &&
-                !settings.notifyServerStatus
-              }
-              onChange={(quietWhileOnline) => update({ quietWhileOnline })}
-            />
-          </div>
-        )}
-        {error && <p className="error">{errorText(error, t)}</p>}
-      </section>
-
-      {settings && (
-        <FriendsSection
-          server={server}
-          friends={settings.friends}
-          disabled={!settings.notifyJoins && !settings.notifyLeaves}
-          onChange={(friends) => update({ friends })}
-        />
+      {unreachable && settings && (
+        <UnreachableNotice help={t("settings.readOnly")} />
       )}
 
-      {settings && (
+      {/* Read-only until the server answers: changes couldn't be saved. */}
+      <fieldset className="settings-fields" disabled={!live}>
         <section className="section">
-          <h2>{t("settings.quietHours")}</h2>
-          <div className="settings-group">
-            <Toggle
-              label={t("settings.quietHours")}
-              description={t("settings.quietHoursHelp")}
-              checked={settings.quietHours.enabled}
-              onChange={(enabled) => updateQuietHours({ enabled })}
+          <h2>{t("settings.notifications")}</h2>
+          <NotificationsOff servers={serverAsList} />
+          {!settings && !error && (
+            <p className="muted">{t("common.loading")}</p>
+          )}
+          {settings && (
+            <div className="settings-group">
+              <Toggle
+                label={t("settings.joins")}
+                checked={settings.notifyJoins}
+                onChange={(notifyJoins) => update({ notifyJoins })}
+              />
+              <Toggle
+                label={t("settings.leaves")}
+                checked={settings.notifyLeaves}
+                onChange={(notifyLeaves) => update({ notifyLeaves })}
+              />
+              <Toggle
+                label={t("settings.serverStatus")}
+                checked={settings.notifyServerStatus}
+                onChange={(notifyServerStatus) =>
+                  update({ notifyServerStatus })
+                }
+              />
+              <Toggle
+                label={t("settings.quietWhileOnline")}
+                checked={settings.quietWhileOnline}
+                disabled={
+                  !settings.notifyJoins &&
+                  !settings.notifyLeaves &&
+                  !settings.notifyServerStatus
+                }
+                onChange={(quietWhileOnline) => update({ quietWhileOnline })}
+              />
+            </div>
+          )}
+          {settings && (
+            <FriendsSection
+              server={server}
+              friends={settings.friends}
+              disabled={!settings.notifyJoins && !settings.notifyLeaves}
+              onChange={(friends) => update({ friends })}
             />
-            {settings.quietHours.enabled && (
-              <>
-                {settings.quietHours.periods.map((period, i) => (
-                  <Fragment key={i}>
-                    <div className="time-row">
-                      <label className="field">
-                        {t("settings.from")}
-                        <input
-                          type="time"
-                          value={period.start}
-                          onChange={(e) =>
-                            e.target.value &&
-                            updatePeriod(i, { start: e.target.value })
-                          }
-                        />
-                      </label>
-                      <label className="field">
-                        {t("settings.to")}
-                        <input
-                          type="time"
-                          value={period.end}
-                          onChange={(e) =>
-                            e.target.value &&
-                            updatePeriod(i, { end: e.target.value })
-                          }
-                        />
-                      </label>
-                      <button
-                        className="icon-button remove-period"
-                        aria-label={t("settings.removePeriod")}
-                        onClick={() => {
-                          setInvalidPeriod(null);
-                          updatePeriods((ps) => ps.filter((_, j) => j !== i));
-                        }}
-                      >
-                        <Trash />
-                      </button>
-                    </div>
-                    {invalidPeriod === i && (
-                      <p className="error small period-error">
-                        {t("settings.samePeriod")}
-                      </p>
-                    )}
-                  </Fragment>
-                ))}
-                <button
-                  className="group-button"
-                  onClick={() =>
-                    updatePeriods((ps) => [
-                      ...ps,
-                      { start: "12:00", end: "14:00" },
-                    ])
-                  }
-                >
-                  <Plus /> {t("settings.addPeriod")}
-                </button>
-              </>
-            )}
-          </div>
+          )}
+          {settings && (
+            <div className="settings-group">
+              <Toggle
+                label={t("settings.quietHours")}
+                checked={settings.quietHours.enabled}
+                onChange={(enabled) => updateQuietHours({ enabled })}
+              />
+              {settings.quietHours.enabled && (
+                <>
+                  {settings.quietHours.periods.map((period, i) => (
+                    <Fragment key={i}>
+                      <div className="time-row">
+                        <label className="time-field">
+                          {t("settings.from")}
+                          <input
+                            type="time"
+                            value={period.start}
+                            onChange={(e) =>
+                              e.target.value &&
+                              updatePeriod(i, { start: e.target.value })
+                            }
+                          />
+                        </label>
+                        <label className="time-field">
+                          {t("settings.to")}
+                          <input
+                            type="time"
+                            value={period.end}
+                            onChange={(e) =>
+                              e.target.value &&
+                              updatePeriod(i, { end: e.target.value })
+                            }
+                          />
+                        </label>
+                        <button
+                          className="icon-button"
+                          aria-label={t("settings.removePeriod")}
+                          onClick={() => {
+                            setInvalidPeriod(null);
+                            updatePeriods((ps) => ps.filter((_, j) => j !== i));
+                          }}
+                        >
+                          <Trash />
+                        </button>
+                      </div>
+                      {invalidPeriod === i && (
+                        <p className="error small period-error">
+                          {t("settings.samePeriod")}
+                        </p>
+                      )}
+                    </Fragment>
+                  ))}
+                  <button
+                    className="group-button"
+                    onClick={() =>
+                      updatePeriods((ps) => [
+                        ...ps,
+                        { start: "12:00", end: "14:00" },
+                      ])
+                    }
+                  >
+                    <Plus /> {t("settings.addPeriod")}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+          {error && !(unreachable && settings) && (
+            <p className="error">{errorText(error, t)}</p>
+          )}
         </section>
-      )}
+      </fieldset>
 
       {info && (
         <section className="section">
@@ -214,7 +222,11 @@ export function SettingsScreen({
       <ConfirmDialog
         open={confirmingLeave}
         title={t("settings.leaveConfirmTitle", { server: server.name })}
-        message={t("settings.leaveConfirm")}
+        message={t(
+          unreachable
+            ? "settings.leaveConfirmUnreachable"
+            : "settings.leaveConfirm",
+        )}
         confirmLabel={t("settings.leaveConfirmButton")}
         danger
         onConfirm={leave}

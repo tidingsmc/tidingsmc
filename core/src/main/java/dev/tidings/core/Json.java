@@ -16,6 +16,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 final class Json {
@@ -40,6 +41,14 @@ final class Json {
     static JsonArray players(List<PlayerProfile> players) {
         JsonArray json = new JsonArray();
         players.forEach(p -> json.add(player(p)));
+        return json;
+    }
+
+    /** Mirrors the app's PushMessage. */
+    static JsonObject pushMessage(NotificationKind kind, PlayerProfile player) {
+        JsonObject json = new JsonObject();
+        json.addProperty("kind", kind.name().toLowerCase(Locale.ROOT));
+        if (player != null) json.add("player", player(player));
         return json;
     }
 
@@ -177,7 +186,19 @@ final class Json {
                 readPlayer(o.get("player")),
                 pairedAt,
                 patchSettings(DeviceSettings.defaults(), o.get("settings")),
-                o.has("push") ? readPush(o.get("push")) : null);
+                o.has("push") ? readStoredPush(o.get("push")) : null);
+    }
+
+    /**
+     * A subscription saved before its checks got stricter is dropped rather than failing the whole
+     * file: the app sends a new one next time it's opened.
+     */
+    private static PushSubscription readStoredPush(JsonElement json) {
+        try {
+            return readPush(json);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     static JsonObject object(JsonElement json, String what) {

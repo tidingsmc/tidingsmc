@@ -1,6 +1,7 @@
 package dev.tidings.core;
 
 import java.net.URI;
+import java.security.GeneralSecurityException;
 
 /**
  * Where to send a device's notifications, as the browser's PushSubscription gives it.
@@ -17,6 +18,32 @@ public record PushSubscription(URI endpoint, String p256dh, String auth) {
         }
         if (p256dh == null || p256dh.isEmpty() || auth == null || auth.isEmpty()) {
             throw new IllegalArgumentException("Missing push keys");
+        }
+        // From RFC 8291: an uncompressed P-256 point, and 16 random bytes. Checked now, or every
+        // push to this device would fail later without the subscription ever being dropped.
+        try {
+            WebPush.publicKey(decode(p256dh, "p256dh"));
+        } catch (GeneralSecurityException e) {
+            throw new IllegalArgumentException("Invalid push key p256dh", e);
+        }
+        if (decode(auth, "auth").length != 16) {
+            throw new IllegalArgumentException("Invalid push key auth");
+        }
+    }
+
+    public byte[] publicKey() {
+        return decode(p256dh, "p256dh");
+    }
+
+    public byte[] authSecret() {
+        return decode(auth, "auth");
+    }
+
+    private static byte[] decode(String base64Url, String what) {
+        try {
+            return Base64Url.decode(base64Url);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid push key " + what, e);
         }
     }
 }

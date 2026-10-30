@@ -1,12 +1,13 @@
 import { useTranslation } from "react-i18next";
 import type { OnlineState } from "../lib/useOnline";
+import { LoadingDots } from "./LoadingDots";
 
 export function OnlineSummary({ state }: { state: OnlineState }) {
   const { t } = useTranslation();
   if (state.status === "loading") {
     return (
       <div className="status">
-        <span className="status-line muted">{t("common.checking")}</span>
+        <LoadingDots label={t("common.checking")} compact />
       </div>
     );
   }
@@ -24,9 +25,7 @@ export function OnlineSummary({ state }: { state: OnlineState }) {
     <div className="status">
       <span className="status-line">
         <span className={players.length > 0 ? "dot ok" : "dot"} />
-        {players.length > 0
-          ? t("online.count", { count: players.length })
-          : t("online.nobody")}
+        {t("online.count", { count: players.length })}
       </span>
     </div>
   );
