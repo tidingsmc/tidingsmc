@@ -10,9 +10,19 @@ final class TidingsConfig {
     static final ForgeConfigSpec.ConfigValue<String> APP_URL;
     static final ForgeConfigSpec.ConfigValue<String> SERVER_NAME;
     static final ForgeConfigSpec.ConfigValue<String> CLIENT_IP_HEADER;
+    static final ForgeConfigSpec.ConfigValue<String> RELAY_URL;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        RELAY_URL =
+                builder.comment(
+                                "Address of your Tidings relay, e.g."
+                                        + " https://tidings-relay.you.workers.dev (see the README"
+                                        + " to deploy one for free). The mod connects out to it, so"
+                                        + " the server needs no public address.",
+                                "When set, port, bind-address, public-url and client-ip-header"
+                                        + " are unused. Empty: serve the API directly instead.")
+                        .define("relay-url", "");
         PORT =
                 builder.comment("Port of the HTTP API the Tidings app calls.")
                         .defineInRange("port", 8765, 1, 65535);
@@ -51,7 +61,13 @@ final class TidingsConfig {
 
     private TidingsConfig() {}
 
+    /** Empty without a relay. */
+    static String relayUrl() {
+        return RELAY_URL.get().strip().replaceAll("/+$", "");
+    }
+
     static String publicUrl() {
+        if (!relayUrl().isEmpty()) return relayUrl();
         String url = PUBLIC_URL.get().strip().replaceAll("/+$", "");
         return url.isEmpty() ? "http://localhost:" + PORT.get() : url;
     }

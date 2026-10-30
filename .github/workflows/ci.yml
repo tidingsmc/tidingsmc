@@ -40,3 +40,21 @@ jobs:
         run: npm exec --no -- eslint .
       - name: tsc typecheck
         run: npm exec --no -- tsc -b --noEmit
+
+  relay:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: relay
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: relay/package-lock.json
+      - run: npm ci
+      - name: prettier
+        run: npm exec --no -- prettier --check .
+      - name: tsc typecheck
+        run: npm exec --no -- tsc --noEmit

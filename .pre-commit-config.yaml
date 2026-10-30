@@ -62,3 +62,19 @@ repos:
         language: system
         files: ^app/.*\.(ts|tsx)$|^app/tsconfig.*\.json$
         pass_filenames: false
+
+      # ── Relay ─────────────────────────────────────────────────────────────
+      - id: relay-prettier
+        name: prettier (relay)
+        entry: bash -c 'cd relay && exec npm exec --no -- prettier --write --ignore-unknown "${@#relay/}"' --
+        language: system
+        files: ^relay/
+        exclude: ^relay/package-lock\.json$
+        types: [text]
+
+      - id: relay-tsc
+        name: tsc typecheck (relay)
+        entry: bash -c 'cd relay && exec npm exec --no -- tsc --noEmit'
+        language: system
+        files: ^relay/.*\.(ts|json|jsonc)$
+        pass_filenames: false

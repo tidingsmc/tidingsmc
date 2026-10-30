@@ -7,10 +7,12 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.logging.LogUtils;
 
+import dev.tidings.core.Api;
 import dev.tidings.core.ApiServer;
 import dev.tidings.core.Device;
 import dev.tidings.core.Pairing;
 import dev.tidings.core.PlayerProfile;
+import dev.tidings.core.RelayClient;
 import dev.tidings.core.Skins;
 import dev.tidings.core.Store;
 import dev.tidings.core.Tidings;
@@ -49,6 +51,7 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -68,7 +71,8 @@ public final class TidingsMod {
     /** Null until the server has started, or if Tidings couldn't start. */
     private Tidings tidings;
 
-    private ApiServer api;
+    /** How the app reaches the API: an {@link ApiServer} or a {@link RelayClient}. */
+    private AutoCloseable api;
 
     private WebPush push;
 
@@ -113,12 +117,23 @@ public final class TidingsMod {
                                     player.sendSystemMessage(approvalRequest(device));
                                 }));
 
+        String relayUrl = TidingsConfig.relayUrl();
+        if (!relayUrl.isEmpty()) {
+            try {
+                api = new RelayClient(new Api(tidings), store.vapidKeys(), URI.create(relayUrl));
+                LOGGER.info("Tidings API served through the relay {}", relayUrl);
+            } catch (IllegalArgumentException e) {
+                LOGGER.error("Tidings is disabled: relay-url {} is invalid", relayUrl, e);
+                this.tidings = null;
+            }
+            return;
+        }
         String bindAddress = TidingsConfig.BIND_ADDRESS.get();
         int port = TidingsConfig.PORT.get();
         try {
             api =
                     new ApiServer(
-                            tidings,
+                            new Api(tidings),
                             new InetSocketAddress(bindAddress, port),
                             TidingsConfig.CLIENT_IP_HEADER.get());
             LOGGER.info(
@@ -159,7 +174,13 @@ public final class TidingsMod {
 
     @SubscribeEvent
     public void onServerStopped(ServerStoppedEvent event) {
-        if (api != null) api.close();
+        if (api != null) {
+            try {
+                api.close();
+            } catch (Exception e) {
+                LOGGER.warn("Tidings couldn't stop its API cleanly", e);
+            }
+        }
         if (push != null) push.close();
         api = null;
         push = null;

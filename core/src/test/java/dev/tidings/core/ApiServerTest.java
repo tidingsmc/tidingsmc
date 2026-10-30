@@ -42,7 +42,7 @@ class ApiServerTest {
         tidings.onApprovalNeeded(requests::add);
         server =
                 new ApiServer(
-                        tidings,
+                        new Api(tidings),
                         new InetSocketAddress(InetAddress.getLoopbackAddress(), 0),
                         "X-Forwarded-For");
     }

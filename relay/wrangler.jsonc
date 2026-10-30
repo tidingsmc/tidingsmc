@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tidings-relay",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "durable_objects": {
+    "bindings": [{ "name": "RELAY", "class_name": "Relay" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Relay"] }],
+  "vars": {
+    // The Minecraft server allowed to connect, as the mod logs it when refused. Empty: the first
+    // server to connect claims this relay.
+    "OWNER_KEY": "",
+  },
+}
