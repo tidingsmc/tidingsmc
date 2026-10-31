@@ -7,6 +7,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -47,6 +48,9 @@ public final class Store {
     private final List<Device> devices = new ArrayList<>();
     private final Map<UUID, PlayerProfile> knownPlayers = new LinkedHashMap<>();
 
+    /** Players who chose whether phones hear about them: true to be announced. */
+    private final Map<UUID, Boolean> announced = new LinkedHashMap<>();
+
     private Store(Path file, String serverId, VapidKeys vapidKeys) {
         this.file = file;
         this.serverId = serverId;
@@ -81,6 +85,13 @@ public final class Store {
             for (JsonElement p : Json.array(json, "players")) {
                 PlayerProfile player = Json.readPlayer(p);
                 store.knownPlayers.put(player.id(), player);
+            }
+            // Saved by a version before players could choose.
+            if (json.has("announced")) {
+                JsonObject choices = Json.object(json.get("announced"), "announced");
+                for (String id : choices.keySet()) {
+                    store.announced.put(Json.uuid(id, "announced"), Json.bool(choices, id));
+                }
             }
             return store;
         } catch (JsonParseException | IllegalArgumentException e) {
@@ -217,6 +228,22 @@ public final class Store {
                 .toList();
     }
 
+    /** Whether {@code player} chose to be announced to phones, or null if they never chose. */
+    public synchronized Boolean announcedChoice(UUID player) {
+        return announced.get(player);
+    }
+
+    public synchronized void setAnnounced(UUID player, boolean announce) {
+        Boolean previous = announced.put(player, announce);
+        try {
+            save();
+        } catch (UncheckedIOException e) {
+            if (previous == null) announced.remove(player);
+            else announced.put(player, previous);
+            throw e;
+        }
+    }
+
     /**
      * Readable by the server's owner only: it holds the push keys, which also prove the relay is
      * this server's. On disk before it's renamed, or a power cut could leave an empty file.
@@ -259,6 +286,10 @@ public final class Store {
         devices.forEach(d -> deviceList.add(Json.device(d)));
         json.add("devices", deviceList);
         json.add("players", Json.players(List.copyOf(knownPlayers.values())));
+        JsonObject choices = new JsonObject();
+        announced.forEach(
+                (id, announce) -> choices.add(id.toString(), new JsonPrimitive(announce)));
+        json.add("announced", choices);
         try {
             Files.createDirectories(file.toAbsolutePath().getParent());
             // Write then rename, so a crash mid-write can't leave half a file.

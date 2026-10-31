@@ -14,6 +14,7 @@ final class TidingsConfig {
     static final ForgeConfigSpec.ConfigValue<String> SERVER_NAME;
     static final ForgeConfigSpec.ConfigValue<String> CLIENT_IP_HEADER;
     static final ForgeConfigSpec.ConfigValue<String> RELAY_URL;
+    static final ForgeConfigSpec.BooleanValue ANNOUNCE_PLAYERS;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -62,6 +63,13 @@ final class TidingsConfig {
                                 "Leave empty for a plain TCP tunnel (ssh -R, adb reverse...): then"
                                         + " anyone could fake that header.")
                         .define("client-ip-header", "");
+        ANNOUNCE_PLAYERS =
+                builder.comment(
+                                "Whether players' phones are told when someone joins or leaves, and"
+                                        + " see them online, until that player uses /tidings hide."
+                                        + " false: no one is announced until they pair a phone"
+                                        + " or use /tidings show.")
+                        .define("announce-players", true);
         SPEC = builder.build();
     }
 

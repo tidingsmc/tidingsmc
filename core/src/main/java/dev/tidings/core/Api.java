@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -266,15 +267,24 @@ public final class Api {
         worldJson.addProperty("day", world.day());
         worldJson.addProperty("weather", world.weather().name().toLowerCase());
         JsonObject response = new JsonObject();
-        response.add("players", Json.players(tidings.onlinePlayers()));
+        response.add("players", Json.players(shownTo(device, tidings.onlinePlayers())));
         response.add("world", worldJson);
         return Response.ok(response);
     }
 
     private Response players(Device device) {
         JsonObject response = new JsonObject();
+        // Hidden players too: they're still worth picking as friends for when they show again.
         response.add("players", Json.players(tidings.store().knownPlayers()));
         return Response.ok(response);
+    }
+
+    /** Without the players who aren't announced, except the device's own. */
+    private List<PlayerProfile> shownTo(Device device, List<PlayerProfile> players) {
+        UUID own = device.player().id();
+        return players.stream()
+                .filter(p -> p.id().equals(own) || tidings.isAnnounced(p.id()))
+                .toList();
     }
 
     private Response updateSettings(Device device, JsonElement changes) {

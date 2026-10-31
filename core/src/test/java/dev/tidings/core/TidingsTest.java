@@ -2,6 +2,7 @@ package dev.tidings.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 class TidingsTest {
     private final PlayerProfile steve = new PlayerProfile(UUID.randomUUID(), "Steve", null);
@@ -79,5 +81,33 @@ class TidingsTest {
 
         assertTrue(tidings.rememberPlayer(steve));
         assertFalse(tidings.rememberPlayer(steve));
+    }
+
+    @Test
+    void pairingAnnouncesThoseWhoNeverChoseWhenNoOneIsByDefault() {
+        Tidings optIn =
+                new Tidings(
+                        Store.inMemory(),
+                        new FakeGame(),
+                        (to, payload, ttl, topic) ->
+                                CompletableFuture.completedFuture(PushSender.Result.DELIVERED),
+                        false);
+        UUID undecided = UUID.randomUUID();
+        UUID hidden = UUID.randomUUID();
+        optIn.setAnnounced(hidden, false);
+
+        assertTrue(optIn.announceIfUndecided(undecided));
+        assertTrue(optIn.isAnnounced(undecided));
+        assertFalse(optIn.announceIfUndecided(hidden));
+        assertFalse(optIn.isAnnounced(hidden));
+    }
+
+    @Test
+    void pairingChangesNothingWhenPlayersAreAnnouncedByDefault() {
+        Tidings tidings = new Tidings(Store.inMemory(), new FakeGame());
+        UUID player = UUID.randomUUID();
+
+        assertFalse(tidings.announceIfUndecided(player));
+        assertNull(tidings.store().announcedChoice(player));
     }
 }

@@ -203,4 +203,63 @@ class NotificationsTest {
 
         assertEquals(renewed, tidings.devicesOf(steve.id()).get(0).push());
     }
+
+    @Test
+    void hiddenPlayersArentAnnouncedJoiningOrLeaving() {
+        pairDevice("steves-phone", steve, withLeaves());
+        tidings.setAnnounced(alex.id(), false);
+
+        tidings.playerJoined(alex, t0);
+        tidings.playerLeft(alex.id(), t0);
+
+        assertEquals(List.of(), sent);
+    }
+
+    @Test
+    void hidingWhileOnlineMeansNoLeaveEither() {
+        pairDevice("steves-phone", steve, withLeaves());
+        tidings.playerJoined(alex, t0);
+        sent.clear();
+
+        tidings.setAnnounced(alex.id(), false);
+        tidings.playerLeft(alex.id(), t0);
+
+        assertEquals(List.of(), sent);
+    }
+
+    @Test
+    void aHiddenPlayerStillGetsQuietWhileOnline() {
+        pairDevice("alexs-phone", alex);
+        tidings.setAnnounced(alex.id(), false);
+        tidings.playerJoined(alex, t0);
+
+        tidings.playerJoined(steve, t0);
+
+        assertEquals(List.of(), sent);
+    }
+
+    @Test
+    void whenTheOwnerAnnouncesNoOneByDefaultPlayersShowThemselves() {
+        Tidings optIn =
+                new Tidings(
+                        tidings.store(),
+                        new FakeGame(),
+                        (to, payload, ttl, topic) -> {
+                            sent.add(
+                                    new Sent(
+                                            to,
+                                            new String(payload, StandardCharsets.UTF_8),
+                                            topic));
+                            return CompletableFuture.completedFuture(answer);
+                        },
+                        false);
+        pairDevice("steves-phone", steve);
+
+        optIn.playerJoined(alex, t0);
+        assertEquals(List.of(), sent);
+
+        optIn.setAnnounced(alex.id(), true);
+        optIn.playerJoined(alex, later(Duration.ofHours(1)));
+        assertEquals(1, sent.size());
+    }
 }

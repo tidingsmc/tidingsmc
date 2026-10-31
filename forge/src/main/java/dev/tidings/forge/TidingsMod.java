@@ -25,6 +25,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -101,7 +102,9 @@ public final class TidingsMod {
         }
         // The field is null once the server stopped, with approval requests maybe still queued.
         push = new WebPush(store.vapidKeys(), TidingsConfig.vapidSubject());
-        Tidings tidings = new Tidings(store, new ForgeGame(server), push);
+        Tidings tidings =
+                new Tidings(
+                        store, new ForgeGame(server), push, TidingsConfig.ANNOUNCE_PLAYERS.get());
         this.tidings = tidings;
         tidings.onApprovalNeeded(
                 device ->
@@ -212,10 +215,7 @@ public final class TidingsMod {
                                     || server.getPlayerList().getPlayer(profile.id()) != player) {
                                 return;
                             }
-                            player.sendSystemMessage(
-                                    Component.literal(
-                                            "This server uses Tidings: get a notification on your"
-                                                    + " phone when friends join."));
+                            player.sendSystemMessage(welcome(tidings.isAnnounced(profile.id())));
                             pair(player);
                         },
                         server);
@@ -276,6 +276,22 @@ public final class TidingsMod {
                                                         devices(
                                                                 context.getSource()
                                                                         .getPlayerOrException())))
+                        .then(
+                                Commands.literal("hide")
+                                        .executes(
+                                                context ->
+                                                        announce(
+                                                                context.getSource()
+                                                                        .getPlayerOrException(),
+                                                                false)))
+                        .then(
+                                Commands.literal("show")
+                                        .executes(
+                                                context ->
+                                                        announce(
+                                                                context.getSource()
+                                                                        .getPlayerOrException(),
+                                                                true)))
                         .then(deviceCommand("approve", this::approve))
                         .then(deviceCommand("deny", this::deny))
                         .then(deviceCommand("unpair", this::unpair)));
@@ -385,6 +401,64 @@ public final class TidingsMod {
                                                         Component.literal("Click to copy"))));
     }
 
+    private static Component welcome(boolean announced) {
+        // Siblings inherit their parent's style: only the first part is gold.
+        MutableComponent message =
+                Component.empty()
+                        .append(
+                                Component.literal("This server has Tidings! ")
+                                        .withStyle(ChatFormatting.GOLD))
+                        .append("Get a ping on your phone whenever your friends hop on. ");
+        if (announced) {
+            return message.append("They get one when you do, too. Rather keep a low profile? ")
+                    .append(runnable("/tidings hide"));
+        }
+        return message.append("Pair your phone and they'll get one when you hop on, too.");
+    }
+
+    private int announce(ServerPlayer player, boolean announce) {
+        if (notRunning(player)) return 0;
+        try {
+            tidings.setAnnounced(player.getUUID(), announce);
+        } catch (UncheckedIOException e) {
+            LOGGER.error("Tidings couldn't save {}'s choice", player.getScoreboardName(), e);
+            player.sendSystemMessage(
+                    Component.literal("That couldn't be saved: see the server log.")
+                            .withStyle(ChatFormatting.RED));
+            return 0;
+        }
+        player.sendSystemMessage(announce ? onTheRadar() : offTheRadar());
+        return 1;
+    }
+
+    private static Component onTheRadar() {
+        return Component.literal("You're on the radar: ")
+                .append(
+                        "friends' phones ping when you join or leave, and the app shows you"
+                                + " online. Rather keep a low profile? ")
+                .append(runnable("/tidings hide"));
+    }
+
+    private static Component offTheRadar() {
+        return Component.literal("You're off the radar: ")
+                .append(
+                        "no phone pings when you join or leave, and the app won't show you"
+                                + " online. Players in the game still see you. Back on with ")
+                .append(runnable("/tidings show"));
+    }
+
+    /** Runs {@code command} on click. */
+    private static Component runnable(String command) {
+        return Component.literal(command)
+                .withStyle(
+                        style ->
+                                style.withColor(ChatFormatting.AQUA)
+                                        .withUnderlined(true)
+                                        .withClickEvent(
+                                                new ClickEvent(
+                                                        ClickEvent.Action.RUN_COMMAND, command)));
+    }
+
     private static Component tooManyDevices() {
         return Component.literal(
                         "You already have "
@@ -463,6 +537,7 @@ public final class TidingsMod {
         }
         if (approval instanceof Tidings.Approval.Approved approved) {
             paired(player, approved.device());
+            announceOnPairing(player);
             return 1;
         }
         if (approval instanceof Tidings.Approval.TooManyDevices) {
@@ -471,6 +546,18 @@ public final class TidingsMod {
         }
         player.sendSystemMessage(noSuchRequest());
         return 0;
+    }
+
+    /** The device is paired either way: failing to save this only keeps them hidden. */
+    private void announceOnPairing(ServerPlayer player) {
+        try {
+            if (tidings.announceIfUndecided(player.getUUID())) {
+                player.sendSystemMessage(onTheRadar());
+            }
+        } catch (UncheckedIOException e) {
+            LOGGER.error(
+                    "Tidings couldn't save that {} is announced", player.getScoreboardName(), e);
+        }
     }
 
     private void paired(ServerPlayer player, Device device) {

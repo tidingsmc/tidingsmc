@@ -25,6 +25,7 @@ public final class Tidings {
     private final Pairing pairing = new Pairing();
     private final Notifier notifier;
     private final Map<UUID, PlayerProfile> online = new LinkedHashMap<>();
+    private final boolean announcedByDefault;
 
     /** Once set, players leaving aren't announced: the server going down says it. */
     private volatile boolean stopping;
@@ -63,11 +64,19 @@ public final class Tidings {
 
     /**
      * @param push delivers the notifications, such as a {@link WebPush}
+     * @param announcedByDefault whether phones hear about players who never used {@link
+     *     #setAnnounced}
      */
-    public Tidings(Store store, Game game, PushSender push) {
+    public Tidings(Store store, Game game, PushSender push, boolean announcedByDefault) {
         this.store = store;
         this.game = game;
         this.notifier = new Notifier(store, push);
+        this.announcedByDefault = announcedByDefault;
+    }
+
+    /** Announces players by default. */
+    Tidings(Store store, Game game, PushSender push) {
+        this(store, game, push, true);
     }
 
     /** Sends no notifications, for tests. */
@@ -98,6 +107,7 @@ public final class Tidings {
         synchronized (this) {
             online.put(player.id(), player);
         }
+        if (!isAnnounced(player.id())) return;
         notifier.notify(NotificationKind.PLAYER_JOINED, player, onlineIds(), now);
     }
 
@@ -116,7 +126,7 @@ public final class Tidings {
         synchronized (this) {
             player = online.remove(id);
         }
-        if (player == null || stopping) return;
+        if (player == null || stopping || !isAnnounced(id)) return;
         notifier.notify(NotificationKind.PLAYER_LEFT, player, onlineIds(), now);
     }
 
@@ -138,8 +148,41 @@ public final class Tidings {
         return Set.copyOf(online.keySet());
     }
 
+    /** Everyone online, announced or not. */
     public synchronized List<PlayerProfile> onlinePlayers() {
         return List.copyOf(online.values());
+    }
+
+    /**
+     * Whether phones are told when {@code player} joins or leaves, and see them online and among
+     * the server's players.
+     */
+    public boolean isAnnounced(UUID player) {
+        Boolean choice = store.announcedChoice(player);
+        return choice == null ? announcedByDefault : choice;
+    }
+
+    /**
+     * Takes effect at once, without telling phones: a player hiding while online doesn't look like
+     * they left.
+     *
+     * @throws java.io.UncheckedIOException if it couldn't be saved
+     */
+    public void setAnnounced(UUID player, boolean announce) {
+        store.setAnnounced(player, announce);
+    }
+
+    /**
+     * When players aren't announced by default, announces {@code player} if they never chose:
+     * pairing a phone says they're in.
+     *
+     * @return whether they're announced because of this
+     * @throws java.io.UncheckedIOException if it couldn't be saved
+     */
+    public boolean announceIfUndecided(UUID player) {
+        if (announcedByDefault || store.announcedChoice(player) != null) return false;
+        store.setAnnounced(player, true);
+        return true;
     }
 
     /**

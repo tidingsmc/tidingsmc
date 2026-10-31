@@ -229,8 +229,12 @@ final class Json {
     }
 
     private static UUID uuid(JsonObject o, String field) {
+        return uuid(string(o, field), field);
+    }
+
+    static UUID uuid(String text, String field) {
         try {
-            return UUID.fromString(string(o, field));
+            return UUID.fromString(text);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid UUID for " + field, e);
         }

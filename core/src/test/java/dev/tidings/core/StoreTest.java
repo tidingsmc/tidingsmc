@@ -169,4 +169,19 @@ class StoreTest {
         Files.delete(file.resolveSibling(file.getFileName() + ".tmp"));
         assertTrue(store.rememberPlayer(steve));
     }
+
+    @Test
+    void remembersWhoChoseToBeAnnouncedOrNot() throws IOException {
+        Path file = dir.resolve("data.json");
+        Store store = Store.open(file);
+        UUID alex = UUID.randomUUID();
+        store.setAnnounced(steve.id(), false);
+        store.setAnnounced(alex, true);
+
+        Store reopened = Store.open(file);
+
+        assertEquals(false, reopened.announcedChoice(steve.id()));
+        assertEquals(true, reopened.announcedChoice(alex));
+        assertNull(reopened.announcedChoice(UUID.randomUUID()));
+    }
 }

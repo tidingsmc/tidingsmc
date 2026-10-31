@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -573,5 +574,34 @@ class ApiServerTest {
                         .firstValue("access-control-allow-headers")
                         .get()
                         .contains("authorization"));
+    }
+
+    @Test
+    void hiddenPlayersAreOnlineToThemselvesOnly() throws IOException, InterruptedException {
+        String token = pair();
+        tidings.playerJoined(steve, Instant.EPOCH);
+        tidings.playerJoined(alex, Instant.EPOCH);
+        tidings.setAnnounced(steve.id(), false);
+        tidings.setAnnounced(alex.id(), false);
+
+        JsonArray online = json(call("GET", "/api/online", token, null)).getAsJsonArray("players");
+
+        assertEquals(1, online.size());
+        assertEquals(
+                steve.id().toString(), online.get(0).getAsJsonObject().get("uuid").getAsString());
+    }
+
+    @Test
+    void hiddenPlayersCanStillBePickedAsFriends() throws IOException, InterruptedException {
+        String token = pair();
+        tidings.rememberPlayer(alex);
+        tidings.setAnnounced(alex.id(), false);
+
+        JsonArray players =
+                json(call("GET", "/api/players", token, null)).getAsJsonArray("players");
+
+        assertEquals(1, players.size());
+        assertEquals(
+                alex.id().toString(), players.get(0).getAsJsonObject().get("uuid").getAsString());
     }
 }
