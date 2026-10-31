@@ -104,6 +104,11 @@ final class TidingsConfig {
         return APP_URL.get().strip().replaceAll("#.*$", "");
     }
 
+    /** The app's address without "https://", for players to type on their phone. */
+    static String appAddress() {
+        return appUrl().replaceFirst("^https://", "").replaceAll("/+$", "");
+    }
+
     /** Empty without a relay. */
     static String relayUrl() {
         return RELAY_URL.get().strip().replaceAll("/+$", "");

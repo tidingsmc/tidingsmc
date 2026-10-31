@@ -343,23 +343,38 @@ public final class TidingsMod {
                         + code.token();
 
         try {
-            if (PairingMap.give(player, link, code.code())) {
+            PairingMap.Given given = PairingMap.give(player, link, code.code());
+            if (given != PairingMap.Given.NOWHERE) {
+                MutableComponent where =
+                        switch (given) {
+                            case HAND -> Component.literal("Scan the map in your hand");
+                            case OFFHAND ->
+                                    Component.literal(
+                                                    "The pairing map is in your other hand: press ")
+                                            .append(Component.keybind("key.swapOffhand"))
+                                            .append(" to hold it up and scan it");
+                            default ->
+                                    Component.literal(
+                                            "A pairing map is in your inventory: hold it and scan"
+                                                    + " it");
+                        };
                 player.sendSystemMessage(
-                        Component.literal(
-                                "Open the Tidings app, tap \"Pair a server\" and follow the"
-                                        + " instructions."));
+                        where.append(" with your phone's camera. Can't scan it? ")
+                                .append(runnable("/tidings pair code")));
             } else {
                 player.sendSystemMessage(
                         Component.literal(
-                                "Your inventory is full: free a slot and use /tidings pair again"
-                                        + " to get a map to scan, or use a code in the app."));
+                                        "Your inventory is full: free a slot and use /tidings pair"
+                                            + " again to get a map to scan, or pair with a code: ")
+                                .append(runnable("/tidings pair code")));
             }
         } catch (IllegalArgumentException e) {
             LOGGER.warn("No pairing map: the link is too long ({} characters)", link.length(), e);
             player.sendSystemMessage(
                     Component.literal(
-                            "No map to scan: the pairing link is too long for one. Use a code in"
-                                    + " the app instead."));
+                                    "No map to scan: the pairing link is too long for one. Pair"
+                                            + " with a code instead: ")
+                            .append(runnable("/tidings pair code")));
         }
         return 1;
     }
@@ -371,9 +386,9 @@ public final class TidingsMod {
         // The app adds https:// itself.
         String address = TidingsConfig.publicUrl().replaceFirst("^https://", "");
         player.sendSystemMessage(
-                Component.literal(
-                                "In the Tidings app, tap \"Pair a server\", then \"Use a"
-                                        + " code\":")
+                Component.literal("On your phone, open ")
+                        .append(copyable(TidingsConfig.appAddress(), ChatFormatting.AQUA))
+                        .append(", tap \"Pair a server\", then \"Use a code\":")
                         .append("\n  Server address: ")
                         .append(copyable(address, ChatFormatting.GREEN))
                         .append("\n  Code: ")

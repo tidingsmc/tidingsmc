@@ -2,15 +2,19 @@ package dev.tidings.forge;
 
 import dev.tidings.core.QrCode;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetCarriedItemPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -50,16 +54,28 @@ final class PairingMap {
 
     private PairingMap() {}
 
+    /** Where {@link #give} put the map. */
+    enum Given {
+        HAND,
+        OFFHAND,
+        INVENTORY,
+        /** Nowhere: their inventory is full. */
+        NOWHERE
+    }
+
     /**
-     * Gives {@code player} a map with {@code link} as a QR code: in their hand if it's empty,
-     * otherwise in their inventory.
+     * Gives {@code player} a map with {@code link} as a QR code, where it's easiest to scan: in
+     * their hand if it's empty, else in an empty hotbar slot that gets selected, else in their off
+     * hand, else in their inventory.
      *
-     * @return false if their inventory is full
      * @throws IllegalArgumentException if the link is too long to fit on a map
      */
-    static boolean give(ServerPlayer player, String link, String code) {
-        if (!player.getMainHandItem().isEmpty() && player.getInventory().getFreeSlot() == -1) {
-            return false;
+    static Given give(ServerPlayer player, String link, String code) {
+        Inventory inventory = player.getInventory();
+        if (!player.getMainHandItem().isEmpty()
+                && !player.getOffhandItem().isEmpty()
+                && inventory.getFreeSlot() == -1) {
+            return Given.NOWHERE;
         }
         QrCode qr = QrCode.encode(link, QrCode.Ecc.MEDIUM);
         MapItemSavedData data = blank();
@@ -73,13 +89,31 @@ final class PairingMap {
         map.getOrCreateTag().putBoolean(TAG, true);
         map.getOrCreateTag().putString(CODE_TAG, code);
         map.setHoverName(Component.literal("Tidings pairing"));
+        ListTag lore = new ListTag();
+        lore.add(
+                StringTag.valueOf(
+                        Component.Serializer.toJson(
+                                Component.literal("Scan it with your phone's camera")
+                                        .withStyle(ChatFormatting.GRAY))));
+        map.getOrCreateTagElement("display").put("Lore", lore);
 
         if (player.getMainHandItem().isEmpty()) {
             player.setItemInHand(InteractionHand.MAIN_HAND, map);
-        } else {
-            player.getInventory().add(map);
+            return Given.HAND;
         }
-        return true;
+        for (int slot = 0; slot < Inventory.getSelectionSize(); slot++) {
+            if (!inventory.getItem(slot).isEmpty()) continue;
+            inventory.setItem(slot, map);
+            inventory.selected = slot;
+            player.connection.send(new ClientboundSetCarriedItemPacket(slot));
+            return Given.HAND;
+        }
+        if (player.getOffhandItem().isEmpty()) {
+            player.setItemInHand(InteractionHand.OFF_HAND, map);
+            return Given.OFFHAND;
+        }
+        inventory.add(map);
+        return Given.INVENTORY;
     }
 
     /**
