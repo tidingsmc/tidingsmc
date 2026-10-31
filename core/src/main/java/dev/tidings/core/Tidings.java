@@ -321,6 +321,11 @@ public final class Tidings {
         awaitingApproval.values().removeIf(a -> !now.isBefore(a.expiresAt));
     }
 
+    /** Every paired device, oldest first. */
+    public List<Device> devices() {
+        return store.devices();
+    }
+
     /** The devices {@code player} paired, oldest first. */
     public List<Device> devicesOf(UUID player) {
         return store.devicesOf(player);

@@ -135,6 +135,21 @@ public final class RelayClient implements AutoCloseable {
         workers.shutdownNow();
     }
 
+    /** Whether phones' requests can come through the relay right now. */
+    public synchronized boolean isConnected() {
+        return socket != null;
+    }
+
+    /** Why it isn't connected, as last logged; null while connected or before a first failure. */
+    public synchronized String problem() {
+        return socket == null ? lastProblem : null;
+    }
+
+    /** The relay's address without its scheme, e.g. tidings-relay.someone.workers.dev */
+    public String host() {
+        return host;
+    }
+
     /**
      * The relay's host as it sees itself, for the signature: like JavaScript's {@code URL.host},
      * lowercase and without the default port, however the owner wrote the relay URL.

@@ -77,7 +77,18 @@ public final class TidingsMod {
     /** How the app reaches the API: an {@link ApiServer} or a {@link RelayClient}. */
     private AutoCloseable api;
 
+    /**
+     * Where phones reach {@link #api}, and where it listens without a relay: as configured when it
+     * started, since Forge reloads the config file when it's edited.
+     */
+    private String publicUrl;
+
+    private String listenAddress;
+
     private WebPush push;
+
+    /** Why Tidings isn't running, for /tidings admin status; null while it is. */
+    private String problem;
 
     public TidingsMod(FMLJavaModLoadingContext context) {
         context.registerConfig(ModConfig.Type.COMMON, TidingsConfig.SPEC);
@@ -87,9 +98,11 @@ public final class TidingsMod {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         MinecraftServer server = event.getServer();
+        problem = null;
         String configProblem = TidingsConfig.problem();
         if (configProblem != null) {
             LOGGER.error("Tidings is disabled: {} in config/tidings-common.toml", configProblem);
+            problem = configProblem + " in config/tidings-common.toml";
             return;
         }
         Path dataFile = FMLPaths.GAMEDIR.get().resolve("tidings").resolve("data.json");
@@ -98,6 +111,7 @@ public final class TidingsMod {
             store = Store.open(dataFile);
         } catch (IOException e) {
             LOGGER.error("Tidings is disabled: couldn't read {}", dataFile, e);
+            problem = "couldn't read " + dataFile;
             return;
         }
         // The field is null once the server stopped, with approval requests maybe still queued.
@@ -127,6 +141,8 @@ public final class TidingsMod {
                                 }));
 
         String relayUrl = TidingsConfig.relayUrl();
+        publicUrl = TidingsConfig.publicUrl();
+        listenAddress = null;
         if (!relayUrl.isEmpty()) {
             api = new RelayClient(new Api(tidings), store.vapidKeys(), URI.create(relayUrl));
             LOGGER.info("Tidings API served through the relay {}", relayUrl);
@@ -140,11 +156,8 @@ public final class TidingsMod {
                             new Api(tidings),
                             new InetSocketAddress(bindAddress, port),
                             TidingsConfig.CLIENT_IP_HEADER.get());
-            LOGGER.info(
-                    "Tidings API listening on {}:{}, public URL {}",
-                    bindAddress,
-                    port,
-                    TidingsConfig.publicUrl());
+            listenAddress = bindAddress + ":" + port;
+            LOGGER.info("Tidings API listening on {}, public URL {}", listenAddress, publicUrl);
         } catch (IOException e) {
             LOGGER.error(
                     "Tidings is disabled: couldn't listen on {}:{}; is the port already used?",
@@ -153,6 +166,7 @@ public final class TidingsMod {
                     e);
             // Pairing codes would be useless without the API.
             this.tidings = null;
+            problem = "couldn't listen on " + bindAddress + ":" + port;
         }
     }
 
@@ -254,6 +268,10 @@ public final class TidingsMod {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
         dispatcher.register(
                 Commands.literal("tidings")
+                        .executes(context -> HelpCommand.run(context.getSource()))
+                        .then(
+                                Commands.literal("help")
+                                        .executes(context -> HelpCommand.run(context.getSource())))
                         .then(
                                 Commands.literal("pair")
                                         .executes(
@@ -294,7 +312,33 @@ public final class TidingsMod {
                                                                 true)))
                         .then(deviceCommand("approve", this::approve))
                         .then(deviceCommand("deny", this::deny))
-                        .then(deviceCommand("unpair", this::unpair)));
+                        .then(deviceCommand("unpair", this::unpair))
+                        .then(AdminCommands.command(this)));
+    }
+
+    /** Null until the server has started, or if Tidings couldn't start: see {@link #problem}. */
+    Tidings tidings() {
+        return tidings;
+    }
+
+    /** How phones reach the API: an {@link ApiServer} or a {@link RelayClient}, or null. */
+    AutoCloseable api() {
+        return api;
+    }
+
+    /** Where phones reach the API, as it was started. */
+    String publicUrl() {
+        return publicUrl;
+    }
+
+    /** Where the API listens, as it was started; null with a relay. */
+    String listenAddress() {
+        return listenAddress;
+    }
+
+    /** Why Tidings isn't running, if it was tried. */
+    String problem() {
+        return problem;
     }
 
     /** {@code /tidings <name> <device>}. */
@@ -334,7 +378,6 @@ public final class TidingsMod {
     private int pair(ServerPlayer player) {
         Pairing.Issued code = newCode(player);
         if (code == null) return 0;
-        String publicUrl = TidingsConfig.publicUrl();
         String link =
                 TidingsConfig.appUrl()
                         + "#pair="
@@ -384,7 +427,7 @@ public final class TidingsMod {
         Pairing.Issued code = newCode(player);
         if (code == null) return 0;
         // The app adds https:// itself.
-        String address = TidingsConfig.publicUrl().replaceFirst("^https://", "");
+        String address = publicUrl.replaceFirst("^https://", "");
         player.sendSystemMessage(
                 Component.literal("On your phone, open ")
                         .append(copyable(TidingsConfig.appAddress(), ChatFormatting.AQUA))
@@ -401,7 +444,7 @@ public final class TidingsMod {
     }
 
     /** Bold, and copied to the clipboard on click. */
-    private static Component copyable(String text, ChatFormatting color) {
+    static Component copyable(String text, ChatFormatting color) {
         return Component.literal(text)
                 .withStyle(
                         style ->
@@ -463,7 +506,7 @@ public final class TidingsMod {
     }
 
     /** Runs {@code command} on click. */
-    private static Component runnable(String command) {
+    static Component runnable(String command) {
         return Component.literal(command)
                 .withStyle(
                         style ->
@@ -633,7 +676,7 @@ public final class TidingsMod {
                                                                 + device.id())));
     }
 
-    private static Component deviceName(Device device) {
+    static Component deviceName(Device device) {
         return Component.literal(device.name()).withStyle(ChatFormatting.GOLD);
     }
 

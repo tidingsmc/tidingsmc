@@ -62,6 +62,16 @@ class TidingsTest {
     }
 
     @Test
+    void listsEveryDeviceForTheOwner() {
+        Tidings tidings = new Tidings(Store.inMemory(), new FakeGame());
+        tidings.store().addDevice(device("pixel", steve));
+        tidings.store().addDevice(device("iphone", alex));
+
+        assertEquals(
+                List.of("pixel", "iphone"), tidings.devices().stream().map(Device::id).toList());
+    }
+
+    @Test
     void noPairingCodeBeyondTheDeviceLimit() {
         Tidings tidings = new Tidings(Store.inMemory(), new FakeGame());
         for (int i = 1; i < Tidings.MAX_DEVICES_PER_PLAYER; i++) {

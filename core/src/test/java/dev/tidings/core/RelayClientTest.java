@@ -2,6 +2,7 @@ package dev.tidings.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -11,6 +12,7 @@ import com.google.gson.JsonParser;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.net.ServerSocket;
 import java.net.URI;
 import java.time.Instant;
 import java.util.List;
@@ -119,6 +121,23 @@ class RelayClientTest {
         }
         assertEquals("localhost:8787", RelayClient.hostOf(URI.create("http://localhost:8787")));
         assertEquals("localhost", RelayClient.hostOf(URI.create("http://localhost:80")));
+    }
+
+    /** For /tidings admin status. */
+    @Test
+    void tellsWhyItIsNotConnected() throws Exception {
+        try (ServerSocket hangUp = DoctorTest.hangUpServer();
+                RelayClient refused =
+                        new RelayClient(
+                                new Api(tidings),
+                                tidings.store().vapidKeys(),
+                                URI.create("http://127.0.0.1:" + hangUp.getLocalPort()))) {
+            assertEquals("127.0.0.1:" + hangUp.getLocalPort(), refused.host());
+            for (int i = 0; i < 100 && refused.problem() == null; i++) Thread.sleep(50);
+
+            assertFalse(refused.isConnected());
+            assertNotNull(refused.problem());
+        }
     }
 
     @Test
