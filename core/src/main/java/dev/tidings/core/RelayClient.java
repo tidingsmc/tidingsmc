@@ -19,6 +19,7 @@ import java.security.Signature;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -101,12 +102,12 @@ public final class RelayClient implements AutoCloseable {
                             throw new IllegalArgumentException(
                                     "The relay URL must start with https://");
                 };
-        if (relayUrl.getRawAuthority() == null) {
+        if (relayUrl.getRawAuthority() == null || relayUrl.getHost() == null) {
             throw new IllegalArgumentException("The relay URL has no host");
         }
         String path = relayUrl.getPath().replaceAll("/+$", "");
         connectUri = URI.create(scheme + "://" + relayUrl.getRawAuthority() + path + "/connect");
-        host = relayUrl.getRawAuthority();
+        host = hostOf(relayUrl);
         AtomicInteger threads = new AtomicInteger();
         ThreadFactory daemons =
                 r -> {
@@ -132,6 +133,17 @@ public final class RelayClient implements AutoCloseable {
         if (socket != null) socket.sendClose(WebSocket.NORMAL_CLOSURE, "Server stopping");
         scheduler.shutdownNow();
         workers.shutdownNow();
+    }
+
+    /**
+     * The relay's host as it sees itself, for the signature: like JavaScript's {@code URL.host},
+     * lowercase and without the default port, however the owner wrote the relay URL.
+     */
+    static String hostOf(URI relayUrl) {
+        String host = relayUrl.getHost().toLowerCase(Locale.ROOT);
+        int port = relayUrl.getPort();
+        int defaultPort = "https".equals(relayUrl.getScheme()) ? 443 : 80;
+        return port == -1 || port == defaultPort ? host : host + ":" + port;
     }
 
     /** What the relay checks: {@code key} signed this, for this relay, at about this time. */

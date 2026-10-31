@@ -72,6 +72,9 @@ Requirements: a JDK (17+; Gradle downloads Java 17 for Forge automatically) and 
                               # set app-url = "http://localhost:5173/" in forge/run/config/tidings-common.toml)
 
 cd app && npm install && npm run dev
+
+cd app && npm test                  # app unit tests
+cd relay && npm install && npm test # relay tests, in a local Workers runtime
 ```
 
 The app uses fake servers in development (`VITE_MOCK_API=true` in `app/.env.development`). To talk to a real server instead, put `VITE_MOCK_API=false` in `app/.env.development.local`, then pair with `localhost:8765`.

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 class RelayClientTest {
@@ -104,6 +105,20 @@ class RelayClientTest {
                                 new Api(tidings),
                                 tidings.store().vapidKeys(),
                                 URI.create("tidings-relay.someone.workers.dev")));
+    }
+
+    /** The relay checks the signature against its own host, as JavaScript's URL.host writes it. */
+    @Test
+    void signsTheRelaysHostHoweverTheOwnerWroteIt() {
+        for (String url :
+                List.of(
+                        "https://tidings-relay.me.workers.dev",
+                        "https://Tidings-Relay.ME.workers.dev/",
+                        "https://tidings-relay.me.workers.dev:443")) {
+            assertEquals("tidings-relay.me.workers.dev", RelayClient.hostOf(URI.create(url)));
+        }
+        assertEquals("localhost:8787", RelayClient.hostOf(URI.create("http://localhost:8787")));
+        assertEquals("localhost", RelayClient.hostOf(URI.create("http://localhost:80")));
     }
 
     @Test

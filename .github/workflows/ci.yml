@@ -40,6 +40,11 @@ jobs:
         run: npm exec --no -- eslint .
       - name: tsc typecheck
         run: npm exec --no -- tsc -b --noEmit
+      - name: tests
+        run: npm test
+      # Also bundles the service worker, which nothing else checks.
+      - name: build
+        run: npm run build
 
   relay:
     runs-on: ubuntu-latest
@@ -57,4 +62,6 @@ jobs:
       - name: prettier
         run: npm exec --no -- prettier --check .
       - name: tsc typecheck
-        run: npm exec --no -- tsc --noEmit
+        run: npm run typecheck
+      - name: tests
+        run: npm test

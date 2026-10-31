@@ -74,7 +74,7 @@ repos:
 
       - id: relay-tsc
         name: tsc typecheck (relay)
-        entry: bash -c 'cd relay && exec npm exec --no -- tsc --noEmit'
+        entry: bash -c 'cd relay && exec npm run --silent typecheck'
         language: system
         files: ^relay/.*\.(ts|json|jsonc)$
         pass_filenames: false
