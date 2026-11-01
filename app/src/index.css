@@ -1002,7 +1002,6 @@ h2 {
   color: var(--muted);
 }
 
-/* One line per period: "From [22:00]  To [08:00]  🗑". */
 .time-row {
   display: flex;
   align-items: center;
@@ -1024,7 +1023,6 @@ h2 {
   flex: 1;
   width: 100%;
   min-width: 0;
-  /* Little on the right: Android puts its dropdown arrow there. */
   padding: 8px 4px 8px 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -1385,10 +1383,7 @@ h2 {
   min-width: 160px;
 }
 
-/* A server's tabs, like a binder's dividers: icon tabs on top of a sheet of paper, the open one
-   joined to it. */
 .binder {
-  /* Keeps the open tab's z-index inside the binder, under the sticky top bar. */
   isolation: isolate;
   flex: 1;
   display: flex;
@@ -1426,7 +1421,6 @@ h2 {
   height: 22px;
 }
 
-/* The open tab stands taller and its bottom edge melts into the paper. */
 .tabs a[aria-current="page"] {
   z-index: 1;
   height: 42px;
@@ -1436,7 +1430,6 @@ h2 {
   color: var(--accent);
 }
 
-/* An add-on's name, on top of its sheet. */
 .tab-title {
   display: flex;
   align-items: center;
@@ -1459,6 +1452,65 @@ h2 {
   color: var(--accent);
 }
 
+.addon-icon.named {
+  display: contents;
+}
+
+img.addon-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.tabs a img.addon-icon,
+.tab-title img.addon-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.addon-row > .addon-icon,
+.addon-row > .addon-icon svg {
+  width: 32px;
+  height: 32px;
+  color: var(--accent);
+}
+
+.addon-icon-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-heading);
+}
+
+.addon-icon-block > .addon-icon,
+.addon-icon-block > .addon-icon svg {
+  width: 28px;
+  height: 28px;
+  color: var(--accent);
+}
+
+.addon-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.addon-image[data-pixelated] {
+  image-rendering: pixelated;
+  border-radius: 0;
+}
+
+.addon-tree-card-head .addon-icon,
+.addon-tree-card-head .addon-icon svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .tab-paper {
   flex: 1;
   display: flex;
@@ -1471,7 +1523,6 @@ h2 {
   box-shadow: 0 1px 2px light-dark(rgb(0 0 0 / 0.06), rgb(0 0 0 / 0.3));
 }
 
-/* Add-on pages, drawn from the blocks their mod sends. */
 .addon {
   display: flex;
   flex-direction: column;
@@ -1556,7 +1607,6 @@ h2 {
   flex-shrink: 0;
 }
 
-/* Scrolls sideways inside the page, like Minecraft's advancement screen. */
 .addon-tree {
   position: relative;
   background: var(--surface);
@@ -1567,7 +1617,6 @@ h2 {
 .addon-tree-scroller {
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  /* Upside down, and its content back up: the scrollbar goes on top. */
   transform: rotateX(180deg);
 }
 
@@ -1609,7 +1658,6 @@ h2 {
   background: var(--bg);
 }
 
-/* Opened, it grows over its neighbours to fit its description. */
 .addon-tree-node[data-open] {
   z-index: 1;
   width: 200px;
@@ -1705,7 +1753,6 @@ h2 {
   font-size: 0.7rem;
 }
 
-/* Over the card's top edge, so the title keeps the whole card. */
 .addon-tree-corner {
   position: absolute;
   top: -10px;
@@ -1713,7 +1760,6 @@ h2 {
   border: 1px solid var(--surface);
 }
 
-/* Above the tree, while there's more of it to scroll to. */
 .addon-tree-scroll {
   display: flex;
   justify-content: flex-end;

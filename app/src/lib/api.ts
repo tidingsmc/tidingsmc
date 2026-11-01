@@ -1,27 +1,19 @@
 import type { TFunction } from "i18next";
 import type { ActionResult, AddonInfo, AddonLink, AddonView } from "./addons";
-import { mockAddonAction, mockAddonView, MOCK_ADDONS } from "./mockAddons";
 import { TranslatedError } from "./i18n";
 import { currentTimeZone, hashString, hostOf } from "./util";
 
-/** A server this device is paired with, as stored on the device. */
 export interface PairedServer {
-  /** Stable ID chosen by the mod; survives changes of `url`. */
   id: string;
   name: string;
-  /** The mod's public URL, e.g. https://mc.example.com */
   url: string;
-  /** Device token, sent as `Authorization: Bearer <token>`. */
   token: string;
-  /** The server's VAPID public key, used to subscribe to its pushes. */
   vapidPublicKey: string;
   deviceName: string;
   pairedAt: number;
-  /** The Minecraft account that paired this device (the one that ran /tidings pair). */
   player: LinkedPlayer;
 }
 
-/** A server has at most one pairing per device, for one Minecraft account. */
 export interface LinkedPlayer {
   uuid: string;
   name: string;
@@ -31,41 +23,24 @@ export interface LinkedPlayer {
 export interface OnlinePlayer {
   uuid: string;
   name: string;
-  /** Skin texture from the player's game profile (textures.minecraft.net). Absent on offline-mode servers. */
   skinUrl?: string;
 }
 
-// The HTTP contract the mod implements. Errors answer `{ error, reason? }`: `error` is shown as is,
-// `reason: "unpaired"` (with 401) means the mod doesn't know this device's token anymore, and
-// `reason: "pending"` (with 403) that the player hasn't approved this device in game yet.
-
-/**
- * POST {url}/api/pair  body: { code, deviceName }
- * `code` is the 6 digits the player typed, or the token from the QR code: long enough not to be
- * guessed, it keeps working while someone floods the server with wrong codes.
- * The token works once the player approves the device in game, see `TidingsApi.approval`.
- */
 export interface PairResponse {
   serverId: string;
-  /** The name the server's owner chose for it, if any: suggested when naming the server. */
   serverName?: string;
   token: string;
   vapidPublicKey: string;
-  /** Who got the pairing code. */
   player: LinkedPlayer;
 }
 
-/** GET {url}/api/online  (authenticated) */
 export interface OnlineResponse {
   players: OnlinePlayer[];
   world?: WorldInfo;
 }
 
-/** A piece of the server description, with Minecraft formatting. */
 export interface MotdSegment {
-  /** May contain "\n" (the MOTD has up to two lines). */
   text: string;
-  /** A Minecraft color name ("gold", "dark_aqua"…) or "#rrggbb". */
   color?: string;
   bold?: boolean;
   italic?: boolean;
@@ -73,135 +48,85 @@ export interface MotdSegment {
   strikethrough?: boolean;
 }
 
-/** GET {url}/api/info  (authenticated): what the multiplayer server list shows. */
 export interface ServerInfo {
   motd: MotdSegment[];
-  /** server-icon.png as "data:image/png;base64,…", absent if the server has none. */
   icon?: string;
   version: string;
-  /** The tabs other mods add to the server's page, in this order. */
   addons?: AddonInfo[];
 }
 
-/** The overworld's state, as seen in game. */
 export interface WorldInfo {
-  /** Time of day in ticks, 0–23999. 0 is sunrise (6:00), 6000 is noon. */
   dayTime: number;
-  /** Days since the world was created. */
   day: number;
   weather: "clear" | "rain" | "thunder";
 }
 
-/** GET {url}/api/players  (authenticated): everyone who has played on the server, to pick friends from. */
 export interface PlayersResponse {
   players: OnlinePlayer[];
 }
 
-/**
- * GET / PATCH {url}/api/devices/me/settings  (authenticated). The mod uses these to decide whom to notify.
- * PATCH replaces each field it contains as a whole: sending `quietHours` replaces all of its periods.
- */
 export interface DeviceSettings {
   notifyJoins: boolean;
   notifyLeaves: boolean;
-  /** The server started or stopped. */
   notifyServerStatus: boolean;
-  /** No notifications while this device's player is on the server themselves: they see it in game. */
   quietWhileOnline: boolean;
   friends: FriendFilter;
   quietHours: QuietHours;
-  /** IANA time zone of the device, e.g. "Europe/Paris". Quiet hours are in this zone. */
   timeZone: string;
-  /**
-   * IDs of the add-ons whose notifications this device doesn't want: the others notify, quiet hours and
-   * `quietWhileOnline` still applying.
-   */
   mutedAddons: string[];
 }
 
-/** Join/leave notifications only for these players. The list is kept while the filter is off. */
 export interface FriendFilter {
   enabled: boolean;
   players: Friend[];
 }
 
-/** The name is only for showing the list; the mod matches players on their UUID. */
 export interface Friend {
   uuid: string;
   name: string;
 }
 
-/** No notifications at all during these daily periods. */
 export interface QuietHours {
   enabled: boolean;
   periods: QuietPeriod[];
 }
 
-/** "HH:MM" times in the device's time zone. A period may cross midnight (22:00 → 08:00). */
 export interface QuietPeriod {
   start: string;
   end: string;
 }
 
-/**
- * Where a new pairing stands: the player approves it in game, or denies it, or lets it expire, or
- * isn't in game to be asked.
- */
 export type Approval =
   "approved" | "pending" | "denied" | "expired" | "playerOffline";
 
 export interface TidingsApi {
   pair(url: string, code: string, deviceName: string): Promise<PairResponse>;
-  /**
-   * GET {url}/api/devices/me/approval  with the token from pairing: `{ approval }`. Answers 401
-   * "unpaired" once the server forgot the request (it restarted, or the request ended long ago).
-   */
   approval(server: PairedServer): Promise<Approval>;
-  /**
-   * POST {url}/api/devices/me/approval  with the token from pairing, once the player named the server.
-   * The mod asks them in game to approve this device; `approval` then tells when they did.
-   */
   askApproval(server: PairedServer): Promise<void>;
   info(server: PairedServer): Promise<ServerInfo>;
   online(server: PairedServer): Promise<OnlineResponse>;
   players(server: PairedServer): Promise<PlayersResponse>;
   settings(server: PairedServer): Promise<DeviceSettings>;
-  /** Returns the settings as saved by the server. */
   updateSettings(
     server: PairedServer,
     changes: Partial<DeviceSettings>,
   ): Promise<DeviceSettings>;
-  /**
-   * PUT {url}/api/devices/me/push  (authenticated)  body: the subscription as JSON,
-   * `{ endpoint, expirationTime, keys: { p256dh, auth } }`. Replaces the device's push subscription.
-   * Sent after pairing, and again whenever the browser changes the subscription. Until then the mod
-   * has nowhere to send this device's notifications. The mod forgets a subscription its push service
-   * says expired (404 or 410), and keeps the device paired: the next one sent here replaces it.
-   */
   updatePush(
     server: PairedServer,
     subscription: PushSubscriptionJSON,
   ): Promise<void>;
-  /** See `AddonView`. */
   addonView(
     server: PairedServer,
     addon: string,
     link: AddonLink | null,
     locale: string,
   ): Promise<AddonView>;
-  /** See `ActionResult`. */
   addonAction(
     server: PairedServer,
     addon: string,
     action: AddonAction,
     locale: string,
   ): Promise<ActionResult>;
-  /**
-   * DELETE {url}/api/devices/me  (authenticated, or a pairing waiting for approval: withdraws it)
-   * The app also drops its push subscription, even if this call fails: the mod then gets 404 or 410
-   * from its push service and drops that subscription. The device stays listed in game until its
-   * player unpairs it there.
-   */
   unpair(server: PairedServer): Promise<void>;
 }
 
@@ -213,7 +138,6 @@ export interface AddonAction {
 
 export class ApiError extends TranslatedError {
   readonly status?: number;
-  /** The mod's machine-readable reason, e.g. "unpaired". */
   readonly reason?: string;
 
   constructor(
@@ -227,10 +151,6 @@ export class ApiError extends TranslatedError {
   }
 }
 
-/**
- * The server couldn't be reached at all, or only the proxy in front of it answered (502–504, and
- * Cloudflare's 52x): it's most likely stopped, or this device is offline.
- */
 export function isUnreachable(err: unknown): boolean {
   if (!(err instanceof ApiError)) return false;
   const { status } = err;
@@ -241,18 +161,15 @@ export function isUnreachable(err: unknown): boolean {
   );
 }
 
-/** Asking again later may get another answer: the server is unreachable, busy, or failed this time. */
 export function worthRetrying(err: unknown): boolean {
   if (isUnreachable(err)) return true;
   const status = err instanceof ApiError ? err.status : undefined;
   return status === 429 || (status !== undefined && status >= 500);
 }
 
-/** Turns what the player typed ("mc.example.com") into the URL we call. */
 export function normalizeServerUrl(input: string): string {
   let s = input.trim();
   if (!/^https?:\/\//i.test(s)) {
-    // A server on this machine (testing) has no HTTPS.
     s = /^localhost(:|\/|$)/i.test(s) ? `http://${s}` : `https://${s}`;
   }
   let url: URL;
@@ -267,7 +184,6 @@ export function normalizeServerUrl(input: string): string {
   return url.origin + url.pathname.replace(/\/+$/, "");
 }
 
-/** A stopped server can leave a request hanging for a minute or more: past this, it's unreachable. */
 const TIMEOUT_MS = 6_000;
 
 async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
@@ -299,13 +215,8 @@ const auth = (server: PairedServer) => ({
 });
 
 const unpairedListeners = new Set<(server: PairedServer) => void>();
-/** Tokens of pairings this device left itself: their 401s are expected. */
 const leftTokens = new Set<string>();
 
-/**
- * Calls `listener` when a server says it doesn't know this device anymore: unpaired in game, or
- * the server lost its data. Not for leaving a server from the app. Returns the unsubscribe function.
- */
 export function onUnpaired(listener: (server: PairedServer) => void) {
   unpairedListeners.add(listener);
   return () => {
@@ -324,7 +235,6 @@ async function authed<T>(
       headers: { ...init.headers, ...auth(server) },
     });
   } catch (err) {
-    // Only the mod says "unpaired": a 401 from a proxy in front of it doesn't mean the pairing is gone.
     if (
       err instanceof ApiError &&
       err.status === 401 &&
@@ -344,7 +254,6 @@ const httpApi: TidingsApi = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ code, deviceName }),
     }),
-  // Not through authed(): a denied pairing isn't one the player had, to tell them it's gone.
   async approval(server) {
     try {
       const { approval } = await request<{ approval: Approval }>(
@@ -362,7 +271,6 @@ const httpApi: TidingsApi = {
       throw err;
     }
   },
-  // Not through authed(): a pairing that expired meanwhile isn't one the player had, to tell them it's gone.
   askApproval: (server) =>
     request(`${server.url}/api/devices/me/approval`, {
       method: "POST",
@@ -396,14 +304,12 @@ const httpApi: TidingsApi = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ...action, locale }),
     }),
-  // Not through authed(): leaving a server the mod already forgot isn't news to the player.
   unpair: (server) => {
     // Requests still on their way would get a 401 too.
     leftTokens.add(server.token);
     return request(`${server.url}/api/devices/me`, {
       method: "DELETE",
       headers: auth(server),
-      // Also sent while the page is closing: a pairing left unfinished gets cancelled that way.
       keepalive: true,
     });
   },
@@ -490,7 +396,6 @@ const mockApi: TidingsApi = {
         { text: "new spawn", color: "aqua", underlined: true },
       ],
       version: "1.20.1 (Forge 47.4.10)",
-      addons: MOCK_ADDONS,
     };
   },
   async online(server) {
@@ -533,17 +438,15 @@ const mockApi: TidingsApi = {
   async updatePush() {
     await delay(200);
   },
-  async addonView(server, addon, link) {
+  // Demo servers have no add-ons: test them on a server with Tidings Vanilla. Answers like a mod
+  // whose add-on was removed, for a link to one.
+  async addonView() {
     await delay(300);
-    if (server.url.includes("offline"))
-      throw new ApiError((t) => t("errors.unreachable"));
-    return mockAddonView(addon, link, MOCK_PLAYERS.map(mockPlayer));
+    throw new ApiError(() => "This server doesn't have this tab anymore", 404);
   },
-  async addonAction(_server, addon, action) {
+  async addonAction() {
     await delay(400);
-    const result = mockAddonAction(addon, action);
-    if ("error" in result) throw new ApiError(() => result.error, 400);
-    return result;
+    throw new ApiError(() => "This server doesn't have this tab anymore", 404);
   },
   async unpair(server) {
     await delay(200);

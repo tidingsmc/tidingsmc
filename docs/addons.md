@@ -16,6 +16,10 @@ Call `TidingsAddons.register` from your mod's constructor with a title, an icon,
 
 A view is a page: a function from `Request` to a `View` of blocks such as text, stats, lists, progress bars, choices, buttons, cards and trees. `request.player()` is the checked player. Views are rebuilt on every open, so read the current state.
 
+## Icons and images
+
+Icons are [pixelarticons](https://pixelarticons.com), picked by name with `Icon.named("sword")`, or small images of your own such as item textures with `Icon.image(bytes)`. The tab, list rows and tree nodes take one, and `Block.icon` puts one in the page. `Block.image` adds a bigger image, from its bytes or base64.
+
 ## Forms and actions
 
 Buttons and forms call actions, which change something and return an `ActionResult` (a message, or a view to open). Form fields arrive as strings in `request.value(name)`.

@@ -17,6 +17,7 @@ import {
 } from "pixelarticons/react";
 import { useTranslation } from "react-i18next";
 import {
+  AddonIcon,
   Avatar,
   ConfirmDialog,
   Dropdown,
@@ -36,6 +37,7 @@ import {
   type ButtonBlock,
   type Field,
   type FormBlock,
+  type ImageBlock,
   type ListItem,
   type TreeItem,
 } from "../lib/addons";
@@ -46,28 +48,22 @@ import {
   type PairedServer,
 } from "../lib/api";
 import { errorText } from "../lib/i18n";
+import { readImage } from "../lib/icons";
 import { navigate, paths, type AddonRoute } from "../lib/router";
 import { layoutTree } from "../lib/treeLayout";
 
-/**
- * `for` is the link it was loaded for: another one is still loading. `reload` counts the reloads
- * after actions, so that forms start anew only once the new view is there.
- */
 type ViewState =
   | { status: "loading" }
   | { status: "ok"; view: AddonView; for: string; reload: number }
   | { status: "error"; error: Error; for: string };
 
-/** What the blocks need from the tab: where links go, and how actions run. */
 interface Context {
   href: (link: AddonLink) => string;
   run: (action: AddonAction) => Promise<void>;
   busy: boolean;
-  /** The page comes from a newer mod: blocks this app doesn't know say to update it. */
   newer: boolean;
 }
 
-/** One of a server's add-on tabs: the page its mod describes, drawn with the app's own blocks. */
 export function AddonTab({
   server,
   addon,
@@ -81,7 +77,6 @@ export function AddonTab({
   const [busy, setBusy] = useState(false);
   const link = addon.view ? { view: addon.view, params: addon.params } : null;
   const linkKey = JSON.stringify(link);
-  /** The last action's message, for the view it was on or it opened. */
   const [message, setMessage] = useState<{
     text: string;
     error?: boolean;
@@ -175,7 +170,6 @@ export function AddonTab({
           {message.text}
         </p>
       )}
-      {/* Anew for each view, and after an action: forms start from their initial values again. */}
       <Fragment key={`${state.reload} ${linkKey}`}>
         <Blocks blocks={state.view.blocks} context={context} nested={false} />
       </Fragment>
@@ -282,6 +276,17 @@ function BlockView({
       return <AddonForm block={block} context={context} />;
     case "tree":
       return <Tree nodes={block.nodes} context={context} />;
+    case "icon": {
+      const label = text(block.label);
+      return (
+        <p className="addon-icon-block">
+          <AddonIcon name={block.icon} />
+          {label && <span>{label}</span>}
+        </p>
+      );
+    }
+    case "image":
+      return <ImageView block={block} />;
     case "card":
       return nested ? null : (
         <div className="card addon-card">
@@ -289,11 +294,26 @@ function BlockView({
         </div>
       );
     default:
-      // A page from a newer mod: the rest of it still shows.
       return context.newer ? (
         <p className="muted small">{t("addon.updateApp")}</p>
       ) : null;
   }
+}
+
+/** Only base64 images */
+function ImageView({ block }: { block: ImageBlock }) {
+  const src = readImage(block.src);
+  if (!src) return null;
+  const width = Number(block.width);
+  return (
+    <img
+      className="addon-image"
+      src={src}
+      alt={text(block.alt)}
+      data-pixelated={block.pixelated === true || undefined}
+      style={width >= 1 && width <= 1024 ? { width } : undefined}
+    />
+  );
 }
 
 function list<T>(items: T[] | undefined): T[] {
@@ -309,8 +329,13 @@ function Row({ item, context }: { item: ListItem; context: Context }) {
   const trailing = text(item.trailing);
   const content = (
     <>
-      {player && typeof player.name === "string" && (
-        <Avatar name={player.name} skinUrl={text(player.skinUrl)} />
+      {item.icon !== undefined ? (
+        <AddonIcon name={item.icon} />
+      ) : (
+        player &&
+        typeof player.name === "string" && (
+          <Avatar name={player.name} skinUrl={text(player.skinUrl)} />
+        )
       )}
       <span className="card-main">
         <span className="addon-row-title">{text(item.title)}</span>
@@ -536,7 +561,7 @@ function TreeCard({
         onClick={onToggle}
       >
         <span className="addon-tree-card-head">
-          <TreeState state={node.state} />
+          <TreeState state={node.state} icon={node.icon} />
           <span className="addon-tree-card-title">{text(node.title)}</span>
         </span>
         {open && subtitle && (
@@ -558,9 +583,10 @@ function TreeCard({
   );
 }
 
-function TreeState({ state }: { state: unknown }) {
+function TreeState({ state, icon: own }: { state: unknown; icon?: unknown }) {
   const { t } = useTranslation();
-  const icon =
+  const ownIcon = own !== undefined ? <AddonIcon name={own} /> : null;
+  const symbol =
     state === "done" ? (
       <Check />
     ) : state === "available" ? (
@@ -568,7 +594,7 @@ function TreeState({ state }: { state: unknown }) {
     ) : state === "locked" ? (
       <Lock />
     ) : null;
-  if (!icon) return null;
+  if (!symbol) return ownIcon;
   const name =
     state === "done"
       ? t("addon.done")
@@ -576,14 +602,17 @@ function TreeState({ state }: { state: unknown }) {
         ? t("addon.available")
         : t("addon.locked");
   return (
-    <span
-      className="addon-tree-state"
-      data-state={state as string}
-      role="img"
-      aria-label={name}
-    >
-      {icon}
-    </span>
+    <>
+      <span
+        className="addon-tree-state"
+        data-state={state as string}
+        role="img"
+        aria-label={name}
+      >
+        {symbol}
+      </span>
+      {ownIcon}
+    </>
   );
 }
 

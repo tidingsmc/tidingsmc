@@ -1,57 +1,54 @@
-import {
-  BookOpen,
-  Calendar,
-  Chart,
-  Coins,
-  Crown,
-  Flag,
-  Gamepad,
-  Gift,
-  Heart,
-  Layout,
-  Lightbulb,
-  Mail,
-  Map,
-  Message,
-  Server,
-  Shield,
-  Sliders,
-  Star,
-  Store,
-  Sword,
-  Trophy,
-} from "pixelarticons/react";
+import { useEffect, useState } from "react";
+import { Layout } from "pixelarticons/react";
+import { readIcon } from "../lib/icons";
 
-// Mirrors dev.tidings.core.addon.Icon: add-ons pick one of these names, never their own image.
-const ICONS = {
-  default: Layout,
-  chart: Chart,
-  trophy: Trophy,
-  map: Map,
-  book: BookOpen,
-  store: Store,
-  coins: Coins,
-  gift: Gift,
-  calendar: Calendar,
-  flag: Flag,
-  mail: Mail,
-  message: Message,
-  star: Star,
-  heart: Heart,
-  sword: Sword,
-  shield: Shield,
-  crown: Crown,
-  server: Server,
-  gamepad: Gamepad,
-  lightbulb: Lightbulb,
-  sliders: Sliders,
-};
+const loaded = new Map<string, string>();
 
-/** An add-on tab's icon, "default" for names from a newer mod. */
-export function AddonIcon({ name }: { name?: string }) {
-  const Icon =
-    name && Object.prototype.hasOwnProperty.call(ICONS, name)
-      ? ICONS[name as keyof typeof ICONS]
-      : ICONS.default;
-  return <Icon aria-hidden />;
+export function AddonIcon({
+  name,
+  className,
+}: {
+  name?: unknown;
+  className?: string;
+}) {
+  const icon = readIcon(name);
+  const iconName = icon.kind === "name" ? icon.name : null;
+  const [svg, setSvg] = useState<string | null | undefined>(() =>
+    iconName ? loaded.get(iconName) : undefined,
+  );
+
+  useEffect(() => {
+    if (!iconName) return;
+    const cached = loaded.get(iconName);
+    if (cached) return setSvg(cached);
+    setSvg(undefined);
+    let cancelled = false;
+    import("../lib/pixelarticons")
+      .then(({ loadSvg }) => loadSvg(iconName) ?? Promise.resolve(null))
+      .then(
+        (text) => {
+          if (text !== null) loaded.set(iconName, text);
+          if (!cancelled) setSvg(text);
+        },
+        () => !cancelled && setSvg(null),
+      );
+    return () => {
+      cancelled = true;
+    };
+  }, [iconName]);
+
+  const classes = ["addon-icon", className].filter(Boolean).join(" ");
+  if (icon.kind === "image") {
+    return <img className={`${classes} image`} src={icon.src} alt="" />;
+  }
+  if (svg === null) return <Layout className={classes} aria-hidden />;
+  if (svg === undefined)
+    return <svg className={classes} viewBox="0 0 24 24" aria-hidden />;
+  return (
+    <span
+      className={`${classes} named`}
+      aria-hidden
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
 }
