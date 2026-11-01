@@ -1,20 +1,18 @@
 package dev.tidings.core.addon;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import com.google.gson.JsonParser;
-
-import dev.tidings.core.PlayerProfile;
-
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** The JSON must match the app's types in app/src/lib/addons.ts. */
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.Test;
+
+import com.google.gson.JsonParser;
+
+import dev.tidings.core.PlayerProfile;
+
 class BlockTest {
     private static void assertJson(String expected, com.google.gson.JsonElement actual) {
         assertEquals(JsonParser.parseString(expected), actual);
@@ -23,18 +21,18 @@ class BlockTest {
     @Test
     void viewsSayWhichBlocksTheyUse() {
         assertJson(
-                "{version:2,title:'Stats',blocks:[{type:'heading',text:'Me'},"
+                "{version:3,title:'Stats',blocks:[{type:'heading',text:'Me'},"
                         + "{type:'text',text:'Hi'},{type:'text',text:'psst',muted:true}]}",
                 View.of("Stats", Block.heading("Me"), Block.text("Hi"), Block.muted("psst"))
                         .toJson());
-        assertJson("{version:2,blocks:[]}", View.of(null).toJson());
+        assertJson("{version:3,blocks:[]}", View.of(null).toJson());
     }
 
     @Test
     void aViewCanBeAboutAPlayer() {
         UUID id = UUID.fromString("8667ba71-b85a-4004-af54-457a9734eed7");
         assertJson(
-                "{version:2,title:'Steve',player:{uuid:'" + id + "',name:'Steve'},blocks:[]}",
+                "{version:3,title:'Steve',player:{uuid:'" + id + "',name:'Steve'},blocks:[]}",
                 View.of("Steve").player(new PlayerProfile(id, "Steve", null)).toJson());
     }
 
@@ -64,6 +62,49 @@ class BlockTest {
                                         Block.ListItem.of("Alex")))
                         .empty("Nobody")
                         .toJson());
+    }
+
+    @Test
+    void rowsAndNodesCanHaveIcons() {
+        assertJson(
+                "{type:'list',items:[{title:'Kills',icon:'sword'},{title:'Old'}]}",
+                Block.list(
+                                List.of(
+                                        Block.ListItem.of("Kills").icon(Icon.named("sword")),
+                                        new Block.ListItem("Old", null, null, null, null)))
+                        .toJson());
+        assertJson(
+                "{type:'tree',nodes:[{id:'a',title:'A',icon:'data:image/gif;base64,R0lGODlh'}]}",
+                Block.tree(
+                                List.of(
+                                        Block.TreeNode.of("a", "A")
+                                                .icon(Icon.image("GIF89a".getBytes()))))
+                        .toJson());
+    }
+
+    @Test
+    void iconsAndImages() {
+        assertJson("{type:'icon',icon:'trophy'}", Block.icon(Icon.named("trophy")).toJson());
+        assertJson(
+                "{type:'icon',icon:'coins',label:'12 coins'}",
+                Block.icon(Icon.COINS, "12 coins").toJson());
+        assertJson(
+                "{type:'image',src:'data:image/gif;base64,R0lGODlh',alt:'A map'}",
+                Block.image("GIF89a".getBytes(), "A map").toJson());
+        assertJson(
+                "{type:'image',src:'data:image/gif;base64,R0lGODlh',alt:'',width:64,"
+                        + "pixelated:true}",
+                Block.image("R0lGODlh", "").width(64).pixelArt().toJson());
+        assertThrows(IllegalArgumentException.class, () -> Block.image("<svg>".getBytes(), ""));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Block.image(new byte[Block.Image.MAX_BYTES + 1], ""));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Block.image("GIF89a".getBytes(), "").width(Block.Image.MAX_WIDTH + 1));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new Block.Image("https://example.com/x.png", "", 0, false));
     }
 
     @Test

@@ -58,7 +58,7 @@ export function ServerScreen({
                   aria-label={title}
                   title={title}
                 >
-                  <AddonIcon name={text(a.icon)} />
+                  <AddonIcon name={a.icon} />
                 </a>
               );
             })}
@@ -68,7 +68,7 @@ export function ServerScreen({
               <>
                 <h2 className="tab-title">
                   {addon.view && <AddonBack server={server} addon={addon.id} />}
-                  <AddonIcon name={text(current?.icon)} />
+                  <AddonIcon name={current?.icon} />
                   {text(current?.title) || addon.id}
                 </h2>
                 <AddonTab key={addon.id} server={server} addon={addon} />

@@ -1,27 +1,21 @@
 package dev.tidings.core.addon;
 
+import java.util.List;
+import java.util.Objects;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import dev.tidings.core.PlayerProfile;
 
-import java.util.List;
-import java.util.Objects;
-
 /**
- * A page of an add-on, as the app shows it in the server's tab for this add-on.
+ * A page of an add-on as the app shows it in the server's tab for this add-on
  *
  * @param title shown above the blocks, or null for none
  * @param player who the page is about, whose face shows next to its title, or null
  */
 public record View(String title, List<Block> blocks, PlayerProfile player) {
-    /**
-     * The blocks this version of Tidings knows. The app shows "update Tidings" in place of blocks
-     * it doesn't know, when an add-on was built for a newer one.
-     *
-     * <p>2: {@link Block.Tree}.
-     */
-    public static final int VERSION = 2;
+    public static final int VERSION = 3;
 
     public View {
         blocks = List.copyOf(blocks);

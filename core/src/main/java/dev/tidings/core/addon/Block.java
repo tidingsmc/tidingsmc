@@ -1,22 +1,16 @@
 package dev.tidings.core.addon;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
-import dev.tidings.core.PlayerProfile;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/**
- * A piece of an add-on's {@link View}. The app draws each kind its own way: add-ons describe what
- * to show, not how. Text is always shown as plain text.
- *
- * <p>Mirrors the app's {@code Block} type (app/src/lib/addons.ts).
- */
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+
+import dev.tidings.core.PlayerProfile;
+
 public sealed interface Block
         permits Block.Heading,
                 Block.Text,
@@ -27,7 +21,9 @@ public sealed interface Block
                 Block.Button,
                 Block.Form,
                 Block.Card,
-                Block.Tree {
+                Block.Tree,
+                Block.IconBlock,
+                Block.Image {
 
     JsonObject toJson();
 
@@ -39,7 +35,7 @@ public sealed interface Block
         return new Text(text, false);
     }
 
-    /** Text of lesser importance, like a hint or a footnote. */
+    /** Text of lesser importance like a hint or a footnote */
     static Text muted(String text) {
         return new Text(text, true);
     }
@@ -75,10 +71,31 @@ public sealed interface Block
         return new Form(action, Map.of(), submit, List.of(fields));
     }
 
+
+    /** An icon on its own line, such as {@code Block.icon(Icon.named("trophy"))}. */
+    static IconBlock icon(Icon icon) {
+        return new IconBlock(icon, null);
+    }
+
+    /** An icon with a line of text next to it. */
+    static IconBlock icon(Icon icon, String label) {
+        return new IconBlock(icon, label);
+    }
+
     /**
-     * Nodes drawn as an indented tree, each under its parent, such as advancements or a quest line.
-     * Parents come before their children; children show in the order given.
+     * An image of the add-on's own: a PNG, JPEG, GIF or WebP file's bytes.
+     *
+     * @param alt what it shows, read by screen readers; "" if it's only decoration
      */
+    static Image image(byte[] bytes, String alt) {
+        return new Image(Icon.dataUrl(bytes, Image.MAX_BYTES), alt, 0, false);
+    }
+
+    /** {@link #image(byte[], String)}, from base64 or a {@code data:image/…;base64,} URL. */
+    static Image image(String base64, String alt) {
+        return image(Icon.decode(base64, Image.MAX_BYTES), alt);
+    }
+
     static Tree tree(List<TreeNode> nodes) {
         return new Tree(nodes);
     }
@@ -176,31 +193,47 @@ public sealed interface Block
      * @param trailing at the end of the row, such as a number, or null
      * @param player whose face to show at the start of the row, or null
      * @param link what tapping the row opens, or null
+     * @param icon shown at the start of the row instead of a player's face, or null
      */
     record ListItem(
-            String title, String subtitle, String trailing, PlayerProfile player, Link link) {
+            String title,
+            String subtitle,
+            String trailing,
+            PlayerProfile player,
+            Link link,
+            Icon icon) {
         public ListItem {
             Objects.requireNonNull(title, "title");
         }
 
+        public ListItem(
+                String title, String subtitle, String trailing, PlayerProfile player, Link link) {
+            this(title, subtitle, trailing, player, link, null);
+        }
+
         public static ListItem of(String title) {
-            return new ListItem(title, null, null, null, null);
+            return new ListItem(title, null, null, null, null, null);
         }
 
         public ListItem subtitle(String subtitle) {
-            return new ListItem(title, subtitle, trailing, player, link);
+            return new ListItem(title, subtitle, trailing, player, link, icon);
         }
 
         public ListItem trailing(String trailing) {
-            return new ListItem(title, subtitle, trailing, player, link);
+            return new ListItem(title, subtitle, trailing, player, link, icon);
         }
 
         public ListItem player(PlayerProfile player) {
-            return new ListItem(title, subtitle, trailing, player, link);
+            return new ListItem(title, subtitle, trailing, player, link, icon);
         }
 
         public ListItem link(Link link) {
-            return new ListItem(title, subtitle, trailing, player, link);
+            return new ListItem(title, subtitle, trailing, player, link, icon);
+        }
+
+        /** Shown instead of the player's face if both are set */
+        public ListItem icon(Icon icon) {
+            return new ListItem(title, subtitle, trailing, player, link, icon);
         }
 
         JsonObject toJson() {
@@ -216,11 +249,12 @@ public sealed interface Block
                 json.add("player", p);
             }
             if (link != null) json.add("link", link.toJson());
+            if (icon != null) json.addProperty("icon", icon.id());
             return json;
         }
     }
 
-    /** A bar filled to {@code value / max}, such as advancements done. */
+    /** A bar filled to {@code value / max} such as advancements done */
     record Progress(String label, long value, long max) implements Block {
         public Progress {
             Objects.requireNonNull(label, "label");
@@ -424,6 +458,7 @@ public sealed interface Block
      * @param state drawn as an icon: done, the next to do, or still out of reach
      * @param badge a short tag next to the title, such as "Challenge", or null
      * @param link what the node opens, or null
+     * @param icon shown before the title, such as the item an advancement shows, or null
      */
     record TreeNode(
             String id,
@@ -433,7 +468,8 @@ public sealed interface Block
             String trailing,
             State state,
             String badge,
-            Link link) {
+            Link link,
+            Icon icon) {
         public static final int MAX_ID_LENGTH = 256;
 
         public enum State {
@@ -456,34 +492,50 @@ public sealed interface Block
             Objects.requireNonNull(state, "state");
         }
 
-        /** A top-level node. */
-        public static TreeNode of(String id, String title) {
-            return new TreeNode(id, null, title, null, null, State.NONE, null, null);
+        public TreeNode(
+                String id,
+                String parent,
+                String title,
+                String subtitle,
+                String trailing,
+                State state,
+                String badge,
+                Link link) {
+            this(id, parent, title, subtitle, trailing, state, badge, link, null);
         }
 
-        /** A node under {@code parent}'s. */
+        /** A top-level node */
+        public static TreeNode of(String id, String title) {
+            return new TreeNode(id, null, title, null, null, State.NONE, null, null, null);
+        }
+
+        /** A node under {@code parent}'s */
         public static TreeNode of(String id, String parent, String title) {
-            return new TreeNode(id, parent, title, null, null, State.NONE, null, null);
+            return new TreeNode(id, parent, title, null, null, State.NONE, null, null, null);
         }
 
         public TreeNode subtitle(String subtitle) {
-            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link);
+            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link, icon);
         }
 
         public TreeNode trailing(String trailing) {
-            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link);
+            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link, icon);
         }
 
         public TreeNode state(State state) {
-            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link);
+            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link, icon);
         }
 
         public TreeNode badge(String badge) {
-            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link);
+            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link, icon);
         }
 
         public TreeNode link(Link link) {
-            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link);
+            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link, icon);
+        }
+
+        public TreeNode icon(Icon icon) {
+            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link, icon);
         }
 
         JsonObject toJson() {
@@ -496,6 +548,69 @@ public sealed interface Block
             if (state != State.NONE) json.addProperty("state", Names.lower(state));
             if (badge != null) json.addProperty("badge", badge);
             if (link != null) json.add("link", link.toJson());
+            if (icon != null) json.addProperty("icon", icon.id());
+            return json;
+        }
+    }
+
+    /**
+     * @param icon a pixelarticons name, or a small image
+     * @param label next to the icon, or null for the icon alone
+     */
+    record IconBlock(Icon icon, String label) implements Block {
+        public IconBlock {
+            Objects.requireNonNull(icon, "icon");
+        }
+
+        @Override
+        public JsonObject toJson() {
+            JsonObject json = typed("icon");
+            json.addProperty("icon", icon.id());
+            if (label != null) json.addProperty("label", label);
+            return json;
+        }
+    }
+
+    /**
+     * Made with {@link Block#image(byte[], String)}.
+     *
+     * @param src a {@code data:image/…;base64,} URL
+     * @param alt what it shows, read by screen readers; "" if it's only decoration
+     * @param width in CSS pixels, at most {@link #MAX_WIDTH}, or 0 for the image's own: never wider
+     *     than the page
+     * @param pixelated scaled up with crisp pixels, for pixel art such as textures
+     */
+    record Image(String src, String alt, int width, boolean pixelated) implements Block {
+        public static final int MAX_BYTES = 64 * 1024;
+        public static final int MAX_WIDTH = 1024;
+
+        public Image {
+            Objects.requireNonNull(src, "src");
+            if (!src.startsWith("data:image/")) {
+                throw new IllegalArgumentException("Make images with Block.image");
+            }
+            Objects.requireNonNull(alt, "alt");
+            if (width < 0 || width > MAX_WIDTH) {
+                throw new IllegalArgumentException(
+                        "An image's width is 1 to " + MAX_WIDTH + ", or 0 for its own");
+            }
+        }
+
+        public Image width(int width) {
+            return new Image(src, alt, width, pixelated);
+        }
+
+        public Image pixelArt() {
+            return new Image(src, alt, width, true);
+        }
+
+        @Override
+        public JsonObject toJson() {
+            JsonObject json = typed("image");
+            json.addProperty("src", src);
+            json.addProperty("alt", alt);
+            if (width > 0) json.addProperty("width", width);
+            if (pixelated) json.addProperty("pixelated", true);
             return json;
         }
     }
