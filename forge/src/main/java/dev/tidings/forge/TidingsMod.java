@@ -695,7 +695,7 @@ public final class TidingsMod {
                                                         Component.literal("Unpair this device"))));
     }
 
-    private static PlayerProfile profile(Player player) {
+    static PlayerProfile profile(Player player) {
         GameProfile profile = player.getGameProfile();
         String textures =
                 profile.getProperties().get("textures").stream()

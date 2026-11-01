@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
+import { isAddonId, readLink } from "./addons";
 
 export type Route =
   | { name: "servers" }
   | { name: "appSettings" }
-  | { name: "server"; id: string }
+  | { name: "server"; id: string; addon?: AddonRoute }
   | { name: "settings"; id: string }
   | { name: "pair"; step?: PairStep; url?: string; code?: string };
+
+/** An add-on's tab on a server's page; without `view`, the tab's first view. */
+export interface AddonRoute {
+  id: string;
+  view?: string;
+  params?: Record<string, string>;
+}
 
 /** The pairing wizard's steps that have their own route, so the back gesture goes between them. */
 export type PairStep = "scan" | "code";
@@ -25,17 +33,43 @@ export function parseRoute(hash: string): Route {
       code: params.get("code") ?? undefined,
     };
   }
-  const [, first, second, third] = h.split("/");
+  // Only the first "?" starts the query: the rest of it, other "?" included, is the query's.
+  const q = h.indexOf("?");
+  const route = q < 0 ? h : h.slice(0, q);
+  const query = q < 0 ? "" : h.slice(q + 1);
+  const [, first, second, third, fourth, fifth] = route.split("/");
   if (first === "pair")
     return second === "scan" || second === "code"
       ? { name: "pair", step: second }
       : { name: "pair" };
   if (first === "settings") return { name: "appSettings" };
-  if (first === "server" && second && third === "settings")
-    return { name: "settings", id: decodeURIComponent(second) };
-  if (first === "server" && second)
-    return { name: "server", id: decodeURIComponent(second) };
+  // A hand-typed or cut link can have a broken escape: it opens the list rather than throwing.
+  const id = second ? decode(second) : undefined;
+  if (first === "server" && id && third === "settings")
+    return { name: "settings", id };
+  if (first === "server" && id && third === "addon" && isAddonId(fourth)) {
+    const view = fifth ? decode(fifth) : undefined;
+    const link = view ? readLink({ view, params: queryParams(query) }) : null;
+    return {
+      name: "server",
+      id,
+      addon: link ? { id: fourth, ...link } : { id: fourth },
+    };
+  }
+  if (first === "server" && id) return { name: "server", id };
   return { name: "servers" };
+}
+
+function decode(part: string): string | undefined {
+  try {
+    return decodeURIComponent(part);
+  } catch {
+    return undefined;
+  }
+}
+
+function queryParams(query: string): Record<string, string> {
+  return Object.fromEntries(new URLSearchParams(query));
 }
 
 export const paths = {
@@ -44,6 +78,12 @@ export const paths = {
   pairStep: (step: PairStep) => `#/pair/${step}`,
   appSettings: "#/settings",
   server: (id: string) => `#/server/${encodeURIComponent(id)}`,
+  addon: (id: string, addon: AddonRoute) => {
+    const tab = `#/server/${encodeURIComponent(id)}/addon/${addon.id}`;
+    if (!addon.view) return tab;
+    const query = new URLSearchParams(addon.params).toString();
+    return `${tab}/${encodeURIComponent(addon.view)}${query && `?${query}`}`;
+  },
   settings: (id: string) => `#/server/${encodeURIComponent(id)}/settings`,
 };
 

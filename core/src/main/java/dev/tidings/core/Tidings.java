@@ -1,5 +1,7 @@
 package dev.tidings.core;
 
+import dev.tidings.core.addon.Addons;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -22,6 +24,7 @@ public final class Tidings {
 
     private final Store store;
     private final Game game;
+    private final Addons addons;
     private final Pairing pairing = new Pairing();
     private final Notifier notifier;
     private final Map<UUID, PlayerProfile> online = new LinkedHashMap<>();
@@ -68,15 +71,20 @@ public final class Tidings {
      *     #setAnnounced}
      */
     public Tidings(Store store, Game game, PushSender push, boolean announcedByDefault) {
+        this(store, game, push, announcedByDefault, Addons.registered());
+    }
+
+    Tidings(Store store, Game game, PushSender push, boolean announcedByDefault, Addons addons) {
         this.store = store;
         this.game = game;
+        this.addons = addons;
         this.notifier = new Notifier(store, push);
         this.announcedByDefault = announcedByDefault;
     }
 
-    /** Announces players by default. */
+    /** Announces players by default, without the add-ons other mods registered. */
     Tidings(Store store, Game game, PushSender push) {
-        this(store, game, push, true);
+        this(store, game, push, true, new Addons());
     }
 
     /** Sends no notifications, for tests. */
@@ -94,6 +102,10 @@ public final class Tidings {
 
     public Game game() {
         return game;
+    }
+
+    public Addons addons() {
+        return addons;
     }
 
     Pairing pairing() {

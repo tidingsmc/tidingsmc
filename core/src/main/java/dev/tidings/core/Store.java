@@ -221,6 +221,11 @@ public final class Store {
         return previous == null;
     }
 
+    /** With the name and skin they had when last seen in game. */
+    public synchronized Optional<PlayerProfile> knownPlayer(UUID id) {
+        return Optional.ofNullable(knownPlayers.get(id));
+    }
+
     /** Everyone who has played here since the mod was installed, by name. */
     public synchronized List<PlayerProfile> knownPlayers() {
         return knownPlayers.values().stream()

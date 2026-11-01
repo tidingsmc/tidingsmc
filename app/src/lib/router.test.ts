@@ -68,4 +68,48 @@ describe("parseRoute", () => {
     });
     expect(parseRoute(paths.servers)).toEqual({ name: "servers" });
   });
+
+  it("reads back add-on paths, with their view and params", () => {
+    const id = "odd id/with?chars#";
+    const params = { stat: "a&b=c?d#e", page: "2" };
+
+    expect(parseRoute(paths.addon(id, { id: "mystats" }))).toEqual({
+      name: "server",
+      id,
+      addon: { id: "mystats" },
+    });
+    expect(
+      parseRoute(paths.addon(id, { id: "mystats", view: "top", params })),
+    ).toEqual({
+      name: "server",
+      id,
+      addon: { id: "mystats", view: "top", params },
+    });
+  });
+
+  it("keeps the whole query when a hand-typed link has another ?", () => {
+    expect(parseRoute("#/server/s/addon/mystats/top?q=a?b&page=2")).toEqual({
+      name: "server",
+      id: "s",
+      addon: { id: "mystats", view: "top", params: { q: "a?b", page: "2" } },
+    });
+  });
+
+  it("opens an add-on's tab when its link isn't one it could have sent", () => {
+    expect(parseRoute("#/server/s/addon/mystats/..%2Fx")).toEqual({
+      name: "server",
+      id: "s",
+      addon: { id: "mystats" },
+    });
+    expect(parseRoute("#/server/s/addon/Bad%20Id")).toEqual({
+      name: "server",
+      id: "s",
+    });
+    expect(parseRoute("#/server/s/addon/mystats/%E0")).toEqual({
+      name: "server",
+      id: "s",
+      addon: { id: "mystats" },
+    });
+    expect(parseRoute("#/server/%E0/settings")).toEqual({ name: "servers" });
+  });
 });

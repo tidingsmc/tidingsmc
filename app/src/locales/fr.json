@@ -69,7 +69,8 @@
     "onlineCount": "En ligne ({{count}})",
     "nobodyOnline": "Personne n'est en ligne pour le moment.",
     "unreachableHelp": "Le serveur est hors ligne, ou c'est vous qui l'êtes.",
-    "you": "vous"
+    "you": "vous",
+    "overview": "Aperçu"
   },
   "pair": {
     "title": "Associer un serveur",
@@ -150,5 +151,8 @@
     "systemLanguage": "Système",
     "version": "Version",
     "disclaimer": "Produit Minecraft non officiel. Non approuvé par Mojang ou Microsoft et non associé à eux."
+  },
+  "addon": {
+    "updateApp": "Mettez Tidings à jour pour tout voir sur cette page."
   }
 }

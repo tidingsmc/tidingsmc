@@ -8,6 +8,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import dev.tidings.core.addon.ActionResult;
+import dev.tidings.core.addon.Addon;
+import dev.tidings.core.addon.AddonError;
+import dev.tidings.core.addon.Block;
+import dev.tidings.core.addon.Icon;
+import dev.tidings.core.addon.View;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -603,5 +610,227 @@ class ApiServerTest {
         assertEquals(1, players.size());
         assertEquals(
                 alex.id().toString(), players.get(0).getAsJsonObject().get("uuid").getAsString());
+    }
+
+    private void addGreeter() {
+        tidings.addons()
+                .add(
+                        Addon.builder("Greeter")
+                                .icon(Icon.MESSAGE)
+                                .view(
+                                        "home",
+                                        request ->
+                                                View.of(
+                                                        "Hi",
+                                                        Block.text(
+                                                                "Hello "
+                                                                        + request.player().name()
+                                                                        + " ("
+                                                                        + request.locale()
+                                                                        + ")")))
+                                .view(
+                                        "echo",
+                                        request -> View.of(null, Block.text(request.param("say"))))
+                                .action(
+                                        "wave",
+                                        request -> {
+                                            if (request.value("to").isEmpty()) {
+                                                throw new AddonError("Wave at whom?");
+                                            }
+                                            return ActionResult.message(
+                                                    "You waved at " + request.value("to"));
+                                        })
+                                .build("greeter"));
+    }
+
+    @Test
+    void infoListsTheAddons() throws IOException, InterruptedException {
+        String token = pair();
+        assertFalse(json(call("GET", "/api/info", token, null)).has("addons"));
+
+        addGreeter();
+
+        JsonArray addons = json(call("GET", "/api/info", token, null)).getAsJsonArray("addons");
+        assertEquals(1, addons.size());
+        assertEquals("greeter", addons.get(0).getAsJsonObject().get("id").getAsString());
+        assertEquals("Greeter", addons.get(0).getAsJsonObject().get("title").getAsString());
+        assertEquals("message", addons.get(0).getAsJsonObject().get("icon").getAsString());
+    }
+
+    @Test
+    void anAddonViewKnowsWhoAsks() throws IOException, InterruptedException {
+        String token = pair();
+        addGreeter();
+
+        HttpResponse<String> response =
+                call("POST", "/api/addons/greeter/view", token, "{\"locale\":\"fr\"}");
+
+        assertEquals(200, response.statusCode(), response.body());
+        JsonObject view = json(response);
+        assertEquals(1, view.get("version").getAsInt());
+        assertEquals("Hi", view.get("title").getAsString());
+        JsonObject text = view.getAsJsonArray("blocks").get(0).getAsJsonObject();
+        assertEquals("text", text.get("type").getAsString());
+        assertEquals("Hello Steve (fr)", text.get("text").getAsString());
+    }
+
+    @Test
+    void anAddonViewGetsItsParams() throws IOException, InterruptedException {
+        String token = pair();
+        addGreeter();
+
+        JsonObject view =
+                json(
+                        call(
+                                "POST",
+                                "/api/addons/greeter/view",
+                                token,
+                                "{\"view\":\"echo\",\"params\":{\"say\":\"moo\"}}"));
+
+        assertEquals(
+                "moo",
+                view.getAsJsonArray("blocks").get(0).getAsJsonObject().get("text").getAsString());
+    }
+
+    @Test
+    void anAddonActionAnswersAMessage() throws IOException, InterruptedException {
+        String token = pair();
+        addGreeter();
+
+        HttpResponse<String> response =
+                call(
+                        "POST",
+                        "/api/addons/greeter/action",
+                        token,
+                        "{\"action\":\"wave\",\"values\":{\"to\":\"Alex\"}}");
+
+        assertEquals(200, response.statusCode(), response.body());
+        assertEquals("You waved at Alex", json(response).get("message").getAsString());
+    }
+
+    @Test
+    void anAddonRefusesWithItsOwnMessage() throws IOException, InterruptedException {
+        String token = pair();
+        addGreeter();
+
+        HttpResponse<String> response =
+                call(
+                        "POST",
+                        "/api/addons/greeter/action",
+                        token,
+                        "{\"action\":\"wave\",\"values\":{\"to\":\"\"}}");
+
+        assertEquals(400, response.statusCode());
+        assertEquals("Wave at whom?", json(response).get("error").getAsString());
+    }
+
+    @Test
+    void anAddonsBugIsAGenericError() throws IOException, InterruptedException {
+        String token = pair();
+        tidings.addons()
+                .add(
+                        Addon.builder("Buggy")
+                                .view(
+                                        "home",
+                                        request ->
+                                                View.of(
+                                                        null,
+                                                        Block.text(
+                                                                ""
+                                                                        + Integer.parseInt(
+                                                                                request.param(
+                                                                                        "page",
+                                                                                        "abc")))))
+                                .build("buggy"));
+
+        HttpResponse<String> response = call("POST", "/api/addons/buggy/view", token, "{}");
+
+        assertEquals(500, response.statusCode());
+        assertEquals(
+                "Something went wrong on the server", json(response).get("error").getAsString());
+    }
+
+    @Test
+    void addonsNeedAPairedDevice() throws IOException, InterruptedException {
+        addGreeter();
+
+        HttpResponse<String> response = call("POST", "/api/addons/greeter/view", null, "{}");
+
+        assertEquals(401, response.statusCode());
+        assertEquals("unpaired", json(response).get("reason").getAsString());
+    }
+
+    @Test
+    void unknownAddonsViewsAndActionsAreNotFound() throws IOException, InterruptedException {
+        String token = pair();
+        addGreeter();
+
+        assertEquals(404, call("POST", "/api/addons/nope/view", token, "{}").statusCode());
+        assertEquals(
+                404,
+                call("POST", "/api/addons/greeter/view", token, "{\"view\":\"nope\"}")
+                        .statusCode());
+        assertEquals(
+                404,
+                call("POST", "/api/addons/greeter/action", token, "{\"action\":\"nope\"}")
+                        .statusCode());
+        assertEquals(404, call("POST", "/api/addons/greeter/other", token, "{}").statusCode());
+        assertEquals(404, call("POST", "/api/addons/greeter/view/x", token, "{}").statusCode());
+        assertEquals(405, call("GET", "/api/addons/greeter/view", token, null).statusCode());
+    }
+
+    @Test
+    void addonRequestsAreChecked() throws IOException, InterruptedException {
+        String token = pair();
+        addGreeter();
+
+        assertEquals(400, call("POST", "/api/addons/greeter/view", token, "[]").statusCode());
+        assertEquals(
+                400,
+                call("POST", "/api/addons/greeter/view", token, "{\"view\":\"../x\"}")
+                        .statusCode());
+        assertEquals(
+                400,
+                call(
+                                "POST",
+                                "/api/addons/greeter/view",
+                                token,
+                                "{\"view\":\"echo\",\"params\":{\"say\":1}}")
+                        .statusCode());
+        assertEquals(
+                400,
+                call("POST", "/api/addons/greeter/view", token, "{\"locale\":\"<script>\"}")
+                        .statusCode());
+    }
+
+    @Test
+    void addonsSeeThePlayersCurrentName() throws IOException, InterruptedException {
+        String token = pair();
+        addGreeter();
+        tidings.rememberPlayer(new PlayerProfile(steve.id(), "Steve2", null));
+
+        JsonObject view = json(call("POST", "/api/addons/greeter/view", token, "{}"));
+
+        assertEquals(
+                "Hello Steve2 (en)",
+                view.getAsJsonArray("blocks").get(0).getAsJsonObject().get("text").getAsString());
+    }
+
+    @Test
+    void tooManyFormValuesAreRefused() throws IOException, InterruptedException {
+        String token = pair();
+        addGreeter();
+        StringBuilder values = new StringBuilder("{\"to\":\"Alex\"");
+        for (int i = 0; i < 64; i++) values.append(",\"v").append(i).append("\":\"x\"");
+        values.append('}');
+
+        HttpResponse<String> response =
+                call(
+                        "POST",
+                        "/api/addons/greeter/action",
+                        token,
+                        "{\"action\":\"wave\",\"values\":" + values + "}");
+
+        assertEquals(400, response.statusCode());
     }
 }

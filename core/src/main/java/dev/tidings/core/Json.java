@@ -15,8 +15,10 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 final class Json {
@@ -220,6 +222,15 @@ final class Json {
         JsonElement e = o.get(field);
         if (e instanceof JsonPrimitive p && p.isString()) return p.getAsString();
         throw new IllegalArgumentException("Expected text for " + field);
+    }
+
+    /** An object of strings, such as an add-on's params; empty if {@code field} is missing. */
+    static Map<String, String> strings(JsonObject o, String field) {
+        if (!o.has(field)) return Map.of();
+        JsonObject strings = object(o.get(field), field);
+        Map<String, String> map = new HashMap<>();
+        for (String name : strings.keySet()) map.put(name, string(strings, name));
+        return map;
     }
 
     static boolean bool(JsonObject o, String field) {

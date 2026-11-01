@@ -69,7 +69,8 @@
     "onlineCount": "Online ({{count}})",
     "nobodyOnline": "Nobody is online right now.",
     "unreachableHelp": "The server is offline, or you are.",
-    "you": "you"
+    "you": "you",
+    "overview": "Overview"
   },
   "pair": {
     "title": "Pair a server",
@@ -150,5 +151,8 @@
     "systemLanguage": "System",
     "version": "Version",
     "disclaimer": "Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft."
+  },
+  "addon": {
+    "updateApp": "Update Tidings to see everything on this page."
   }
 }

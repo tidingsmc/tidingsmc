@@ -19,6 +19,8 @@
   --warning: light-dark(#9a5b00, #f0b45a);
   --ok: light-dark(#2e9d3a, #5ccf66);
   --off: light-dark(#9aa0aa, #696f7a);
+  --paper: light-dark(#fbf9f4, #20232a);
+  --tab-back: light-dark(#e7e9ee, #181a20);
 
   font-family:
     "Rubik Variable",
@@ -1351,4 +1353,227 @@ h2 {
 .scan-overlay .button {
   width: auto;
   min-width: 160px;
+}
+
+/* A server's tabs, like a binder's dividers: icon tabs on top of a sheet of paper, the open one
+   joined to it. */
+.binder {
+  /* Keeps the open tab's z-index inside the binder, under the sticky top bar. */
+  isolation: isolate;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 -16px -1px;
+  padding: 4px 16px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs a {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 38px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px 6px 0 0;
+  background: var(--tab-back);
+  color: var(--muted);
+  transition:
+    margin-top 0.15s,
+    height 0.15s;
+}
+
+.tabs a svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* The open tab stands taller and its bottom edge melts into the paper. */
+.tabs a[aria-current="page"] {
+  z-index: 1;
+  height: 42px;
+  margin-top: 0;
+  background: var(--paper);
+  border-bottom-color: var(--paper);
+  color: var(--accent);
+}
+
+/* An add-on's name, on top of its sheet. */
+.tab-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 -4px;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.tab-title svg {
+  width: 22px;
+  height: 22px;
+  color: var(--accent);
+}
+
+.tab-paper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 14px;
+  border: 1px solid var(--border);
+  border-radius: 0 6px 6px 6px;
+  background: var(--paper);
+  box-shadow: 0 1px 2px light-dark(rgb(0 0 0 / 0.06), rgb(0 0 0 / 0.3));
+}
+
+/* Add-on pages, drawn from the blocks their mod sends. */
+.addon {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.addon-title {
+  font-size: 1rem;
+  color: var(--text);
+  margin: 0;
+}
+
+.addon-heading {
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin: 6px 0 -6px;
+}
+
+.addon-message {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+.addon-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.addon-stat {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.addon-stat dd {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+}
+
+.addon-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addon-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-decoration: none;
+}
+
+.addon-row-title {
+  font-family: var(--font-heading);
+}
+
+.addon-row-trailing {
+  font-family: var(--font-heading);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.addon-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.addon-progress progress {
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  overflow: hidden;
+}
+
+.addon-progress progress::-webkit-progress-bar {
+  background: var(--accent-soft);
+}
+
+.addon-progress progress::-webkit-progress-value {
+  background: var(--accent);
+}
+
+.addon-progress progress::-moz-progress-bar {
+  background: var(--accent);
+}
+
+.addon-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.addon-choices a {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.addon-choices a[aria-current="page"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.addon-card {
+  gap: 12px;
+}
+
+.addon-card:active {
+  transform: none;
+}
+
+.addon-form .toggle-row {
+  padding: 0;
 }

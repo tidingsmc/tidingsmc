@@ -85,7 +85,11 @@ export default function App() {
           }}
         />
       ) : (
-        <ServerScreen key={server.id} server={server} />
+        <ServerScreen
+          key={server.id}
+          server={server}
+          addon={route.name === "server" ? route.addon : undefined}
+        />
       );
       break;
     }

@@ -1,5 +1,7 @@
 package dev.tidings.core;
 
+import java.util.function.Supplier;
+
 final class FakeGame implements Game {
     String motd = "§6A Minecraft Server";
     byte[] icon;
@@ -31,5 +33,10 @@ final class FakeGame implements Game {
     @Override
     public WorldState world() {
         return new WorldState(6000, 3, Weather.RAIN);
+    }
+
+    @Override
+    public <T> T onServerThread(Supplier<T> task) {
+        return task.get();
     }
 }

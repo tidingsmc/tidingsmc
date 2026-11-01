@@ -1,3 +1,4 @@
+export { AddonIcon } from "./AddonIcon";
 export { Avatar } from "./Avatar";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { Dropdown } from "./Dropdown";

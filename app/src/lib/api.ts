@@ -1,4 +1,6 @@
 import type { TFunction } from "i18next";
+import type { ActionResult, AddonInfo, AddonLink, AddonView } from "./addons";
+import { mockAddonAction, mockAddonView, MOCK_ADDONS } from "./mockAddons";
 import { TranslatedError } from "./i18n";
 import { currentTimeZone, hashString, hostOf } from "./util";
 
@@ -77,6 +79,8 @@ export interface ServerInfo {
   /** server-icon.png as "data:image/png;base64,…", absent if the server has none. */
   icon?: string;
   version: string;
+  /** The tabs other mods add to the server's page, in this order. */
+  addons?: AddonInfo[];
 }
 
 /** The overworld's state, as seen in game. */
@@ -173,6 +177,20 @@ export interface TidingsApi {
     server: PairedServer,
     subscription: PushSubscriptionJSON,
   ): Promise<void>;
+  /** See `AddonView`. */
+  addonView(
+    server: PairedServer,
+    addon: string,
+    link: AddonLink | null,
+    locale: string,
+  ): Promise<AddonView>;
+  /** See `ActionResult`. */
+  addonAction(
+    server: PairedServer,
+    addon: string,
+    action: AddonAction,
+    locale: string,
+  ): Promise<ActionResult>;
   /**
    * DELETE {url}/api/devices/me  (authenticated, or a pairing waiting for approval: withdraws it)
    * The app also drops its push subscription, even if this call fails: the mod then gets 404 or 410
@@ -180,6 +198,12 @@ export interface TidingsApi {
    * player unpairs it there.
    */
   unpair(server: PairedServer): Promise<void>;
+}
+
+export interface AddonAction {
+  action: string;
+  params?: Record<string, string>;
+  values?: Record<string, string>;
 }
 
 export class ApiError extends TranslatedError {
@@ -355,6 +379,18 @@ const httpApi: TidingsApi = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(subscription),
     }),
+  addonView: (server, addon, link, locale) =>
+    authed(server, `/api/addons/${addon}/view`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...link, locale }),
+    }),
+  addonAction: (server, addon, action, locale) =>
+    authed(server, `/api/addons/${addon}/action`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...action, locale }),
+    }),
   // Not through authed(): leaving a server the mod already forgot isn't news to the player.
   unpair: (server) => {
     // Requests still on their way would get a 401 too.
@@ -449,6 +485,7 @@ const mockApi: TidingsApi = {
         { text: "new spawn", color: "aqua", underlined: true },
       ],
       version: "1.20.1 (Forge 47.4.10)",
+      addons: MOCK_ADDONS,
     };
   },
   async online(server) {
@@ -490,6 +527,18 @@ const mockApi: TidingsApi = {
   },
   async updatePush() {
     await delay(200);
+  },
+  async addonView(server, addon, link) {
+    await delay(300);
+    if (server.url.includes("offline"))
+      throw new ApiError((t) => t("errors.unreachable"));
+    return mockAddonView(addon, link, MOCK_PLAYERS.map(mockPlayer));
+  },
+  async addonAction(_server, addon, action) {
+    await delay(400);
+    const result = mockAddonAction(addon, action);
+    if ("error" in result) throw new ApiError(() => result.error, 400);
+    return result;
   },
   async unpair(server) {
     await delay(200);

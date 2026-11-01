@@ -1,5 +1,7 @@
+import { Home } from "pixelarticons/react";
 import { useTranslation } from "react-i18next";
 import {
+  AddonIcon,
   Avatar,
   LoadingDots,
   Motd,
@@ -8,19 +10,27 @@ import {
   SettingsLink,
   UnreachableNotice,
 } from "../components";
-import { isUnreachable, type PairedServer } from "../lib/api";
+import { isAddonId, text } from "../lib/addons";
+import { isUnreachable, type PairedServer, type ServerInfo } from "../lib/api";
 import { errorText } from "../lib/i18n";
-import { paths } from "../lib/router";
+import { paths, type AddonRoute } from "../lib/router";
 import { useInfo } from "../lib/useInfo";
 import { useOnline } from "../lib/useOnline";
 import { hostOf } from "../lib/util";
 import { WorldCard } from "../world";
+import { AddonTab } from "./AddonTab";
 
-export function ServerScreen({ server }: { server: PairedServer }) {
+export function ServerScreen({
+  server,
+  addon,
+}: {
+  server: PairedServer;
+  addon?: AddonRoute;
+}) {
   const { t } = useTranslation();
-  const online = useOnline(server);
   const info = useInfo(server);
-  const unreachable = online.status === "error" && isUnreachable(online.error);
+  const addons = (info?.addons ?? []).filter((a) => isAddonId(a?.id));
+  const current = addons.find((a) => a.id === addon?.id);
 
   return (
     <Screen
@@ -28,6 +38,66 @@ export function ServerScreen({ server }: { server: PairedServer }) {
       back={paths.servers}
       action={<SettingsLink href={paths.settings(server.id)} />}
     >
+      {addons.length > 0 || addon ? (
+        <div className="binder">
+          <nav className="tabs">
+            <a
+              href={paths.server(server.id)}
+              aria-current={addon ? undefined : "page"}
+              aria-label={t("server.overview")}
+              title={t("server.overview")}
+            >
+              <Home aria-hidden />
+            </a>
+            {addons.map((a) => {
+              const title = text(a.title) || a.id;
+              return (
+                <a
+                  key={a.id}
+                  href={paths.addon(server.id, { id: a.id })}
+                  aria-current={a.id === addon?.id ? "page" : undefined}
+                  aria-label={title}
+                  title={title}
+                >
+                  <AddonIcon name={text(a.icon)} />
+                </a>
+              );
+            })}
+          </nav>
+          <div className="tab-paper">
+            {addon ? (
+              <>
+                <h2 className="tab-title">
+                  <AddonIcon name={text(current?.icon)} />
+                  {text(current?.title) || addon.id}
+                </h2>
+                <AddonTab key={addon.id} server={server} addon={addon} />
+              </>
+            ) : (
+              <Overview server={server} info={info} />
+            )}
+          </div>
+        </div>
+      ) : (
+        <Overview server={server} info={info} />
+      )}
+    </Screen>
+  );
+}
+
+function Overview({
+  server,
+  info,
+}: {
+  server: PairedServer;
+  info: ServerInfo | null;
+}) {
+  const { t } = useTranslation();
+  const online = useOnline(server);
+  const unreachable = online.status === "error" && isUnreachable(online.error);
+
+  return (
+    <>
       <p className="server-address">{hostOf(server.url)}</p>
       <div className="server-header">
         <ServerIcon name={server.name} icon={info?.icon} size={64} />
@@ -70,6 +140,6 @@ export function ServerScreen({ server }: { server: PairedServer }) {
             ))}
         </section>
       )}
-    </Screen>
+    </>
   );
 }
