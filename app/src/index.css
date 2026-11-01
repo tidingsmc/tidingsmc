@@ -46,6 +46,11 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100%;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -55,7 +60,7 @@ body {
 #root {
   max-width: 560px;
   margin: 0 auto;
-  min-height: 100dvh;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
 }
