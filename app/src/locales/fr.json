@@ -110,6 +110,7 @@
     "joins": "Quand quelqu'un se connecte",
     "leaves": "Quand quelqu'un se déconnecte",
     "serverStatus": "Quand le serveur démarre ou s'arrête",
+    "addons": "Extensions",
     "quietWhileOnline": "Pas pendant que je joue",
     "quietHours": "Heures de silence",
     "from": "De",
@@ -153,6 +154,12 @@
     "disclaimer": "Produit Minecraft non officiel. Non approuvé par Mojang ou Microsoft et non associé à eux."
   },
   "addon": {
-    "updateApp": "Mettez Tidings à jour pour tout voir sur cette page."
+    "updateApp": "Mettez Tidings à jour pour tout voir sur cette page.",
+    "done": "Fait",
+    "available": "À faire ensuite",
+    "scrollLeft": "Défiler vers la gauche",
+    "scrollRight": "Défiler vers la droite",
+    "open": "Ouvrir",
+    "locked": "Verrouillé"
   }
 }

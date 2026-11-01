@@ -112,6 +112,11 @@ export interface DeviceSettings {
   quietHours: QuietHours;
   /** IANA time zone of the device, e.g. "Europe/Paris". Quiet hours are in this zone. */
   timeZone: string;
+  /**
+   * IDs of the add-ons whose notifications this device doesn't want: the others notify, quiet hours and
+   * `quietWhileOnline` still applying.
+   */
+  mutedAddons: string[];
 }
 
 /** Join/leave notifications only for these players. The list is kept while the filter is off. */
@@ -604,6 +609,7 @@ function mockSettings(server: PairedServer): DeviceSettings {
     friends: { enabled: false, players: [] },
     quietHours: { enabled: false, periods: [{ start: "22:00", end: "08:00" }] },
     timeZone: currentTimeZone(),
+    mutedAddons: [],
   };
   const saved = localStorage.getItem(`tidings.mock.settings.${server.id}`);
   return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;

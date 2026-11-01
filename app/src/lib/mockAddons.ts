@@ -11,7 +11,11 @@ import type { AddonAction, LinkedPlayer } from "./api";
 import { hashString } from "./util";
 
 export const MOCK_ADDONS: AddonInfo[] = [
-  { id: "mystats", title: "My stats", icon: "chart" },
+  {
+    id: "mystats",
+    title: "My stats",
+    icon: "chart",
+  },
 ];
 
 const STATS = [
@@ -20,12 +24,70 @@ const STATS = [
   { id: "mobs", label: "Mobs killed", unit: "" },
 ];
 
-const ADVANCEMENTS = [
-  { title: "Stone Age", done: true },
-  { title: "Getting an Upgrade", done: true },
-  { title: "Diamonds!", done: true },
-  { title: "We Need to Go Deeper", done: false },
-  { title: "The End?", done: false },
+const ADVANCEMENTS: {
+  id: string;
+  parent?: string;
+  title: string;
+  description: string;
+  done: boolean;
+  badge?: string;
+}[] = [
+  {
+    id: "root",
+    title: "Minecraft",
+    description: "The heart and story of the game",
+    done: true,
+  },
+  {
+    id: "stone",
+    parent: "root",
+    title: "Stone Age",
+    description: "Mine Stone with your new Pickaxe",
+    done: true,
+  },
+  {
+    id: "upgrade",
+    parent: "stone",
+    title: "Getting an Upgrade",
+    description: "Construct a better Pickaxe",
+    done: true,
+  },
+  {
+    id: "iron",
+    parent: "upgrade",
+    title: "Acquire Hardware",
+    description: "Smelt an Iron Ingot",
+    done: true,
+  },
+  {
+    id: "diamonds",
+    parent: "iron",
+    title: "Diamonds!",
+    description: "Acquire diamonds",
+    done: false,
+  },
+  {
+    id: "deeper",
+    parent: "diamonds",
+    title: "We Need to Go Deeper",
+    description: "Build, light and enter a Nether Portal",
+    done: false,
+  },
+  {
+    id: "lava",
+    parent: "iron",
+    title: "Hot Stuff",
+    description: "Fill a Bucket with lava",
+    done: false,
+  },
+  {
+    id: "end",
+    parent: "deeper",
+    title: "The End?",
+    description: "Enter the End Portal",
+    done: false,
+    badge: "Goal",
+  },
 ];
 
 function statValue(player: LinkedPlayer, stat: string): number {
@@ -69,13 +131,25 @@ export function mockAddonView(
     }
     case "advancements":
       blocks.push({
-        type: "list",
-        items: ADVANCEMENTS.map((a) => ({
-          title: a.title,
-          trailing: a.done ? "✓" : "",
-        })),
+        type: "tree",
+        nodes: ADVANCEMENTS.map((a) => {
+          const parent = ADVANCEMENTS.find((p) => p.id === a.parent);
+          return {
+            id: a.id,
+            parent: a.parent,
+            title: a.title,
+            subtitle: a.description,
+            trailing: a.done ? "Oct 30" : undefined,
+            state: a.done
+              ? "done"
+              : !parent || parent.done
+                ? "available"
+                : "locked",
+            badge: a.badge,
+          };
+        }),
       });
-      return { version: 1, title: "Advancements", blocks };
+      return { version: 2, title: "Advancements", blocks };
     default: {
       const done = ADVANCEMENTS.filter((a) => a.done).length;
       blocks.push(

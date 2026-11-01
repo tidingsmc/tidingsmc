@@ -19,7 +19,8 @@ public record Link(String view, Map<String, String> params) {
         return new Link(view, params);
     }
 
-    JsonObject toJson() {
+    /** As views and push messages send it to the app. */
+    public JsonObject toJson() {
         JsonObject json = new JsonObject();
         json.addProperty("view", view);
         if (!params.isEmpty()) json.add("params", Names.toJson(params));

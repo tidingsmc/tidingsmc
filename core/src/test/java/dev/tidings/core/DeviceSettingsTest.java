@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonParser;
+
 import dev.tidings.core.FriendFilter.Friend;
 
 import org.junit.jupiter.api.Test;
@@ -13,7 +15,9 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 class DeviceSettingsTest {
@@ -26,7 +30,7 @@ class DeviceSettingsTest {
 
     private static DeviceSettings everything(
             FriendFilter friends, QuietHours quietHours, ZoneId timeZone) {
-        return new DeviceSettings(true, true, true, false, friends, quietHours, timeZone);
+        return new DeviceSettings(true, true, true, false, friends, quietHours, timeZone, Set.of());
     }
 
     @Test
@@ -106,6 +110,71 @@ class DeviceSettingsTest {
         assertTrue(
                 everything(off, QuietHours.off(), UTC)
                         .wants(NotificationKind.PLAYER_JOINED, ALEX, NOON_UTC, ME, false));
+    }
+
+    @Test
+    void addonsNotifyUnlessMuted() {
+        DeviceSettings settings = DeviceSettings.defaults();
+        assertTrue(settings.wantsAddon("vanilla", STEVE, NOON_UTC, ME, false));
+        assertTrue(settings.wantsAddon("vanilla", null, NOON_UTC, ME, false));
+
+        DeviceSettings muted = settings.withMutedAddons(Set.of("vanilla"));
+        assertFalse(muted.wantsAddon("vanilla", STEVE, NOON_UTC, ME, false));
+        assertTrue(muted.wantsAddon("bounties", STEVE, NOON_UTC, ME, false));
+    }
+
+    @Test
+    void addonNotificationsFollowTheSameQuietRules() {
+        DeviceSettings settings = DeviceSettings.defaults();
+        assertFalse(settings.wantsAddon("vanilla", ME, NOON_UTC, ME, false), "about the owner");
+        assertFalse(settings.wantsAddon("vanilla", STEVE, NOON_UTC, ME, true), "owner online");
+
+        QuietHours lunch =
+                new QuietHours(
+                        true,
+                        List.of(new QuietHours.Period(LocalTime.of(11, 0), LocalTime.of(13, 0))));
+        assertFalse(
+                everything(FriendFilter.off(), lunch, UTC)
+                        .wantsAddon("vanilla", STEVE, NOON_UTC, ME, false));
+    }
+
+    @Test
+    void theFriendFilterIsOnlyForJoinsAndLeaves() {
+        FriendFilter onlySteve = new FriendFilter(true, List.of(new Friend(STEVE, "Steve")));
+        assertTrue(
+                everything(onlySteve, QuietHours.off(), UTC)
+                        .wantsAddon("vanilla", ALEX, NOON_UTC, ME, false));
+    }
+
+    @Test
+    void mutedAddonsRoundTripThroughJson() {
+        DeviceSettings muted = DeviceSettings.defaults().withMutedAddons(Set.of("vanilla", "bank"));
+        assertEquals(muted, Json.patchSettings(DeviceSettings.defaults(), Json.settings(muted)));
+
+        DeviceSettings stored =
+                Json.patchSettings(DeviceSettings.defaults(), JsonParser.parseString("{}"));
+        assertEquals(Set.of(), stored.mutedAddons(), "settings saved before add-ons notified");
+    }
+
+    @Test
+    void invalidMutedAddonsAreRejected() {
+        for (String changes :
+                List.of(
+                        "{\"mutedAddons\": \"vanilla\"}",
+                        "{\"mutedAddons\": [1]}",
+                        "{\"mutedAddons\": [\"Not An ID\"]}")) {
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () ->
+                            Json.patchSettings(
+                                    DeviceSettings.defaults(), JsonParser.parseString(changes)),
+                    changes);
+        }
+        Set<String> tooMany = new HashSet<>();
+        for (int i = 0; i <= DeviceSettings.MAX_MUTED_ADDONS; i++) tooMany.add("addon" + i);
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> DeviceSettings.defaults().withMutedAddons(tooMany));
     }
 
     @Test

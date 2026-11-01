@@ -110,6 +110,7 @@
     "joins": "When someone joins",
     "leaves": "When someone leaves",
     "serverStatus": "When the server starts or stops",
+    "addons": "Add-ons",
     "quietWhileOnline": "Not while I'm playing",
     "quietHours": "Quiet hours",
     "from": "From",
@@ -153,6 +154,12 @@
     "disclaimer": "Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft."
   },
   "addon": {
-    "updateApp": "Update Tidings to see everything on this page."
+    "updateApp": "Update Tidings to see everything on this page.",
+    "done": "Done",
+    "available": "Next to do",
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right",
+    "open": "Open",
+    "locked": "Locked"
   }
 }

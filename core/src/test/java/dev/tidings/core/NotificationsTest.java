@@ -8,6 +8,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import dev.tidings.core.addon.Addon;
+import dev.tidings.core.addon.AddonContext;
+import dev.tidings.core.addon.Addons;
+import dev.tidings.core.addon.Link;
+import dev.tidings.core.addon.Notification;
+import dev.tidings.core.addon.View;
+
 import org.junit.jupiter.api.Test;
 
 import java.net.URI;
@@ -16,6 +23,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -69,7 +78,8 @@ class NotificationsTest {
                 d.quietWhileOnline(),
                 d.friends(),
                 d.quietHours(),
-                d.timeZone());
+                d.timeZone(),
+                d.mutedAddons());
     }
 
     private Instant later(Duration d) {
@@ -261,5 +271,133 @@ class NotificationsTest {
         optIn.setAnnounced(alex.id(), true);
         optIn.playerJoined(alex, later(Duration.ofHours(1)));
         assertEquals(1, sent.size());
+    }
+
+    @Test
+    void addonNotificationsCarryTheirTextAndLink() {
+        PushSubscription stevesPhone = pairDevice("steves-phone", steve);
+        pairDevice("alexs-phone", alex);
+
+        tidings.addonNotified(
+                "vanilla",
+                Notification.of("Alex fell from a high place")
+                        .about(alex)
+                        .link(Link.to("player", Map.of("id", alex.id().toString()))),
+                t0);
+
+        assertEquals(1, sent.size(), "not Alex's own phone");
+        assertEquals(stevesPhone, sent.get(0).to());
+        JsonObject message = sent.get(0).json();
+        assertEquals("addon", message.get("kind").getAsString());
+        assertEquals("vanilla", message.get("addon").getAsString());
+        assertEquals("Alex fell from a high place", message.get("text").getAsString());
+        assertEquals("Alex", message.getAsJsonObject("player").get("name").getAsString());
+        JsonObject link = message.getAsJsonObject("link");
+        assertEquals("player", link.get("view").getAsString());
+        assertEquals(alex.id().toString(), link.getAsJsonObject("params").get("id").getAsString());
+    }
+
+    @Test
+    void addonNewsDoesntReplaceJoinsInThePushQueue() {
+        pairDevice("steves-phone", steve);
+
+        tidings.playerJoined(alex, t0);
+        tidings.playerLeft(alex.id(), t0);
+        tidings.addonNotified("vanilla", Notification.of("Alex died").about(alex), t0);
+        tidings.addonNotified("other", Notification.of("Alex won").about(alex), t0);
+        tidings.addonNotified("vanilla", Notification.of("Server news"), t0);
+
+        List<String> topics = sent.stream().map(Sent::topic).toList();
+        assertEquals(4, topics.size());
+        assertEquals(4, Set.copyOf(topics).size(), "one queue each: " + topics);
+    }
+
+    @Test
+    void addonNewsAboutHiddenPlayersIsDropped() {
+        pairDevice("steves-phone", steve);
+        tidings.setAnnounced(alex.id(), false);
+
+        tidings.addonNotified("vanilla", Notification.of("Alex died").about(alex), t0);
+
+        assertEquals(List.of(), sent);
+    }
+
+    @Test
+    void mutedAddonsArentHeard() {
+        pairDevice(
+                "steves-phone",
+                steve,
+                DeviceSettings.defaults().withMutedAddons(Set.of("vanilla")));
+
+        tidings.addonNotified("vanilla", Notification.of("Server news"), t0);
+        assertEquals(List.of(), sent);
+
+        tidings.addonNotified("bounties", Notification.of("New bounty"), t0);
+        assertEquals(1, sent.size());
+    }
+
+    @Test
+    void addonNotificationsCanBeForSomePlayersOnly() {
+        PushSubscription stevesPhone = pairDevice("steves-phone", steve);
+        pairDevice("alexs-phone", alex);
+
+        tidings.addonNotified(
+                "bounties", Notification.of("Your bounty was claimed").to(List.of(steve.id())), t0);
+
+        assertEquals(List.of(stevesPhone), sent.stream().map(Sent::to).toList());
+    }
+
+    @Test
+    void eachAddonHasAFewNotificationsAMinute() {
+        pairDevice("steves-phone", steve);
+
+        for (int i = 0; i < Addons.MAX_NOTIFICATIONS_PER_MINUTE + 5; i++) {
+            tidings.addonNotified("vanilla", Notification.of("News " + i), t0);
+        }
+        tidings.addonNotified("bounties", Notification.of("Other add-on"), t0);
+        assertEquals(Addons.MAX_NOTIFICATIONS_PER_MINUTE + 1, sent.size());
+
+        sent.clear();
+        tidings.addonNotified("vanilla", Notification.of("Later"), later(Duration.ofSeconds(61)));
+        assertEquals(1, sent.size());
+    }
+
+    @Test
+    void addonsAreQuietOnceTheServerStops() {
+        pairDevice("steves-phone", steve);
+        tidings.serverStopping(t0);
+        sent.clear();
+
+        tidings.addonNotified("vanilla", Notification.of("Server news"), t0);
+
+        assertEquals(List.of(), sent);
+    }
+
+    @Test
+    void addonContextsReachTheRunningTidings() {
+        pairDevice("steves-phone", steve);
+        tidings.rememberPlayer(alex);
+        AddonContext context =
+                tidings.addons()
+                        .add(
+                                Addon.builder("Vanilla")
+                                        .view("home", r -> View.of(null))
+                                        .build("vanilla"));
+        context.notify(Notification.of("While the server starts"));
+        assertTrue(context.isHidden(alex.id()), "nobody's known before the server started");
+        tidings.serverStarted(t0);
+        sent.clear();
+
+        assertFalse(context.isHidden(alex.id()));
+        assertEquals(alex, context.player(alex.id()).orElseThrow());
+        context.notify(Notification.of("Server news"));
+        assertEquals(1, sent.size());
+
+        tidings.serverStopping(t0);
+        sent.clear();
+        assertTrue(context.isHidden(alex.id()), "nobody's known once the server stops");
+        assertTrue(context.player(alex.id()).isEmpty());
+        context.notify(Notification.of("Dropped"));
+        assertEquals(List.of(), sent);
     }
 }

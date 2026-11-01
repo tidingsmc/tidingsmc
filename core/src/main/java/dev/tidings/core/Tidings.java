@@ -1,9 +1,15 @@
 package dev.tidings.core;
 
 import dev.tidings.core.addon.Addons;
+import dev.tidings.core.addon.Notification;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,6 +22,8 @@ import java.util.function.Consumer;
 
 /** Entry point that platform adapters (Forge, later others) talk to */
 public final class Tidings {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Tidings.class);
+
     /** Beyond this, players unpair a device themselves before pairing a new one. */
     public static final int MAX_DEVICES_PER_PLAYER = 5;
 
@@ -36,6 +44,27 @@ public final class Tidings {
     private final Map<String, AwaitingApproval> awaitingApproval = new HashMap<>();
 
     private volatile Consumer<Device> approvalListener = device -> {};
+
+    /** When each add-on last notified, by ID, within the last minute. */
+    private final Map<String, Deque<Instant>> addonNotifications = new HashMap<>();
+
+    private final Addons.Host addonHost =
+            new Addons.Host() {
+                @Override
+                public void notify(String addonId, Notification notification) {
+                    addonNotified(addonId, notification, Instant.now());
+                }
+
+                @Override
+                public boolean isAnnounced(UUID player) {
+                    return Tidings.this.isAnnounced(player);
+                }
+
+                @Override
+                public Optional<PlayerProfile> knownPlayer(UUID player) {
+                    return store.knownPlayer(player);
+                }
+            };
 
     /**
      * {@code asked}: whether its player was asked to approve it yet. {@code outcome}: null while it
@@ -80,6 +109,11 @@ public final class Tidings {
         this.addons = addons;
         this.notifier = new Notifier(store, push);
         this.announcedByDefault = announcedByDefault;
+    }
+
+    /** Once the server stopped. */
+    public void close() {
+        addons.disconnect(addonHost);
     }
 
     /** Announces players by default, without the add-ons other mods registered. */
@@ -142,7 +176,9 @@ public final class Tidings {
         notifier.notify(NotificationKind.PLAYER_LEFT, player, onlineIds(), now);
     }
 
+    /** Add-ons can notify and see players from now on, until {@link #serverStopping}. */
     public void serverStarted(Instant now) {
+        addons.connect(addonHost);
         notifier.notify(NotificationKind.SERVER_STARTED, null, onlineIds(), now);
     }
 
@@ -153,7 +189,39 @@ public final class Tidings {
      */
     public CompletableFuture<Void> serverStopping(Instant now) {
         stopping = true;
+        addons.disconnect(addonHost);
         return notifier.notify(NotificationKind.SERVER_STOPPING, null, onlineIds(), now);
+    }
+
+    /**
+     * Sends an add-on's notification, unless it's about a hidden player, the server is stopping, or
+     * the add-on already sent {@link Addons#MAX_NOTIFICATIONS_PER_MINUTE} in the last minute.
+     *
+     * @return completes once every push got an answer
+     */
+    CompletableFuture<Void> addonNotified(String addonId, Notification notification, Instant now) {
+        PlayerProfile player = notification.player();
+        if (stopping || (player != null && !isAnnounced(player.id()))) {
+            return CompletableFuture.completedFuture(null);
+        }
+        if (!withinAddonLimit(addonId, now)) {
+            LOGGER.warn(
+                    "The {} add-on sends over {} notifications a minute: dropped \"{}\"",
+                    addonId,
+                    Addons.MAX_NOTIFICATIONS_PER_MINUTE,
+                    notification.text());
+            return CompletableFuture.completedFuture(null);
+        }
+        return notifier.notifyAddon(addonId, notification, onlineIds(), now);
+    }
+
+    private synchronized boolean withinAddonLimit(String addonId, Instant now) {
+        Deque<Instant> sent = addonNotifications.computeIfAbsent(addonId, id -> new ArrayDeque<>());
+        Instant minuteAgo = now.minus(Duration.ofMinutes(1));
+        while (!sent.isEmpty() && !sent.peekFirst().isAfter(minuteAgo)) sent.removeFirst();
+        if (sent.size() >= Addons.MAX_NOTIFICATIONS_PER_MINUTE) return false;
+        sent.addLast(now);
+        return true;
     }
 
     private synchronized Set<UUID> onlineIds() {

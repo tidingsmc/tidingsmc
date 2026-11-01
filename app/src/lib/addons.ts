@@ -13,7 +13,7 @@ export interface AddonInfo {
 }
 
 /** The blocks this app knows. A page from a newer mod may use others: they show "update Tidings". */
-export const VIEW_VERSION = 1;
+export const VIEW_VERSION = 2;
 
 /** Opens one of the same add-on's views. */
 export interface AddonLink {
@@ -28,6 +28,8 @@ export interface AddonLink {
 export interface AddonView {
   version: number;
   title?: string;
+  /** Who the page is about: their face shows next to the title. */
+  player?: { uuid: string; name: string; skinUrl?: string };
   blocks: Block[];
 }
 
@@ -53,7 +55,8 @@ export type Block =
     }
   | ButtonBlock
   | FormBlock
-  | { type: "card"; blocks: Block[] };
+  | { type: "card"; blocks: Block[] }
+  | { type: "tree"; nodes: TreeNode[] };
 
 export interface ListItem {
   title: string;
@@ -61,6 +64,52 @@ export interface ListItem {
   trailing?: string;
   player?: { uuid: string; name: string; skinUrl?: string };
   link?: AddonLink;
+}
+
+/** A node of a tree block, listed after its parent; children show in the order given. */
+export interface TreeNode {
+  /** Unique within its tree. */
+  id: string;
+  /** Absent for a top-level node. */
+  parent?: string;
+  title: string;
+  subtitle?: string;
+  trailing?: string;
+  /** Drawn as an icon: done, the next to do, or still out of reach. */
+  state?: "done" | "available" | "locked";
+  /** A short tag next to the title, such as "Challenge". */
+  badge?: string;
+  link?: AddonLink;
+}
+
+export interface TreeItem {
+  node: TreeNode;
+  children: TreeItem[];
+  /** It names itself as its parent: shown at the top level, with an arrow back to itself. */
+  loops?: boolean;
+}
+
+/**
+ * Nests a tree block's nodes under their parents. The mod lists parents first; a node whose parent
+ * isn't listed before it shows at the top level, one that is its own parent too, and one whose ID
+ * is already taken is dropped, so a broken tree still shows everything once and can't loop.
+ */
+export function buildTree(nodes: unknown): TreeItem[] {
+  if (!Array.isArray(nodes)) return [];
+  const roots: TreeItem[] = [];
+  const byId = new Map<string, TreeItem>();
+  for (const node of nodes) {
+    if (typeof node !== "object" || node === null) continue;
+    const { id, parent } = node as TreeNode;
+    if (typeof id !== "string" || !id || byId.has(id)) continue;
+    // Looked up before it's added, so a node can't be its own child.
+    const under = typeof parent === "string" ? byId.get(parent) : undefined;
+    const item: TreeItem = { node, children: [] };
+    if (parent === id) item.loops = true;
+    byId.set(id, item);
+    (under ? under.children : roots).push(item);
+  }
+  return roots;
 }
 
 /** Has either `action` (with its `params`) or `link`. */

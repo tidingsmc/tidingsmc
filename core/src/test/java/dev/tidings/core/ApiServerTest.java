@@ -667,7 +667,7 @@ class ApiServerTest {
 
         assertEquals(200, response.statusCode(), response.body());
         JsonObject view = json(response);
-        assertEquals(1, view.get("version").getAsInt());
+        assertEquals(View.VERSION, view.get("version").getAsInt());
         assertEquals("Hi", view.get("title").getAsString());
         JsonObject text = view.getAsJsonArray("blocks").get(0).getAsJsonObject();
         assertEquals("text", text.get("type").getAsString());

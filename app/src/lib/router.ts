@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { isAddonId, readLink } from "./addons";
+import type { AddonRoute, PairStep } from "./paths";
+
+export { paths, type AddonRoute, type PairStep } from "./paths";
 
 export type Route =
   | { name: "servers" }
@@ -7,16 +10,6 @@ export type Route =
   | { name: "server"; id: string; addon?: AddonRoute }
   | { name: "settings"; id: string }
   | { name: "pair"; step?: PairStep; url?: string; code?: string };
-
-/** An add-on's tab on a server's page; without `view`, the tab's first view. */
-export interface AddonRoute {
-  id: string;
-  view?: string;
-  params?: Record<string, string>;
-}
-
-/** The pairing wizard's steps that have their own route, so the back gesture goes between them. */
-export type PairStep = "scan" | "code";
 
 /**
  * Hash-based routes, so the app works from any static host (GitHub Pages) without server config.
@@ -72,21 +65,6 @@ function queryParams(query: string): Record<string, string> {
   return Object.fromEntries(new URLSearchParams(query));
 }
 
-export const paths = {
-  servers: "#/",
-  pair: "#/pair",
-  pairStep: (step: PairStep) => `#/pair/${step}`,
-  appSettings: "#/settings",
-  server: (id: string) => `#/server/${encodeURIComponent(id)}`,
-  addon: (id: string, addon: AddonRoute) => {
-    const tab = `#/server/${encodeURIComponent(id)}/addon/${addon.id}`;
-    if (!addon.view) return tab;
-    const query = new URLSearchParams(addon.params).toString();
-    return `${tab}/${encodeURIComponent(addon.view)}${query && `?${query}`}`;
-  },
-  settings: (id: string) => `#/server/${encodeURIComponent(id)}/settings`,
-};
-
 export function useRoute(): Route {
   const [route, setRoute] = useState(() => parseRoute(location.hash));
   useEffect(() => {
@@ -97,10 +75,33 @@ export function useRoute(): Route {
   return route;
 }
 
+/**
+ * Each history entry remembers the route that led to it, in `history.state.from`, so a back button
+ * can tell whether going back stays where it is. A replaced entry keeps what led to the one it
+ * replaces, as going back skips it.
+ */
+let currentHash = typeof location === "undefined" ? "" : location.hash;
+if (typeof window !== "undefined") {
+  // The entry the app opened on came from outside it, such as a tapped notification. Marked now, or
+  // coming back to it would look like a new entry and take the page it was left for as its own.
+  if (history.state === null) history.replaceState({ from: "" }, "");
+  addEventListener("hashchange", () => {
+    // A new entry: entries revisited with back or forward keep theirs.
+    if (history.state === null) history.replaceState({ from: currentHash }, "");
+    currentHash = location.hash;
+  });
+}
+
+/** The route that led to the current one, if the app was on one. */
+export function cameFrom(): string | undefined {
+  const from = (history.state as { from?: unknown } | null)?.from;
+  return typeof from === "string" && from ? from : undefined;
+}
+
 /** `replace` keeps one-time links (like a pairing link) out of the back history. */
 export function navigate(path: string, { replace = false } = {}) {
   if (replace) {
-    history.replaceState(null, "", path);
+    history.replaceState({ from: cameFrom() ?? "" }, "", path);
     dispatchEvent(new HashChangeEvent("hashchange"));
   } else {
     location.hash = path;

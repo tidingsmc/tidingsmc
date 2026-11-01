@@ -9,6 +9,7 @@ import dev.tidings.core.PlayerProfile;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -22,11 +23,19 @@ class BlockTest {
     @Test
     void viewsSayWhichBlocksTheyUse() {
         assertJson(
-                "{version:1,title:'Stats',blocks:[{type:'heading',text:'Me'},"
+                "{version:2,title:'Stats',blocks:[{type:'heading',text:'Me'},"
                         + "{type:'text',text:'Hi'},{type:'text',text:'psst',muted:true}]}",
                 View.of("Stats", Block.heading("Me"), Block.text("Hi"), Block.muted("psst"))
                         .toJson());
-        assertJson("{version:1,blocks:[]}", View.of(null).toJson());
+        assertJson("{version:2,blocks:[]}", View.of(null).toJson());
+    }
+
+    @Test
+    void aViewCanBeAboutAPlayer() {
+        UUID id = UUID.fromString("8667ba71-b85a-4004-af54-457a9734eed7");
+        assertJson(
+                "{version:2,title:'Steve',player:{uuid:'" + id + "',name:'Steve'},blocks:[]}",
+                View.of("Steve").player(new PlayerProfile(id, "Steve", null)).toJson());
     }
 
     @Test
@@ -125,6 +134,46 @@ class BlockTest {
                 Block.card(Block.text("Hi")).toJson());
         assertThrows(
                 IllegalArgumentException.class, () -> Block.card(Block.card(Block.text("Hi"))));
+    }
+
+    @Test
+    void trees() {
+        assertJson(
+                "{type:'tree',nodes:["
+                        + "{id:'root',title:'Minecraft',state:'done'},"
+                        + "{id:'stone',parent:'root',title:'Stone Age',subtitle:'Mine stone',"
+                        + "trailing:'Oct 30',state:'available',badge:'Goal',"
+                        + "link:{view:'adv',params:{id:'stone'}}}]}",
+                Block.tree(
+                                List.of(
+                                        Block.TreeNode.of("root", "Minecraft")
+                                                .state(Block.TreeNode.State.DONE),
+                                        Block.TreeNode.of("stone", "root", "Stone Age")
+                                                .subtitle("Mine stone")
+                                                .trailing("Oct 30")
+                                                .state(Block.TreeNode.State.AVAILABLE)
+                                                .badge("Goal")
+                                                .link(Link.to("adv", Map.of("id", "stone")))))
+                        .toJson());
+    }
+
+    @Test
+    void treeParentsComeFirst() {
+        Block.TreeNode root = Block.TreeNode.of("root", "Root");
+        Block.TreeNode child = Block.TreeNode.of("child", "root", "Child");
+
+        assertThrows(IllegalArgumentException.class, () -> Block.tree(List.of(child, root)));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Block.tree(List.of(root, Block.TreeNode.of("x", "nowhere", "X"))));
+        assertThrows(IllegalArgumentException.class, () -> Block.tree(List.of(root, root)));
+        assertThrows(IllegalArgumentException.class, () -> Block.TreeNode.of("a", "a", "A"));
+        assertThrows(IllegalArgumentException.class, () -> Block.TreeNode.of("", "Empty"));
+        List<Block.TreeNode> tooMany = new ArrayList<>();
+        for (int i = 0; i <= Block.Tree.MAX_NODES; i++) {
+            tooMany.add(Block.TreeNode.of("n" + i, "N"));
+        }
+        assertThrows(IllegalArgumentException.class, () -> Block.tree(tooMany));
     }
 
     @Test

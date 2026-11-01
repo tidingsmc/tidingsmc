@@ -1,4 +1,6 @@
 import i18next from "i18next";
+import { isAddonId, readLink } from "./lib/addons";
+import { paths } from "./lib/paths";
 import { notificationContent, type PushMessage } from "./lib/push";
 import { skinFace } from "./lib/skin";
 import { safeSkinUrl } from "./lib/util";
@@ -22,12 +24,23 @@ const KINDS: PushMessage["kind"][] = [
   "player_left",
   "server_started",
   "server_stopping",
+  "addon",
 ];
 
 function parse(data: PushMessageData | null): PushMessage | undefined {
   try {
     const message = data?.json();
-    return KINDS.includes(message?.kind) ? message : undefined;
+    if (!KINDS.includes(message?.kind)) return undefined;
+    if (message.kind !== "addon") return message;
+    if (
+      !isAddonId(message.addon) ||
+      typeof message.text !== "string" ||
+      !message.text
+    )
+      return undefined;
+    // A link the app wouldn't follow opens the add-on's first view instead.
+    const link = message.link === undefined ? null : readLink(message.link);
+    return { ...message, link: link ?? undefined };
   } catch {
     return undefined;
   }
@@ -38,7 +51,7 @@ async function showFallback() {
   await self.registration.showNotification("Tidings", {
     body: t("notification.unknown"),
     icon: NO_ICON,
-    data: { serverId: serverIdOfScope() },
+    data: { path: paths.server(serverIdOfScope()) },
   });
 }
 
@@ -58,13 +71,15 @@ function serverIdOfScope(): string {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const { serverId } = event.notification.data as { serverId: string };
-  event.waitUntil(openServer(serverId));
+  const data = event.notification.data as { path?: string; serverId?: string };
+  // Notifications shown by an older version of this worker only have serverId.
+  const path = data.path ?? paths.server(data.serverId ?? serverIdOfScope());
+  event.waitUntil(openPath(path));
 });
 
-async function openServer(serverId: string) {
+/** `path` is one of the app's routes, such as paths.server(…). */
+async function openPath(path: string) {
   const app = new URL("../../", self.registration.scope).href;
-  const path = `#/server/${encodeURIComponent(serverId)}`;
   const windows = await self.clients.matchAll({
     type: "window",
     includeUncontrolled: true,
@@ -81,7 +96,7 @@ async function openServer(serverId: string) {
 async function show(message: PushMessage) {
   const serverId = serverIdOfScope();
   const name = (await serverName(serverId).catch(() => undefined)) ?? "Tidings";
-  const { title, body, tag } = notificationContent(
+  const { title, body, tag, path } = notificationContent(
     message,
     { id: serverId, name },
     await translator(),
@@ -91,7 +106,7 @@ async function show(message: PushMessage) {
     tag,
     renotify: true,
     icon: await playerIcon(message),
-    data: { serverId },
+    data: { path },
   } as NotificationOptions & { renotify: boolean });
 }
 

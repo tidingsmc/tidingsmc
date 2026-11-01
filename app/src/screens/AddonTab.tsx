@@ -1,5 +1,20 @@
-import { Fragment, useEffect, useState, type FormEvent } from "react";
-import { ChevronRight } from "pixelarticons/react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Circle,
+  Lock,
+} from "pixelarticons/react";
 import { useTranslation } from "react-i18next";
 import {
   Avatar,
@@ -10,6 +25,7 @@ import {
   UnreachableNotice,
 } from "../components";
 import {
+  buildTree,
   readLink,
   readParams,
   text,
@@ -21,6 +37,7 @@ import {
   type Field,
   type FormBlock,
   type ListItem,
+  type TreeItem,
 } from "../lib/addons";
 import {
   api,
@@ -30,6 +47,7 @@ import {
 } from "../lib/api";
 import { errorText } from "../lib/i18n";
 import { navigate, paths, type AddonRoute } from "../lib/router";
+import { layoutTree } from "../lib/treeLayout";
 
 /**
  * `for` is the link it was loaded for: another one is still loading. `reload` counts the reloads
@@ -138,9 +156,17 @@ export function AddonTab({
     );
   }
   const title = text(state.view.title);
+  const player = state.view.player;
   return (
     <div className="addon">
-      {title && <h3 className="addon-title">{title}</h3>}
+      {title && (
+        <h3 className="addon-title">
+          {player && typeof player.name === "string" && (
+            <Avatar name={player.name} skinUrl={text(player.skinUrl)} />
+          )}
+          {title}
+        </h3>
+      )}
       {message?.on === linkKey && (
         <p
           className={message.error ? "error" : "addon-message"}
@@ -254,6 +280,8 @@ function BlockView({
       return <ActionButton block={block} context={context} />;
     case "form":
       return <AddonForm block={block} context={context} />;
+    case "tree":
+      return <Tree nodes={block.nodes} context={context} />;
     case "card":
       return nested ? null : (
         <div className="card addon-card">
@@ -302,6 +330,260 @@ function Row({ item, context }: { item: ListItem; context: Context }) {
         <div className="addon-row">{content}</div>
       )}
     </li>
+  );
+}
+
+/** Card size and spacing in the tree, in CSS pixels: fixed, so the layout needs no measuring. */
+const CARD_WIDTH = 136;
+const CARD_HEIGHT = 64;
+const COLUMN_GAP = 28;
+const ROW_GAP = 10;
+const TREE_PADDING = 12;
+/** About how tall an opened card gets, to leave room for one near the bottom. */
+const OPEN_CARD_HEIGHT = 170;
+
+const cardX = (column: number) =>
+  TREE_PADDING + column * (CARD_WIDTH + COLUMN_GAP);
+const cardY = (row: number) => TREE_PADDING + row * (CARD_HEIGHT + ROW_GAP);
+
+/**
+ * Laid out left to right like Minecraft's advancement screen, scrolling sideways, with arrows from
+ * each node to the ones under it. Cards show their title; tapping one opens it over its neighbours
+ * to show the rest.
+ */
+function Tree({ nodes, context }: { nodes: unknown; context: Context }) {
+  const { t } = useTranslation();
+  const [selected, setSelected] = useState<string | null>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  // Not again on each tap or scroll: a tree has up to 500 nodes.
+  const layout = useMemo(() => layoutTree(buildTree(nodes)), [nodes]);
+  // Opens where the player is: the first node to do next, with what leads to it on its left.
+  const next = layout.nodes.find((n) => n.item.node.state === "available");
+  const nextColumn = next?.column ?? 0;
+
+  const updateEdges = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const left = el.scrollLeft > 1;
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    setEdges((e) =>
+      e.left === left && e.right === right ? e : { left, right },
+    );
+  }, []);
+
+  const scrolled = useRef(false);
+  useLayoutEffect(() => {
+    const el = scrollerRef.current;
+    if (!el || scrolled.current) return;
+    scrolled.current = true;
+    // The next node in the middle, what leads to it on its left.
+    el.scrollLeft = cardX(nextColumn) + CARD_WIDTH / 2 - el.clientWidth / 2;
+    updateEdges();
+  }, [nextColumn, updateEdges]);
+
+  useEffect(() => {
+    updateEdges();
+    addEventListener("resize", updateEdges);
+    return () => removeEventListener("resize", updateEdges);
+  }, [updateEdges, layout.columns]);
+
+  if (layout.nodes.length === 0) return null;
+  const width = cardX(layout.columns) - COLUMN_GAP + TREE_PADDING;
+  const opened = layout.nodes.find((n) => n.item.node.id === selected);
+  const height = Math.max(
+    cardY(layout.rows) - ROW_GAP + TREE_PADDING,
+    opened ? cardY(opened.row) + OPEN_CARD_HEIGHT + TREE_PADDING : 0,
+  );
+  const scrollBy = (direction: 1 | -1) =>
+    scrollerRef.current?.scrollBy({
+      left: direction * (CARD_WIDTH + COLUMN_GAP) * 2,
+      behavior: "smooth",
+    });
+
+  return (
+    <div className="addon-tree">
+      {(edges.left || edges.right) && (
+        <div className="addon-tree-scroll">
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={t("addon.scrollLeft")}
+            disabled={!edges.left}
+            onClick={() => scrollBy(-1)}
+          >
+            <ChevronLeft />
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={t("addon.scrollRight")}
+            disabled={!edges.right}
+            onClick={() => scrollBy(1)}
+          >
+            <ChevronRight />
+          </button>
+        </div>
+      )}
+      <div
+        className="addon-tree-scroller"
+        ref={scrollerRef}
+        onScroll={updateEdges}
+      >
+        <div className="addon-tree-canvas" style={{ width, height }}>
+          <svg
+            className="addon-tree-arrows"
+            width={width}
+            height={height}
+            aria-hidden
+          >
+            {layout.edges.map(({ from, to }) => {
+              const parent = layout.nodes[from];
+              const child = layout.nodes[to];
+              if (from === to) {
+                // Out of its right side, over its top, and back into its left side.
+                const left = cardX(child.column);
+                const right = left + CARD_WIDTH;
+                const y = cardY(child.row) + CARD_HEIGHT / 2;
+                const top = cardY(child.row) - ROW_GAP / 2;
+                const out = right + COLUMN_GAP / 2;
+                const back = left - 8;
+                return (
+                  <path
+                    key={to}
+                    data-state={child.item.node.state}
+                    d={`M${right} ${y}H${out}V${top}H${back}V${y}H${left - 1}M${left - 6} ${y - 4}L${left - 1} ${y}L${left - 6} ${y + 4}`}
+                  />
+                );
+              }
+              const x1 = cardX(parent.column) + CARD_WIDTH;
+              const y1 = cardY(parent.row) + CARD_HEIGHT / 2;
+              const x2 = cardX(child.column);
+              const y2 = cardY(child.row) + CARD_HEIGHT / 2;
+              const middle = x1 + COLUMN_GAP / 2;
+              return (
+                <path
+                  key={to}
+                  data-state={child.item.node.state}
+                  d={`M${x1} ${y1}H${middle}V${y2}H${x2 - 1}M${x2 - 6} ${y2 - 4}L${x2 - 1} ${y2}L${x2 - 6} ${y2 + 4}`}
+                />
+              );
+            })}
+          </svg>
+          {layout.nodes.map(({ item, column, row }) => (
+            <TreeCard
+              key={item.node.id}
+              item={item}
+              context={context}
+              open={item.node.id === selected}
+              onToggle={() =>
+                setSelected((id) => (id === item.node.id ? null : item.node.id))
+              }
+              left={cardX(column)}
+              top={cardY(row)}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A node: its title, and once tapped its description, date and link too. */
+function TreeCard({
+  item,
+  context,
+  open,
+  onToggle,
+  left,
+  top,
+}: {
+  item: TreeItem;
+  context: Context;
+  open: boolean;
+  onToggle: () => void;
+  left: number;
+  top: number;
+}) {
+  const { t } = useTranslation();
+  const { node } = item;
+  const badge = text(node.badge);
+  const subtitle = text(node.subtitle);
+  const trailing = text(node.trailing);
+  const link = readLink(node.link);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Wider once open: the part that's out of view comes in.
+    if (open)
+      ref.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+  }, [open]);
+  return (
+    <div
+      ref={ref}
+      className="addon-tree-node"
+      data-state={node.state}
+      data-open={open || undefined}
+      style={{ left, top, minHeight: CARD_HEIGHT }}
+    >
+      <button
+        type="button"
+        className="addon-tree-card"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <span className="addon-tree-card-head">
+          <TreeState state={node.state} />
+          <span className="addon-tree-card-title">{text(node.title)}</span>
+        </span>
+        {open && subtitle && (
+          <span className="addon-tree-card-text small">{subtitle}</span>
+        )}
+        {open && trailing && (
+          <span className="addon-tree-card-text muted small">{trailing}</span>
+        )}
+      </button>
+      {open && link && (
+        <a className="addon-tree-open small" href={context.href(link)}>
+          {t("addon.open")}
+        </a>
+      )}
+      {badge && (
+        <span className="addon-tree-badge addon-tree-corner">{badge}</span>
+      )}
+    </div>
+  );
+}
+
+function TreeState({ state }: { state: unknown }) {
+  const { t } = useTranslation();
+  const icon =
+    state === "done" ? (
+      <Check />
+    ) : state === "available" ? (
+      <Circle />
+    ) : state === "locked" ? (
+      <Lock />
+    ) : null;
+  if (!icon) return null;
+  const name =
+    state === "done"
+      ? t("addon.done")
+      : state === "available"
+        ? t("addon.available")
+        : t("addon.locked");
+  return (
+    <span
+      className="addon-tree-state"
+      data-state={state as string}
+      role="img"
+      aria-label={name}
+    >
+      {icon}
+    </span>
   );
 }
 

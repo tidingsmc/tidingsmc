@@ -165,6 +165,7 @@ public final class TidingsMod {
                     port,
                     e);
             // Pairing codes would be useless without the API.
+            tidings.close();
             this.tidings = null;
             problem = "couldn't listen on " + bindAddress + ":" + port;
         }
@@ -200,6 +201,7 @@ public final class TidingsMod {
             }
         }
         if (push != null) push.close();
+        if (tidings != null) tidings.close();
         api = null;
         push = null;
         tidings = null;

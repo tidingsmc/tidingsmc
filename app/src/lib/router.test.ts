@@ -48,7 +48,7 @@ describe("parseRoute", () => {
     expect(parseRoute("#/server")).toEqual({ name: "servers" });
   });
 
-  // The service worker builds this path itself when a notification is tapped (sw.ts, openServer).
+  // The service worker builds this path itself when a notification is tapped (sw.ts, notificationclick).
   it("reads the path a tapped notification opens", () => {
     expect(parseRoute(`#/server/${encodeURIComponent("1f2e3d4c")}`)).toEqual({
       name: "server",

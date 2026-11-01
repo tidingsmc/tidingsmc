@@ -1,5 +1,9 @@
 package dev.tidings.core;
 
+import com.google.gson.JsonObject;
+
+import dev.tidings.core.addon.Notification;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +17,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /** Picks the devices that want to hear about something, and sends them a push. */
 final class Notifier {
@@ -36,36 +42,69 @@ final class Notifier {
      */
     CompletableFuture<Void> notify(
             NotificationKind kind, PlayerProfile player, Set<UUID> online, Instant now) {
-        try {
-            return send(kind, player, online, now);
-        } catch (RuntimeException e) {
-            // Called from the game's thread: a failed push mustn't break what the game does next.
-            LOGGER.error("Couldn't send {} notifications", kind, e);
-            return CompletableFuture.completedFuture(null);
-        }
+        UUID about = player == null ? null : player.id();
+        return send(
+                kind.name(),
+                () -> Json.pushMessage(kind, player),
+                player == null ? "server" : topic(player.id().toString()),
+                device -> {
+                    UUID owner = device.player().id();
+                    return device.settings().wants(kind, about, now, owner, online.contains(owner));
+                });
+    }
+
+    /**
+     * @param online who's on the server now
+     * @return completes once every push got an answer
+     */
+    CompletableFuture<Void> notifyAddon(
+            String addonId, Notification notification, Set<UUID> online, Instant now) {
+        PlayerProfile player = notification.player();
+        UUID about = player == null ? null : player.id();
+        return send(
+                addonId + " add-on",
+                () -> Json.addonPushMessage(addonId, notification),
+                topic("addon:" + addonId + ":" + (about == null ? "news" : about)),
+                device -> {
+                    UUID owner = device.player().id();
+                    return notification.isFor(owner)
+                            && device.settings()
+                                    .wantsAddon(addonId, about, now, owner, online.contains(owner));
+                });
     }
 
     private CompletableFuture<Void> send(
-            NotificationKind kind, PlayerProfile player, Set<UUID> online, Instant now) {
-        byte[] payload = Json.pushMessage(kind, player).toString().getBytes(StandardCharsets.UTF_8);
-        String topic = topic(player);
-        UUID about = player == null ? null : player.id();
-        List<CompletableFuture<Void>> sends = new ArrayList<>();
-        for (Device device : store.devices()) {
-            PushSubscription to = device.push();
-            UUID owner = device.player().id();
-            if (to == null
-                    || !device.settings().wants(kind, about, now, owner, online.contains(owner))) {
-                continue;
+            String what, Supplier<JsonObject> message, String topic, Predicate<Device> wants) {
+        try {
+            byte[] payload = message.get().toString().getBytes(StandardCharsets.UTF_8);
+            if (payload.length > WebPush.MAX_PAYLOAD) {
+                // Notification's limits should prevent it: one warning rather than one per device.
+                LOGGER.warn(
+                        "Dropped {} notification: {} bytes, over a push's {}",
+                        what,
+                        payload.length,
+                        WebPush.MAX_PAYLOAD);
+                return CompletableFuture.completedFuture(null);
             }
-            sends.add(
-                    sender.send(to, payload, TTL, topic)
-                            .thenAccept(
-                                    result -> {
-                                        if (result == PushSender.Result.GONE) forget(device, to);
-                                    }));
+            List<CompletableFuture<Void>> sends = new ArrayList<>();
+            for (Device device : store.devices()) {
+                PushSubscription to = device.push();
+                if (to == null || !wants.test(device)) continue;
+                sends.add(
+                        sender.send(to, payload, TTL, topic)
+                                .thenAccept(
+                                        result -> {
+                                            if (result == PushSender.Result.GONE) {
+                                                forget(device, to);
+                                            }
+                                        }));
+            }
+            return CompletableFuture.allOf(sends.toArray(CompletableFuture[]::new));
+        } catch (RuntimeException e) {
+            // Called from the game's thread: a failed push mustn't break what the game does next.
+            LOGGER.error("Couldn't send {} notifications", what, e);
+            return CompletableFuture.completedFuture(null);
         }
-        return CompletableFuture.allOf(sends.toArray(CompletableFuture[]::new));
     }
 
     /**
@@ -86,15 +125,15 @@ final class Notifier {
     }
 
     /**
-     * Like the app's notification tags: news about one player replaces the previous one still
-     * waiting for the phone, and so does news about the server. At most 32 base64url characters.
+     * Like the app's notification tags: news with the same key (about the same player, about the
+     * server, or the same add-on's about the same player) replaces the previous one still waiting
+     * for the phone. At most 32 base64url characters.
      */
-    private static String topic(PlayerProfile player) {
-        if (player == null) return "server";
+    private static String topic(String key) {
         try {
             byte[] hash =
                     MessageDigest.getInstance("SHA-256")
-                            .digest(player.id().toString().getBytes(StandardCharsets.US_ASCII));
+                            .digest(key.getBytes(StandardCharsets.UTF_8));
             return Base64Url.encode(hash).substring(0, 32);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("Every JVM has SHA-256", e);

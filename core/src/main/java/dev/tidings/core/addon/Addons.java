@@ -8,9 +8,10 @@ import dev.tidings.core.PlayerProfile;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -34,6 +35,26 @@ public final class Addons {
      */
     private final Map<String, Addon> addons = new TreeMap<>();
 
+    /** What the running Tidings offers add-ons; null while it isn't running. */
+    private volatile Host host;
+
+    /**
+     * More would be spam: what's over is dropped, see {@link AddonContext#notify}. Enough for a
+     * burst of news, such as several players dying in the same fight.
+     */
+    public static final int MAX_NOTIFICATIONS_PER_MINUTE = 10;
+
+    /**
+     * How the running Tidings serves {@link AddonContext}. Its methods may be called on any thread.
+     */
+    public interface Host {
+        void notify(String addonId, Notification notification);
+
+        boolean isAnnounced(UUID player);
+
+        Optional<PlayerProfile> knownPlayer(UUID player);
+    }
+
     /** Thrown when the app asks for an add-on, view or action that doesn't exist (anymore). */
     public static final class NotFound extends RuntimeException {
         NotFound(String message) {
@@ -56,7 +77,7 @@ public final class Addons {
      *
      * @throws IllegalStateException if it was already taken
      */
-    public static Consumer<Addon> registrar() {
+    public static Function<Addon, AddonContext> registrar() {
         if (REGISTRAR_TAKEN.getAndSet(true)) {
             throw new IllegalStateException(
                     "Add-ons are registered through the loader's entry point, such as"
@@ -65,27 +86,42 @@ public final class Addons {
         return REGISTERED::put;
     }
 
+    /** Called by Tidings once it runs: add-ons' contexts work through {@code host} from then on. */
+    public synchronized void connect(Host host) {
+        this.host = Objects.requireNonNull(host, "host");
+    }
+
+    /** Called by Tidings once it stops, unless another one connected since. */
+    public synchronized void disconnect(Host host) {
+        if (this.host == host) this.host = null;
+    }
+
+    Host host() {
+        return host;
+    }
+
     /**
      * For tests and their own instances: {@link #registered} only takes add-ons through {@link
      * #registrar}.
      *
      * @throws IllegalStateException if another add-on has the same ID, or on {@link #registered}
      */
-    public void add(Addon addon) {
+    public AddonContext add(Addon addon) {
         if (this == REGISTERED) {
             throw new IllegalStateException(
                     "Add-ons are registered through the loader's entry point, such as"
                             + " TidingsAddons");
         }
-        put(addon);
+        return put(addon);
     }
 
-    private synchronized void put(Addon addon) {
+    private synchronized AddonContext put(Addon addon) {
         Objects.requireNonNull(addon, "addon");
         if (addons.putIfAbsent(addon.id(), addon) != null) {
             throw new IllegalStateException(
                     "Two add-ons with the ID " + addon.id() + ": a mod can add one tab");
         }
+        return new AddonContext(this, addon);
     }
 
     /** By ID. */

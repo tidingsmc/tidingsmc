@@ -55,15 +55,15 @@ The API itself is described in `app/src/lib/api.ts`.
 
 ## Add-ons
 
-Other mods can add tabs to a server's page in the app. They describe each page as blocks (headings, text, stats, lists, progress bars, choices, buttons, forms, cards) and the app draws them in its own style: an add-on runs no code on the phone, can only link to its own pages, and never sees device tokens. Views and actions run on the server thread, for the player whose device asks.
+Other mods can add tabs to a server's page in the app. They describe each page as blocks (headings, text, stats, lists, progress bars, choices, buttons, forms, cards) and the app draws them in its own style: an add-on runs no code on the phone, can only link to its own pages, and never sees device tokens. Views and actions run on the server thread, for the player whose device asks. Add-ons can also send notifications, which each player can turn off per add-on in the server's settings.
 
-**[Writing an add-on](docs/addons.md)** explains how to set up a mod, every block and field, actions, errors, security and limits. For a working add-on, see [tidingsmc-vanilla](https://github.com/tidingsmc/tidingsmc-vanilla). The classes are in `core/src/main/java/dev/tidings/core/addon/`, and the JSON the app receives is described in `app/src/lib/addons.ts`.
+**[Writing an add-on](docs/addons.md)** explains how to set up a mod, every block and field, actions, errors, security and limits. For a working add-on, see [tidingsmc-vanilla](https://github.com/tidingsmc/tidingsmc-vanilla).
 
 ## Repository layout
 
 | Path | What |
 |---|---|
-| `core/` | Plain Java 17, no Minecraft: pairing, tokens, push sending, HTTP API, storage |
+| `core/` | Pairing, tokens, push sending, HTTP API, storage |
 | `forge/` | Forge 1.20.1 adapter: join/leave events, `/tidings` commands, QR code map |
 | `app/` | The PWA: Vite + React + TypeScript |
 | `relay/` | The optional relay: a Cloudflare Worker with one Durable Object |

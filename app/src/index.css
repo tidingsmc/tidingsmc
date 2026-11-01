@@ -450,14 +450,6 @@ h2 {
   border-radius: 3px;
 }
 
-.server-address {
-  margin-bottom: -6px;
-  color: var(--muted);
-  font-family: var(--font-heading);
-  font-size: 0.85rem;
-  overflow-wrap: anywhere;
-}
-
 .status {
   display: flex;
   margin-top: 2px;
@@ -599,6 +591,39 @@ h2 {
 
 .settings-group + .settings-group {
   margin-top: 12px;
+}
+
+.settings-group-title {
+  margin: 16px 4px 6px;
+}
+
+.settings-collapsible {
+  margin-bottom: 12px;
+}
+
+.settings-collapsible > summary {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.settings-collapsible > summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-collapsible-chevron {
+  width: 16px;
+  height: 16px;
+  transform: rotate(-90deg);
+}
+
+.settings-collapsible[open] .settings-collapsible-chevron {
+  transform: none;
 }
 
 .toggle-row {
@@ -1418,6 +1443,11 @@ h2 {
   color: var(--text);
 }
 
+.tab-back {
+  margin-left: -4px;
+  color: var(--muted);
+}
+
 .tab-title svg {
   width: 22px;
   height: 22px;
@@ -1446,6 +1476,9 @@ h2 {
 }
 
 .addon-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 1rem;
   color: var(--text);
   margin: 0;
@@ -1516,6 +1549,181 @@ h2 {
   font-family: var(--font-heading);
   color: var(--muted);
   flex-shrink: 0;
+}
+
+/* Scrolls sideways inside the page, like Minecraft's advancement screen. */
+.addon-tree {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.addon-tree-scroller {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  /* Upside down, and its content back up: the scrollbar goes on top. */
+  transform: rotateX(180deg);
+}
+
+.addon-tree-canvas {
+  position: relative;
+  transform: rotateX(180deg);
+  transition: height 0.15s;
+}
+
+.addon-tree-arrows {
+  position: absolute;
+  inset: 0;
+  fill: none;
+  stroke: var(--off);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.addon-tree-arrows path[data-state="done"] {
+  stroke: var(--ok);
+}
+
+.addon-tree-arrows path[data-state="available"] {
+  stroke: var(--accent);
+}
+
+.addon-tree-arrows path[data-state="locked"] {
+  stroke-dasharray: 4 4;
+}
+
+.addon-tree-node {
+  position: absolute;
+  width: 136px;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+/* Opened, it grows over its neighbours to fit its description. */
+.addon-tree-node[data-open] {
+  z-index: 1;
+  width: 200px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
+}
+
+.addon-tree-node[data-state="done"] {
+  border-color: var(--ok);
+}
+
+.addon-tree-node[data-state="available"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.addon-tree-node[data-state="locked"] {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.addon-tree-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.addon-tree-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.addon-tree-card-title {
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.addon-tree-node[data-open] .addon-tree-card-title {
+  -webkit-line-clamp: unset;
+}
+
+.addon-tree-card-text {
+  line-height: 1.35;
+}
+
+.addon-tree-open {
+  margin: 0 10px 8px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.addon-tree-state {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.addon-tree-state svg {
+  width: 18px;
+  height: 18px;
+}
+
+.addon-tree-state[data-state="done"] {
+  color: var(--ok);
+}
+
+.addon-tree-state[data-state="available"] {
+  color: var(--accent);
+}
+
+.addon-tree-badge {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.7rem;
+}
+
+/* Over the card's top edge, so the title keeps the whole card. */
+.addon-tree-corner {
+  position: absolute;
+  top: -10px;
+  right: 8px;
+  border: 1px solid var(--surface);
+}
+
+/* Above the tree, while there's more of it to scroll to. */
+.addon-tree-scroll {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 4px 8px 0;
+}
+
+.addon-tree-scroll .icon-button {
+  margin: 0;
+  color: var(--text);
+}
+
+.addon-tree-scroll .icon-button:disabled {
+  color: var(--off);
+  cursor: default;
 }
 
 .addon-progress {

@@ -7,6 +7,7 @@ import com.google.gson.JsonPrimitive;
 
 import dev.tidings.core.FriendFilter.Friend;
 import dev.tidings.core.QuietHours.Period;
+import dev.tidings.core.addon.Notification;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -16,9 +17,11 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 final class Json {
@@ -46,10 +49,23 @@ final class Json {
         return json;
     }
 
+    /** Mirrors the app's PushMessage, for kind "addon". */
+    static JsonObject addonPushMessage(String addonId, Notification notification) {
+        JsonObject json = pushMessage("addon", notification.player());
+        json.addProperty("addon", addonId);
+        json.addProperty("text", notification.text());
+        if (notification.link() != null) json.add("link", notification.link().toJson());
+        return json;
+    }
+
     /** Mirrors the app's PushMessage. */
     static JsonObject pushMessage(NotificationKind kind, PlayerProfile player) {
+        return pushMessage(kind.name().toLowerCase(Locale.ROOT), player);
+    }
+
+    private static JsonObject pushMessage(String kind, PlayerProfile player) {
         JsonObject json = new JsonObject();
-        json.addProperty("kind", kind.name().toLowerCase(Locale.ROOT));
+        json.addProperty("kind", kind);
         if (player != null) json.add("player", player(player));
         return json;
     }
@@ -101,6 +117,10 @@ final class Json {
         json.add("quietHours", quietHours);
 
         json.addProperty("timeZone", s.timeZone().getId());
+
+        JsonArray mutedAddons = new JsonArray();
+        s.mutedAddons().stream().sorted().forEach(mutedAddons::add);
+        json.add("mutedAddons", mutedAddons);
         return json;
     }
 
@@ -117,7 +137,23 @@ final class Json {
                 c.has("quietHours") ? readQuietHours(c.get("quietHours")) : base.quietHours(),
                 c.has("timeZone")
                         ? DeviceSettings.parseTimeZone(string(c, "timeZone"))
-                        : base.timeZone());
+                        : base.timeZone(),
+                c.has("mutedAddons") ? readMutedAddons(c) : base.mutedAddons());
+    }
+
+    private static Set<String> readMutedAddons(JsonObject o) {
+        JsonArray ids = array(o, "mutedAddons");
+        if (ids.size() > DeviceSettings.MAX_MUTED_ADDONS) {
+            throw new IllegalArgumentException("Too many muted add-ons");
+        }
+        Set<String> muted = new HashSet<>();
+        for (JsonElement id : ids) {
+            if (!(id instanceof JsonPrimitive p) || !p.isString()) {
+                throw new IllegalArgumentException("Expected text in mutedAddons");
+            }
+            muted.add(p.getAsString());
+        }
+        return muted;
     }
 
     private static FriendFilter readFriends(JsonElement json) {

@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState } from "react";
-import { Plus, Trash } from "pixelarticons/react";
+import { ChevronDown, Plus, Trash } from "pixelarticons/react";
 import { useTranslation } from "react-i18next";
 import {
   ConfirmDialog,
@@ -38,6 +38,18 @@ export function SettingsScreen({
   const [leaving, setLeaving] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const [invalidPeriod, setInvalidPeriod] = useState<number | null>(null);
+  // Any add-on may notify: each gets a switch.
+  const addons = info?.addons ?? [];
+  const mutedAddons = settings?.mutedAddons;
+
+  function muteAddon(id: string, muted: boolean) {
+    if (!mutedAddons) return; // settings not loaded yet
+    update({
+      mutedAddons: muted
+        ? [...mutedAddons.filter((a) => a !== id), id]
+        : mutedAddons.filter((a) => a !== id),
+    });
+  }
 
   function updateQuietHours(changes: Partial<QuietHours>) {
     if (!settings) return;
@@ -107,11 +119,36 @@ export function SettingsScreen({
                 disabled={
                   !settings.notifyJoins &&
                   !settings.notifyLeaves &&
-                  !settings.notifyServerStatus
+                  !settings.notifyServerStatus &&
+                  // Until the server's add-ons are known, one of them may notify.
+                  info !== null &&
+                  // Older caches and mods have no mutedAddons: nothing is muted.
+                  addons.every((a) => mutedAddons?.includes(a.id))
                 }
                 onChange={(quietWhileOnline) => update({ quietWhileOnline })}
               />
             </div>
+          )}
+          {mutedAddons && addons.length > 0 && (
+            <details className="settings-collapsible">
+              <summary className="settings-group-title">
+                <ChevronDown
+                  className="settings-collapsible-chevron"
+                  aria-hidden
+                />
+                {t("settings.addons")}
+              </summary>
+              <div className="settings-group">
+                {addons.map((addon) => (
+                  <Toggle
+                    key={addon.id}
+                    label={addon.title}
+                    checked={!mutedAddons.includes(addon.id)}
+                    onChange={(on) => muteAddon(addon.id, !on)}
+                  />
+                ))}
+              </div>
+            </details>
           )}
           {settings && (
             <FriendsSection

@@ -1,4 +1,4 @@
-import { Home } from "pixelarticons/react";
+import { ChevronLeft, Home } from "pixelarticons/react";
 import { useTranslation } from "react-i18next";
 import {
   AddonIcon,
@@ -13,10 +13,9 @@ import {
 import { isAddonId, text } from "../lib/addons";
 import { isUnreachable, type PairedServer, type ServerInfo } from "../lib/api";
 import { errorText } from "../lib/i18n";
-import { paths, type AddonRoute } from "../lib/router";
+import { cameFrom, paths, type AddonRoute } from "../lib/router";
 import { useInfo } from "../lib/useInfo";
 import { useOnline } from "../lib/useOnline";
-import { hostOf } from "../lib/util";
 import { WorldCard } from "../world";
 import { AddonTab } from "./AddonTab";
 
@@ -68,6 +67,7 @@ export function ServerScreen({
             {addon ? (
               <>
                 <h2 className="tab-title">
+                  {addon.view && <AddonBack server={server} addon={addon.id} />}
                   <AddonIcon name={text(current?.icon)} />
                   {text(current?.title) || addon.id}
                 </h2>
@@ -85,6 +85,31 @@ export function ServerScreen({
   );
 }
 
+/**
+ * Back to the page of the add-on that led here, like the back gesture; to the tab's first page when
+ * none did, such as after opening a notification, so it never leaves the add-on.
+ */
+function AddonBack({ server, addon }: { server: PairedServer; addon: string }) {
+  const { t } = useTranslation();
+  const tab = paths.addon(server.id, { id: addon });
+  return (
+    <a
+      className="back tab-back"
+      href={tab}
+      aria-label={t("common.back")}
+      onClick={(e) => {
+        const from = cameFrom();
+        if (from === tab || from?.startsWith(`${tab}/`)) {
+          e.preventDefault();
+          history.back();
+        }
+      }}
+    >
+      <ChevronLeft />
+    </a>
+  );
+}
+
 function Overview({
   server,
   info,
@@ -98,7 +123,6 @@ function Overview({
 
   return (
     <>
-      <p className="server-address">{hostOf(server.url)}</p>
       <div className="server-header">
         <ServerIcon name={server.name} icon={info?.icon} size={64} />
         {info && <Motd segments={info.motd} />}

@@ -18,6 +18,7 @@ describe("notificationContent", () => {
       title: "Survival",
       body: "Steve joined",
       tag: `abc123:player:${steve.uuid}`,
+      path: "#/server/abc123",
     });
     expect(content({ kind: "server_started" }).title).toBe("Survival");
   });
@@ -45,6 +46,7 @@ describe("notificationContent", () => {
       title: "Survival",
       body: "The server is shutting down",
       tag: "abc123:status",
+      path: "#/server/abc123",
     });
     expect(content({ kind: "server_started" }).tag).toBe("abc123:status");
   });
@@ -69,5 +71,42 @@ describe("notificationContent", () => {
       content({ kind: "player_joined", player: { ...steve, name: "<b>&" } })
         .body,
     ).toBe("<b>& joined");
+  });
+
+  it("shows an add-on's text and opens its view", () => {
+    expect(
+      content({
+        kind: "addon",
+        addon: "vanilla",
+        text: "Steve fell from a high place",
+        player: steve,
+        link: { view: "player", params: { id: steve.uuid } },
+      }),
+    ).toEqual({
+      title: "Survival",
+      body: "Steve fell from a high place",
+      tag: `abc123:addon:vanilla:${steve.uuid}`,
+      path: `#/server/abc123/addon/vanilla/player?id=${steve.uuid}`,
+    });
+  });
+
+  it("opens an add-on's first view without a link", () => {
+    expect(
+      content({ kind: "addon", addon: "vanilla", text: "News" }),
+    ).toMatchObject({
+      tag: "abc123:addon:vanilla:news",
+      path: "#/server/abc123/addon/vanilla",
+    });
+  });
+
+  it("keeps an add-on's news apart from joins and other add-ons", () => {
+    const tags = [
+      content({ kind: "player_joined", player: steve }).tag,
+      content({ kind: "addon", addon: "vanilla", text: "x", player: steve })
+        .tag,
+      content({ kind: "addon", addon: "bounties", text: "x", player: steve })
+        .tag,
+    ];
+    expect(new Set(tags).size).toBe(3);
   });
 });

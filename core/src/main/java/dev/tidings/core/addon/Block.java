@@ -5,9 +5,11 @@ import com.google.gson.JsonObject;
 
 import dev.tidings.core.PlayerProfile;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * A piece of an add-on's {@link View}. The app draws each kind its own way: add-ons describe what
@@ -24,7 +26,8 @@ public sealed interface Block
                 Block.Choices,
                 Block.Button,
                 Block.Form,
-                Block.Card {
+                Block.Card,
+                Block.Tree {
 
     JsonObject toJson();
 
@@ -70,6 +73,14 @@ public sealed interface Block
     /** Calls {@code action} with what the player filled in, see {@link Request#values}. */
     static Form form(String action, String submit, Field... fields) {
         return new Form(action, Map.of(), submit, List.of(fields));
+    }
+
+    /**
+     * Nodes drawn as an indented tree, each under its parent, such as advancements or a quest line.
+     * Parents come before their children; children show in the order given.
+     */
+    static Tree tree(List<TreeNode> nodes) {
+        return new Tree(nodes);
     }
 
     /** Groups blocks together. Can't contain another card. */
@@ -363,6 +374,128 @@ public sealed interface Block
             JsonArray array = new JsonArray();
             blocks.forEach(block -> array.add(block.toJson()));
             json.add("blocks", array);
+            return json;
+        }
+    }
+
+    /**
+     * @param nodes at most {@link #MAX_NODES}, each one's parent before it
+     */
+    record Tree(List<TreeNode> nodes) implements Block {
+        public static final int MAX_NODES = 500;
+
+        public Tree {
+            nodes = List.copyOf(nodes);
+            if (nodes.size() > MAX_NODES) {
+                throw new IllegalArgumentException("A tree has at most " + MAX_NODES + " nodes");
+            }
+            Set<String> seen = new HashSet<>();
+            for (TreeNode node : nodes) {
+                // Parents first: then there can't be a loop, and the app draws it in one pass.
+                if (node.parent() != null && !seen.contains(node.parent())) {
+                    throw new IllegalArgumentException(
+                            "Tree node "
+                                    + node.id()
+                                    + "'s parent "
+                                    + node.parent()
+                                    + " must come before it");
+                }
+                if (!seen.add(node.id())) {
+                    throw new IllegalArgumentException("Two tree nodes have the ID " + node.id());
+                }
+            }
+        }
+
+        @Override
+        public JsonObject toJson() {
+            JsonObject json = typed("tree");
+            JsonArray array = new JsonArray();
+            nodes.forEach(node -> array.add(node.toJson()));
+            json.add("nodes", array);
+            return json;
+        }
+    }
+
+    /**
+     * @param id unique within its tree: 1 to {@link #MAX_ID_LENGTH} characters, any of them
+     * @param parent the ID of the node it's under, or null for a top-level node
+     * @param subtitle under the title, or null
+     * @param trailing at the end of the row, such as a date, or null
+     * @param state drawn as an icon: done, the next to do, or still out of reach
+     * @param badge a short tag next to the title, such as "Challenge", or null
+     * @param link what the node opens, or null
+     */
+    record TreeNode(
+            String id,
+            String parent,
+            String title,
+            String subtitle,
+            String trailing,
+            State state,
+            String badge,
+            Link link) {
+        public static final int MAX_ID_LENGTH = 256;
+
+        public enum State {
+            NONE,
+            DONE,
+            AVAILABLE,
+            LOCKED
+        }
+
+        public TreeNode {
+            Objects.requireNonNull(id, "id");
+            if (id.isEmpty() || id.length() > MAX_ID_LENGTH) {
+                throw new IllegalArgumentException(
+                        "A tree node's ID is 1 to " + MAX_ID_LENGTH + " characters");
+            }
+            if (id.equals(parent)) {
+                throw new IllegalArgumentException("Tree node " + id + " is its own parent");
+            }
+            Objects.requireNonNull(title, "title");
+            Objects.requireNonNull(state, "state");
+        }
+
+        /** A top-level node. */
+        public static TreeNode of(String id, String title) {
+            return new TreeNode(id, null, title, null, null, State.NONE, null, null);
+        }
+
+        /** A node under {@code parent}'s. */
+        public static TreeNode of(String id, String parent, String title) {
+            return new TreeNode(id, parent, title, null, null, State.NONE, null, null);
+        }
+
+        public TreeNode subtitle(String subtitle) {
+            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link);
+        }
+
+        public TreeNode trailing(String trailing) {
+            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link);
+        }
+
+        public TreeNode state(State state) {
+            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link);
+        }
+
+        public TreeNode badge(String badge) {
+            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link);
+        }
+
+        public TreeNode link(Link link) {
+            return new TreeNode(id, parent, title, subtitle, trailing, state, badge, link);
+        }
+
+        JsonObject toJson() {
+            JsonObject json = new JsonObject();
+            json.addProperty("id", id);
+            if (parent != null) json.addProperty("parent", parent);
+            json.addProperty("title", title);
+            if (subtitle != null) json.addProperty("subtitle", subtitle);
+            if (trailing != null) json.addProperty("trailing", trailing);
+            if (state != State.NONE) json.addProperty("state", Names.lower(state));
+            if (badge != null) json.addProperty("badge", badge);
+            if (link != null) json.add("link", link.toJson());
             return json;
         }
     }
