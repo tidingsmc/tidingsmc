@@ -1,10 +1,17 @@
 import { version } from "../../package.json";
 import type { ReactNode } from "react";
-import { Moon, Smartphone, Sun } from "pixelarticons/react";
+import {
+  BellOff,
+  ChevronRight,
+  Moon,
+  Smartphone,
+  Sun,
+} from "pixelarticons/react";
 import { useTranslation } from "react-i18next";
-import { Dropdown, NotificationsOff, Screen } from "../components";
-import type { PairedServer } from "../lib/api";
+import { Dropdown, Screen } from "../components";
 import { useLanguage } from "../lib/i18n";
+import type { PairedServer } from "../lib/api";
+import { usePushStates } from "../lib/notifications";
 import { paths } from "../lib/router";
 import { useTheme, type Theme } from "../lib/theme";
 import { LOCALE_NAMES, type Locale } from "../locales";
@@ -19,10 +26,13 @@ export function AppSettingsScreen({ servers }: { servers: PairedServer[] }) {
   const { t } = useTranslation();
   const [theme, setTheme] = useTheme();
   const [language, setLanguage] = useLanguage();
+  const { states } = usePushStates(servers);
+  const pushStates = [...(states?.values() ?? [])];
+  const notificationsOff = pushStates.some((state) => state !== "on");
+  const canTurnOn = pushStates.includes("off");
 
   return (
     <Screen title={t("common.settings")} back={paths.servers}>
-      <NotificationsOff servers={servers} />
       <div className="settings-list">
         <div className="info-row">
           {t("appSettings.theme")}
@@ -61,6 +71,18 @@ export function AppSettingsScreen({ servers }: { servers: PairedServer[] }) {
               })),
             ]}
           />
+        </div>
+
+        <div className="info-row">
+          {t("settings.notifications")}
+          <a
+            className={`button nav-button${notificationsOff ? " warning" : ""}`}
+            href={paths.notificationSettings}
+          >
+            {notificationsOff && <BellOff aria-hidden />}
+            {canTurnOn ? t("push.turnOn") : t("appSettings.manage")}
+            <ChevronRight aria-hidden />
+          </a>
         </div>
 
         <p className="info-row">

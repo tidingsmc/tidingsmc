@@ -62,6 +62,9 @@ describe("parseRoute", () => {
     expect(parseRoute(paths.server(id))).toEqual({ name: "server", id });
     expect(parseRoute(paths.settings(id))).toEqual({ name: "settings", id });
     expect(parseRoute(paths.appSettings)).toEqual({ name: "appSettings" });
+    expect(parseRoute(paths.notificationSettings)).toEqual({
+      name: "notificationSettings",
+    });
     expect(parseRoute(paths.pairStep("code"))).toEqual({
       name: "pair",
       step: "code",

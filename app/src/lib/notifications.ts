@@ -12,12 +12,11 @@ export function pushSupported(): boolean {
   );
 }
 
-/** Each server gets its own service worker registration so each can have its own push subscription. */
+/** Each server gets its own service worker registration so each can have its own push subscription */
 function scopeOf(serverId: string): string {
   return new URL(`./s/${encodeURIComponent(serverId)}/`, location.href).href;
 }
 
-/** Registers the server's service worker, if it isn't yet, and waits until it runs. */
 async function register(serverId: string): Promise<ServiceWorkerRegistration> {
   const registration = await navigator.serviceWorker.register(
     new URL("./sw.js", location.href),
@@ -36,7 +35,6 @@ async function register(serverId: string): Promise<ServiceWorkerRegistration> {
   return new Promise((resolve, reject) => {
     worker.addEventListener("statechange", () => {
       if (worker.state === "activated") resolve(registration);
-      // Failed to install, or replaced by a newer one before activating.
       if (worker.state === "redundant")
         reject(new TranslatedError((t) => t("push.couldntStart")));
     });
@@ -55,19 +53,11 @@ const sentSubscriptions = sentToServers("tidings.sentSubscriptions");
 
 const subscriptionChanges = new EventTarget();
 
-/**
- * Asks for permission to notify, unless already answered. Call it while handling a tap: iPhones only ask then.
- * @returns whether notifications are allowed
- */
 export async function askPermission(): Promise<boolean> {
   if (!pushSupported()) return false;
   return (await Notification.requestPermission()) === "granted";
 }
 
-/**
- * Subscribes to the server's pushes, unless already subscribed, and sends it the subscription if it hasn't
- * got this one yet. Needs notification permission.
- */
 export async function subscribe(server: PairedServer): Promise<void> {
   const registration = await register(server.id);
   const subscription =
@@ -90,7 +80,6 @@ function base64UrlToBytes(s: string): Uint8Array<ArrayBuffer> {
   return Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
 }
 
-/** Asks for permission and subscribes, with a message saying why if it can't. Call it while handling a tap. */
 export async function enableNotifications(server: PairedServer): Promise<void> {
   if (!pushSupported()) throw new TranslatedError((t) => t("push.unsupported"));
   if (!(await askPermission()))
@@ -98,11 +87,6 @@ export async function enableNotifications(server: PairedServer): Promise<void> {
   await subscribe(server);
 }
 
-/**
- * Browsers can renew or drop push subscriptions, and don't reliably tell the service worker. So each time
- * the app comes to the foreground, subscribe again where needed and send servers the subscriptions they
- * haven't got. Does nothing until notifications are allowed: asking needs a tap.
- */
 export function useSubscriptionSync(servers: PairedServer[]) {
   useEffect(() => {
     const sync = () => {
@@ -137,15 +121,8 @@ async function pushState(server: PairedServer): Promise<PushState> {
     : "off";
 }
 
-/**
- * Whether this device gets each server's notifications, by server id; null while checking.
- * Checked again when the app comes back to the foreground, as notifications may have been allowed meanwhile,
- * and whenever a server is sent a new subscription, as useSubscriptionSync may still be sending it.
- * `servers` must keep its identity between renders.
- */
 export function usePushStates(servers: PairedServer[]) {
   const [states, setStates] = useState<Map<string, PushState> | null>(null);
-  // Only the latest check's result is kept: an older one finishing last would undo a change.
   const latest = useRef(0);
   const refresh = useCallback(async () => {
     const check = ++latest.current;
@@ -162,19 +139,30 @@ export function usePushStates(servers: PairedServer[]) {
     };
     document.addEventListener("visibilitychange", onVisible);
     subscriptionChanges.addEventListener("change", refresh);
+    let status: PermissionStatus | undefined;
+    let cancelled = false;
+    navigator.permissions
+      ?.query({ name: "notifications" })
+      .then((s) => {
+        if (cancelled) return;
+        status = s;
+        status.addEventListener("change", refresh);
+      })
+      .catch(() => {});
     return () => {
+      cancelled = true;
       document.removeEventListener("visibilitychange", onVisible);
       subscriptionChanges.removeEventListener("change", refresh);
+      status?.removeEventListener("change", refresh);
     };
   }, [refresh]);
   return { states, refresh };
 }
 
 const SNOOZE_KEY = "tidings.notificationsSnoozedUntil";
-/** How long "Not now" hides the reminder to turn notifications on. */
+/** How long "Not now" hides the reminder to turn notifications on */
 const SNOOZE_MS = 3 * 24 * 60 * 60 * 1000;
 
-/** Whether the reminder to turn notifications on was put off, and a way to put it off. */
 export function useNotificationsSnooze() {
   const [snoozedUntil, setSnoozedUntil] = useState(() => {
     try {
@@ -188,27 +176,19 @@ export function useNotificationsSnooze() {
     try {
       localStorage.setItem(SNOOZE_KEY, String(until));
     } catch {
-      // Hidden until the app is opened again, then.
+      // Hidden
     }
     setSnoozedUntil(until);
   }, []);
   return { snoozed: snoozedUntil > Date.now(), snooze };
 }
 
-/**
- * Tapping a notification while the app is open focuses it and asks it to show the server (see sw.ts).
- * The app's page isn't under any registration's scope, so the worker can't navigate it itself.
- */
 export function listenForNotificationClicks() {
   navigator.serviceWorker?.addEventListener("message", (event) => {
     if (event.data?.type === "open") navigate(event.data.path);
   });
 }
 
-/**
- * Stops this device getting the server's pushes, even if the server couldn't be told: its push service
- * then answers 410 to the server, which forgets the device.
- */
 export async function unregister(serverId: string) {
   const registration = await ownRegistration(serverId);
   if (!registration) return;

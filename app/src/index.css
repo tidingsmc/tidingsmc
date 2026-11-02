@@ -197,6 +197,10 @@ svg {
   justify-content: space-between;
 }
 
+.settings-list .nav-button {
+  justify-content: space-between;
+}
+
 .settings-list .theme-option {
   justify-content: flex-start;
 }
@@ -577,6 +581,10 @@ h2 {
   color: var(--danger);
 }
 
+.button.warning {
+  color: var(--warning);
+}
+
 .button.danger.filled {
   background: var(--danger);
   border-color: var(--danger);
@@ -656,7 +664,8 @@ h2 {
   position: relative;
 }
 
-.dropdown-button {
+.dropdown-button,
+.nav-button {
   width: auto;
   padding: 8px 10px 8px 14px;
   font-family: var(--font-heading);

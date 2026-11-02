@@ -150,6 +150,7 @@
     },
     "language": "Language",
     "systemLanguage": "System",
+    "manage": "Manage",
     "version": "Version",
     "disclaimer": "Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft."
   },

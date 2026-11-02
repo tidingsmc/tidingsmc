@@ -7,6 +7,7 @@ export { paths, type AddonRoute, type PairStep } from "./paths";
 export type Route =
   | { name: "servers" }
   | { name: "appSettings" }
+  | { name: "notificationSettings" }
   | { name: "server"; id: string; addon?: AddonRoute }
   | { name: "settings"; id: string }
   | { name: "pair"; step?: PairStep; url?: string; code?: string };
@@ -35,7 +36,10 @@ export function parseRoute(hash: string): Route {
     return second === "scan" || second === "code"
       ? { name: "pair", step: second }
       : { name: "pair" };
-  if (first === "settings") return { name: "appSettings" };
+  if (first === "settings")
+    return second === "notifications"
+      ? { name: "notificationSettings" }
+      : { name: "appSettings" };
   // A hand-typed or cut link can have a broken escape: it opens the list rather than throwing.
   const id = second ? decode(second) : undefined;
   if (first === "server" && id && third === "settings")
