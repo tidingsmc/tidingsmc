@@ -23,28 +23,28 @@ class BlockTest {
     @Test
     void viewsSayWhichBlocksTheyUse() {
         assertJson(
-                "{version:4,title:'Stats',blocks:[{type:'heading',text:'Me'},"
+                "{version:5,title:'Stats',blocks:[{type:'heading',text:'Me'},"
                         + "{type:'text',text:'Hi'},{type:'text',text:'psst',muted:true}]}",
                 View.of("Stats", Block.heading("Me"), Block.text("Hi"), Block.muted("psst"))
                         .toJson());
-        assertJson("{version:4,blocks:[]}", View.of(null).toJson());
+        assertJson("{version:5,blocks:[]}", View.of(null).toJson());
     }
 
     @Test
     void aViewCanBeAboutAPlayer() {
         UUID id = UUID.fromString("8667ba71-b85a-4004-af54-457a9734eed7");
         assertJson(
-                "{version:4,title:'Steve',player:{uuid:'" + id + "',name:'Steve'},blocks:[]}",
+                "{version:5,title:'Steve',player:{uuid:'" + id + "',name:'Steve'},blocks:[]}",
                 View.of("Steve").player(new PlayerProfile(id, "Steve", null)).toJson());
     }
 
     @Test
     void aViewCanRefreshItself() {
         assertJson(
-                "{version:4,title:'Chat',refresh:3,blocks:[]}",
+                "{version:5,title:'Chat',refresh:3,blocks:[]}",
                 View.of("Chat").refreshEvery(Duration.ofSeconds(3)).toJson());
         assertJson(
-                "{version:4,refresh:3600,blocks:[]}",
+                "{version:5,refresh:3600,blocks:[]}",
                 View.of(null).refreshEvery(Duration.ofHours(1)).toJson());
         for (Duration every : List.of(
                 Duration.ZERO,
@@ -211,6 +211,73 @@ class BlockTest {
         List<Block.ChatLine> many = new ArrayList<>();
         for (int i = 0; i <= Block.Chat.MAX_LINES; i++) many.add(Block.ChatLine.system("#" + i));
         assertThrows(IllegalArgumentException.class, () -> Block.chat(many));
+    }
+
+    @Test
+    void maps() {
+        byte[] png = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0};
+        assertJson(
+                "{type:'map',minX:-10,minZ:0,maxX:10,maxZ:40,"
+                        + "background:'data:image/png;base64,iVBORw0KGgoA',"
+                        + "areas:[{minX:-5,minZ:2,maxX:1,maxZ:8.5}],"
+                        + "markers:[{x:0.5,z:3,label:'Town hall',icon:'crown',"
+                        + "link:{view:'building',params:{id:'7'}}},"
+                        + "{x:-2,z:20,label:'Bob'}]}",
+                Block.map(-10, 0, 10, 40)
+                        .background(png)
+                        .areas(List.of(Block.MapArea.of(1, 8.5, -5, 2)))
+                        .markers(
+                                List.of(
+                                        Block.MapMarker.of(0.5, 3, "Town hall")
+                                                .icon(Icon.named("crown"))
+                                                .link(Link.to("building", Map.of("id", "7"))),
+                                        Block.MapMarker.of(-2, 20, "Bob")))
+                        .toJson());
+        assertJson("{type:'map',minX:0,minZ:0,maxX:1,maxZ:1}", Block.map(0, 0, 1, 1).toJson());
+        assertThrows(IllegalArgumentException.class, () -> Block.map(0, 0, 0, 1));
+        assertThrows(IllegalArgumentException.class, () -> Block.map(0, 5, 1, 1));
+        assertThrows(IllegalArgumentException.class, () -> Block.map(0, 0, Double.NaN, 1));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Block.map(0, 0, 1, 1).background(new byte[] {1, 2, 3}));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Block.map(0, 0, 1, 1).background(new byte[Block.Image.MAX_BYTES + 1]));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Block.MapMarker.of(Double.POSITIVE_INFINITY, 0, "x"));
+        List<Block.MapMarker> many = new ArrayList<>();
+        for (int i = 0; i <= Block.MapBlock.MAX_MARKERS; i++) {
+            many.add(Block.MapMarker.of(0, 0, "#" + i));
+        }
+        assertThrows(IllegalArgumentException.class, () -> Block.map(0, 0, 1, 1).markers(many));
+        assertThrows(IllegalArgumentException.class, () -> Block.MapMarker.of(0, 0, " "));
+    }
+
+    @Test
+    void mapBlocks() {
+        assertEquals(new Block.MapArea(5, 0, 6, 11), Block.MapArea.blocks(5, 10, 5, 0));
+        assertEquals(new Block.MapArea(-3, -2, 1, 1), Block.MapArea.blocks(0, -2, -3, 0));
+        assertThrows(IllegalArgumentException.class, () -> Block.MapArea.of(5, 0, 5, 10));
+        assertEquals(
+                Block.MapMarker.of(3.5, -1.5, "Chest"), Block.MapMarker.atBlock(3, -2, "Chest"));
+    }
+
+    @Test
+    void mapImagesAreCapped() {
+        byte[] face = new byte[Icon.MAX_IMAGE_BYTES];
+        byte[] png = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
+        System.arraycopy(png, 0, face, 0, png.length);
+        Icon icon = Icon.image(face);
+        List<Block.MapMarker> faces = new ArrayList<>();
+        for (int i = 0; i * icon.id().length() <= Block.MapBlock.MAX_IMAGE_CHARS; i++) {
+            faces.add(Block.MapMarker.of(0, 0, "#" + i).icon(icon));
+        }
+        Block.MapBlock map = Block.map(0, 0, 1, 1);
+        assertThrows(IllegalArgumentException.class, () -> map.markers(faces));
+        map.markers(faces.subList(0, faces.size() - 1));
+        // Named icons cost nothing
+        map.markers(faces.stream().map(m -> m.icon(Icon.STAR)).toList());
     }
 
     @Test

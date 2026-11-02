@@ -1521,6 +1521,122 @@ img.addon-icon {
   border-radius: 0;
 }
 
+.addon-map-frame {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.addon-map-scroller {
+  max-height: 70vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.addon-map-canvas {
+  position: relative;
+  margin-inline: auto;
+}
+
+.addon-map-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.addon-map-area {
+  position: absolute;
+  border: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  pointer-events: none;
+}
+
+.addon-map-marker {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+  cursor: pointer;
+}
+
+.addon-map-marker::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.addon-map-marker[data-icon] {
+  width: 24px;
+  height: 24px;
+  border-width: 1px;
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.addon-map-marker .addon-icon,
+.addon-map-marker .addon-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.addon-map-marker[aria-pressed="true"] {
+  z-index: 1;
+  outline: 3px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.addon-map-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.addon-map-zoom {
+  flex: none;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+}
+
+.addon-map-zoom .icon-button {
+  margin: 0;
+  color: var(--text);
+}
+
+.addon-map-zoom span {
+  min-width: 2ch;
+  text-align: center;
+  font-family: var(--font-heading);
+}
+
+.addon-map-label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-heading);
+}
+
+.addon-map-label a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .addon-tree-card-head .addon-icon,
 .addon-tree-card-head .addon-icon svg {
   width: 20px;

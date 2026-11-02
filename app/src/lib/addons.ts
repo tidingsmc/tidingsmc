@@ -1,10 +1,12 @@
+import { readImage } from "./icons";
+
 export interface AddonInfo {
   id: string;
   title: string;
   icon?: string;
 }
 
-export const VIEW_VERSION = 4;
+export const VIEW_VERSION = 5;
 
 export interface AddonLink {
   view: string;
@@ -51,7 +53,8 @@ export type Block =
   | { type: "tree"; nodes: TreeNode[] }
   /** `icon` as in lib/icons: a pixelarticons name or a small base64 image */
   | { type: "icon"; icon: string; label?: string }
-  | ImageBlock;
+  | ImageBlock
+  | MapBlock;
 
 export interface ImageBlock {
   type: "image";
@@ -59,6 +62,107 @@ export interface ImageBlock {
   alt: string;
   width?: number;
   pixelated?: boolean;
+}
+
+export interface MapBlock {
+  type: "map";
+  minX: number;
+  minZ: number;
+  maxX: number;
+  maxZ: number;
+  background?: string;
+  areas?: { minX: number; minZ: number; maxX: number; maxZ: number }[];
+  markers?: {
+    x: number;
+    z: number;
+    label: string;
+    icon?: string;
+    link?: AddonLink;
+  }[];
+}
+
+// Positions in % of the map's width and height from its top left corner
+export interface MapLayout {
+  width: number;
+  height: number;
+  background: string | null;
+  areas: { left: number; top: number; width: number; height: number }[];
+  markers: {
+    left: number;
+    top: number;
+    label: string;
+    icon?: string;
+    link: AddonLink | null;
+  }[];
+}
+
+export function list<T>(items: T[] | undefined): T[] {
+  return Array.isArray(items)
+    ? items.filter((i) => typeof i === "object" && i !== null)
+    : [];
+}
+
+const MAX_MAP_ITEMS = 500;
+
+const finite = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
+export function readMap(block: MapBlock): MapLayout | null {
+  const { minX, minZ, maxX, maxZ } = block;
+  if (!finite(minX) || !finite(minZ) || !finite(maxX) || !finite(maxZ))
+    return null;
+  const width = maxX - minX;
+  const height = maxZ - minZ;
+  if (!(width > 0 && height > 0 && finite(width) && finite(height)))
+    return null;
+  const x = (value: number) => ((value - minX) / width) * 100;
+  const z = (value: number) => ((value - minZ) / height) * 100;
+  const clip = (value: number) => Math.min(Math.max(value, 0), 100);
+  const items = (value: unknown): Record<string, unknown>[] =>
+    list(value as Record<string, unknown>[] | undefined).slice(
+      0,
+      MAX_MAP_ITEMS,
+    );
+
+  const areas: MapLayout["areas"] = [];
+  for (const area of items(block.areas)) {
+    const { minX, minZ, maxX, maxZ } = area;
+    if (!finite(minX) || !finite(minZ) || !finite(maxX) || !finite(maxZ))
+      continue;
+    const left = clip(x(minX));
+    const top = clip(z(minZ));
+    const right = clip(x(maxX));
+    const bottom = clip(z(maxZ));
+    if (right > left && bottom > top)
+      areas.push({ left, top, width: right - left, height: bottom - top });
+  }
+
+  const markers: MapLayout["markers"] = [];
+  for (const marker of items(block.markers)) {
+    if (!finite(marker.x) || !finite(marker.z)) continue;
+    const left = x(marker.x);
+    const top = z(marker.z);
+    // The map spans [min, max) like the blocks it shows
+    if (left < 0 || left >= 100 || top < 0 || top >= 100) continue;
+    markers.push({
+      left,
+      top,
+      label: text(marker.label),
+      icon:
+        typeof marker.icon === "string" && marker.icon !== ""
+          ? marker.icon
+          : undefined,
+      link: readLink(marker.link),
+    });
+  }
+
+  return {
+    width,
+    height,
+    background: readImage(block.background),
+    areas,
+    markers,
+  };
 }
 
 export interface ListItem {
