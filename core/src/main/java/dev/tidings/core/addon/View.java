@@ -17,7 +17,7 @@ import dev.tidings.core.PlayerProfile;
  * @param refresh seconds between reloads while the page is open, or 0 for none
  */
 public record View(String title, List<Block> blocks, PlayerProfile player, int refresh) {
-    public static final int VERSION = 3;
+    public static final int VERSION = 4;
     public static final Duration MIN_REFRESH = Duration.ofSeconds(2);
     public static final Duration MAX_REFRESH = Duration.ofHours(1);
 

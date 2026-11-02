@@ -162,6 +162,10 @@
   },
   "addon": {
     "updateApp": "Update Tidings to see everything on this page.",
+    "chatSend": "Send",
+    "chatMessage": "Message",
+    "chatTimes": "Show times",
+    "chatHeads": "Show faces instead of names",
     "done": "Done",
     "available": "Next to do",
     "scrollLeft": "Scroll left",

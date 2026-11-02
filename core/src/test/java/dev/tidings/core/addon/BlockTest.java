@@ -1,6 +1,7 @@
 package dev.tidings.core.addon;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -22,28 +23,28 @@ class BlockTest {
     @Test
     void viewsSayWhichBlocksTheyUse() {
         assertJson(
-                "{version:3,title:'Stats',blocks:[{type:'heading',text:'Me'},"
+                "{version:4,title:'Stats',blocks:[{type:'heading',text:'Me'},"
                         + "{type:'text',text:'Hi'},{type:'text',text:'psst',muted:true}]}",
                 View.of("Stats", Block.heading("Me"), Block.text("Hi"), Block.muted("psst"))
                         .toJson());
-        assertJson("{version:3,blocks:[]}", View.of(null).toJson());
+        assertJson("{version:4,blocks:[]}", View.of(null).toJson());
     }
 
     @Test
     void aViewCanBeAboutAPlayer() {
         UUID id = UUID.fromString("8667ba71-b85a-4004-af54-457a9734eed7");
         assertJson(
-                "{version:3,title:'Steve',player:{uuid:'" + id + "',name:'Steve'},blocks:[]}",
+                "{version:4,title:'Steve',player:{uuid:'" + id + "',name:'Steve'},blocks:[]}",
                 View.of("Steve").player(new PlayerProfile(id, "Steve", null)).toJson());
     }
 
     @Test
     void aViewCanRefreshItself() {
         assertJson(
-                "{version:3,title:'Chat',refresh:3,blocks:[]}",
+                "{version:4,title:'Chat',refresh:3,blocks:[]}",
                 View.of("Chat").refreshEvery(Duration.ofSeconds(3)).toJson());
         assertJson(
-                "{version:3,refresh:3600,blocks:[]}",
+                "{version:4,refresh:3600,blocks:[]}",
                 View.of(null).refreshEvery(Duration.ofHours(1)).toJson());
         for (Duration every : List.of(
                 Duration.ZERO,
@@ -166,6 +167,50 @@ class BlockTest {
         assertJson(
                 "{type:'button',label:'More',link:{view:'more'}}",
                 Block.button("More", Link.to("more")).toJson());
+    }
+
+    @Test
+    void chats() {
+        assertJson(
+                "{type:'chat',lines:[{name:'Steve',text:'hi @Alex',time:1793620800000},"
+                        + "{name:'Alex',text:'hey',tag:'Phone',"
+                        + "player:{uuid:'8667ba71-b85a-4004-af54-457a9734eed7',name:'Alex'},"
+                        + "whisper:true},"
+                        + "{text:'Steve left the game'}],"
+                        + "action:'send',params:{room:'main'},placeholder:'Say hi',maxLength:100,"
+                        + "empty:'Nothing yet'}",
+                Block.chat(
+                                List.of(
+                                        Block.ChatLine.of("Steve", "hi @Alex")
+                                                .time(Instant.ofEpochMilli(1793620800000L)),
+                                        Block.ChatLine.of(
+                                                new PlayerProfile(
+                                                        UUID.fromString(
+                                                                "8667ba71-b85a-4004-af54-457a9734eed7"),
+                                                        "Alex",
+                                                        null),
+                                                "hey")
+                                        .tag("Phone")
+                                        .whispered(),
+                                        Block.ChatLine.system("Steve left the game")),
+                                "send")
+                        .params(Map.of("room", "main"))
+                        .placeholder("Say hi")
+                        .maxLength(100)
+                        .empty("Nothing yet")
+                        .toJson());
+        assertJson(
+                "{type:'chat',lines:[]}",
+                Block.chat(List.of()).placeholder("unused").toJson());
+        assertThrows(IllegalArgumentException.class, () -> Block.chat(List.of(), "no spaces"));
+        assertThrows(
+                IllegalArgumentException.class, () -> Block.chat(List.of(), "send").maxLength(0));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Block.chat(List.of(), "send").maxLength(1001));
+        List<Block.ChatLine> many = new ArrayList<>();
+        for (int i = 0; i <= Block.Chat.MAX_LINES; i++) many.add(Block.ChatLine.system("#" + i));
+        assertThrows(IllegalArgumentException.class, () -> Block.chat(many));
     }
 
     @Test

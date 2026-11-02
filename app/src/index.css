@@ -1548,6 +1548,184 @@ img.addon-icon {
   overflow-wrap: anywhere;
 }
 
+#root:has(.mc-chat) {
+  height: 100dvh;
+}
+
+:is(.shell, .main, .content, .binder, .tab-paper, .addon):has(.mc-chat) {
+  min-height: 0;
+}
+
+.addon:has(> .mc-chat) {
+  flex: 1;
+}
+
+.mc-chat {
+  --mc-shadow: 0.125em 0.125em 0;
+  flex: 1;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: #fff;
+  text-shadow: var(--mc-shadow) #3f3f3f;
+  background: light-dark(rgb(0 0 0 / 0.75), rgb(0 0 0 / 0.5));
+}
+
+.mc-chat-lines {
+  list-style: none;
+  margin: 0;
+  flex: 1;
+  min-height: 0;
+  padding: 6px 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.mc-chat-lines li + li {
+  margin-top: 2px;
+}
+
+.mc-gray,
+.mc-chat-time,
+.mc-chat-empty {
+  color: #aaa;
+  text-shadow: var(--mc-shadow) #2a2a2a;
+}
+
+.mc-whisper,
+.mc-whisper .mc-yellow {
+  color: #aaa;
+  font-style: italic;
+  text-shadow: var(--mc-shadow) #2a2a2a;
+}
+
+.mc-yellow,
+.mc-system {
+  color: #ff5;
+  text-shadow: var(--mc-shadow) #3f3f15;
+}
+
+.mc-chat-empty {
+  flex: 1;
+  margin: 0;
+  padding: 6px 8px;
+}
+
+.mc-chat-input {
+  margin-top: auto;
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  background: rgb(0 0 0 / 0.5);
+}
+
+.mc-chat-input input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  caret-color: #fff;
+  font: inherit;
+  font-size: max(1rem, 16px);
+  text-shadow: inherit;
+}
+
+.mc-chat-input input::placeholder {
+  color: #808080;
+  text-shadow: none;
+}
+
+.mc-button {
+  display: grid;
+  place-items: center;
+  padding: 4px 10px;
+  border: 2px solid #000;
+  border-radius: 0;
+  background: #6f6f6f;
+  box-shadow:
+    inset 2px 2px 0 #aaa,
+    inset -2px -2px 0 #555;
+  color: #fff;
+  font: inherit;
+  text-shadow: var(--mc-shadow) #3f3f3f;
+  cursor: pointer;
+}
+
+.mc-button svg {
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(2px 2px 0 #3f3f3f);
+}
+
+.mc-button:disabled svg {
+  filter: none;
+}
+
+.mc-button:hover:not(:disabled) {
+  border-color: #fff;
+}
+
+.tab-paper:has(.mc-chat) {
+  position: relative;
+}
+
+.tab-paper:has(.mc-chat) .tab-title {
+  min-height: 30px;
+  padding-right: 76px;
+}
+
+.mc-chat-tools {
+  position: absolute;
+  top: 16px;
+  right: 14px;
+  display: flex;
+  gap: 6px;
+}
+
+.mc-chat-tools .mc-button {
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  font-family: var(--font-heading);
+}
+
+.mc-chat-tools svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mc-head .avatar {
+  display: inline-grid;
+  border-radius: 0;
+  vertical-align: -4px;
+  text-shadow: none;
+}
+
+.mc-toggle[aria-pressed="false"] {
+  background: #3c3c3c;
+  box-shadow:
+    inset 2px 2px 0 #555,
+    inset -2px -2px 0 #2a2a2a;
+  color: #a0a0a0;
+}
+
+.mc-toggle[aria-pressed="false"] svg {
+  filter: none;
+}
+
+.mc-button:disabled {
+  background: #2c2c2c;
+  box-shadow: none;
+  color: #a0a0a0;
+  text-shadow: none;
+  cursor: default;
+}
+
 .addon-title {
   display: flex;
   align-items: center;
@@ -2382,6 +2560,11 @@ img.addon-icon {
 
   .tab-paper {
     padding: 24px;
+  }
+
+  .mc-chat-tools {
+    top: 24px;
+    right: 24px;
   }
 
   .addon-list {
