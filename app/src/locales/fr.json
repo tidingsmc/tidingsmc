@@ -56,6 +56,8 @@
     "day": "Jour {{day}}"
   },
   "serverList": {
+    "title": "Serveurs",
+    "morePlayers": "+{{count}}",
     "empty": "Aucun serveur",
     "emptyHelp": "Rejoignez un serveur Minecraft équipé de Tidings et associez-le\u00a0!",
     "pair": "Associer un serveur",
@@ -107,6 +109,7 @@
   },
   "settings": {
     "notifications": "Notifications",
+    "notificationsHelp": "Ce dont {{server}} prévient cet appareil. Les réglages de l'application s'y ajoutent, pour tous les serveurs.",
     "joins": "Quand quelqu'un se connecte",
     "leaves": "Quand quelqu'un se déconnecte",
     "serverStatus": "Quand le serveur démarre ou s'arrête",
@@ -152,6 +155,9 @@
     "systemLanguage": "Système",
     "manage": "Gérer",
     "version": "Version",
+    "appearance": "Apparence",
+    "notificationsHelp": "Pour tous les serveurs pairés",
+    "about": "À propos",
     "disclaimer": "Produit Minecraft non officiel. Non approuvé par Mojang ou Microsoft et non associé à eux."
   },
   "addon": {

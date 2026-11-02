@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Screen } from "./components";
+import { Screen, Sidebar } from "./components";
 import { onUnpaired, type PairedServer } from "./lib/api";
 import { navigate, parseRoute, paths, useRoute } from "./lib/router";
 import { unregister, useSubscriptionSync } from "./lib/notifications";
@@ -8,6 +8,7 @@ import { useUnpairRetry } from "./lib/pendingUnpairs";
 import { useAppWideSettingsSync } from "./lib/appWideSettings";
 import { useServers } from "./lib/storage";
 import { useTimeZoneSync } from "./lib/timeZone";
+import { useWide } from "./lib/useWide";
 import { AppSettingsScreen } from "./screens/AppSettingsScreen";
 import { NotificationSettingsScreen } from "./screens/NotificationSettingsScreen";
 import { PairScreen } from "./screens/PairScreen";
@@ -18,13 +19,17 @@ import { SettingsScreen } from "./screens/SettingsScreen";
 export default function App() {
   const { t } = useTranslation();
   const route = useRoute();
+  const wide = useWide();
+
   const { servers, upsert, remove, removePairing } = useServers();
   const serversRef = useRef(servers);
   serversRef.current = servers;
+
   useTimeZoneSync(servers);
   useAppWideSettingsSync(servers);
   useSubscriptionSync(servers);
   useUnpairRetry();
+
   // Servers that unpaired this device
   const [unpaired, setUnpaired] = useState<PairedServer[]>([]);
 
@@ -57,7 +62,11 @@ export default function App() {
       screen = <AppSettingsScreen servers={servers} />;
       break;
     case "notificationSettings":
-      screen = <NotificationSettingsScreen servers={servers} />;
+      screen = wide ? (
+        <AppSettingsScreen servers={servers} />
+      ) : (
+        <NotificationSettingsScreen servers={servers} />
+      );
       break;
     case "pair":
       screen = (
@@ -81,6 +90,17 @@ export default function App() {
         <Screen title={t("server.notFound")} back={paths.servers}>
           <p className="muted">{t("server.notPaired")}</p>
         </Screen>
+      ) : route.name === "settings" && wide ? (
+        <ServerScreen
+          key={server.id}
+          server={server}
+          settings={{
+            onLeft: () => {
+              remove(server.id);
+              navigate(paths.servers, { replace: true });
+            },
+          }}
+        />
       ) : route.name === "settings" ? (
         <SettingsScreen
           key={server.id}
@@ -111,5 +131,10 @@ export default function App() {
       );
   }
 
-  return screen;
+  return (
+    <div className="shell">
+      {wide && <Sidebar servers={servers} route={route} />}
+      <div className="main">{screen}</div>
+    </div>
+  );
 }

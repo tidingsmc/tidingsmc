@@ -1,4 +1,4 @@
-import { ChevronLeft, Home } from "pixelarticons/react";
+import { ChevronLeft, Home, SettingsCog } from "pixelarticons/react";
 import { useTranslation } from "react-i18next";
 import {
   AddonIcon,
@@ -16,37 +16,50 @@ import { errorText } from "../lib/i18n";
 import { cameFrom, paths, type AddonRoute } from "../lib/router";
 import { useInfo } from "../lib/useInfo";
 import { useOnline } from "../lib/useOnline";
+import { useWide } from "../lib/useWide";
 import { WorldCard } from "../world";
 import { AddonTab } from "./AddonTab";
+import { ServerSettings } from "./SettingsScreen";
 
 export function ServerScreen({
   server,
   addon,
+  settings,
 }: {
   server: PairedServer;
   addon?: AddonRoute;
+  settings?: { onLeft: () => void };
 }) {
   const { t } = useTranslation();
+  const wide = useWide();
   const info = useInfo(server);
   const addons = (info?.addons ?? []).filter((a) => isAddonId(a?.id));
   const current = addons.find((a) => a.id === addon?.id);
+  const onOverview = !addon && !settings;
 
   return (
     <Screen
       title={server.name}
       back={paths.servers}
-      action={<SettingsLink href={paths.settings(server.id)} />}
+      action={
+        <SettingsLink
+          href={wide ? paths.appSettings : paths.settings(server.id)}
+        />
+      }
     >
-      {addons.length > 0 || addon ? (
+      {addons.length > 0 || addon || wide ? (
         <div className="binder">
           <nav className="tabs">
             <a
               href={paths.server(server.id)}
-              aria-current={addon ? undefined : "page"}
+              aria-current={onOverview ? "page" : undefined}
               aria-label={t("server.overview")}
               title={t("server.overview")}
             >
               <Home aria-hidden />
+              <span className="tab-label" aria-hidden>
+                {t("server.overview")}
+              </span>
             </a>
             {addons.map((a) => {
               const title = text(a.title) || a.id;
@@ -54,17 +67,40 @@ export function ServerScreen({
                 <a
                   key={a.id}
                   href={paths.addon(server.id, { id: a.id })}
-                  aria-current={a.id === addon?.id ? "page" : undefined}
+                  aria-current={
+                    !settings && a.id === addon?.id ? "page" : undefined
+                  }
                   aria-label={title}
                   title={title}
                 >
                   <AddonIcon name={a.icon} />
+                  <span className="tab-label" aria-hidden>
+                    {title}
+                  </span>
                 </a>
               );
             })}
+            {wide && (
+              <a
+                className="tab-end"
+                href={paths.settings(server.id)}
+                aria-current={settings ? "page" : undefined}
+                aria-label={t("common.settings")}
+                title={t("common.settings")}
+              >
+                <SettingsCog aria-hidden />
+                <span className="tab-label" aria-hidden>
+                  {t("common.settings")}
+                </span>
+              </a>
+            )}
           </nav>
           <div className="tab-paper">
-            {addon ? (
+            {settings ? (
+              <div className="tab-settings">
+                <ServerSettings server={server} onLeft={settings.onLeft} />
+              </div>
+            ) : addon ? (
               <>
                 <h2 className="tab-title">
                   {addon.view && <AddonBack server={server} addon={addon.id} />}
@@ -85,10 +121,6 @@ export function ServerScreen({
   );
 }
 
-/**
- * Back to the page of the add-on that led here, like the back gesture; to the tab's first page when
- * none did, such as after opening a notification, so it never leaves the add-on.
- */
 function AddonBack({ server, addon }: { server: PairedServer; addon: string }) {
   const { t } = useTranslation();
   const tab = paths.addon(server.id, { id: addon });
@@ -97,6 +129,7 @@ function AddonBack({ server, addon }: { server: PairedServer; addon: string }) {
       className="back tab-back"
       href={tab}
       aria-label={t("common.back")}
+      title={t("common.back")}
       onClick={(e) => {
         const from = cameFrom();
         if (from === tab || from?.startsWith(`${tab}/`)) {
@@ -122,14 +155,16 @@ function Overview({
   const unreachable = online.status === "error" && isUnreachable(online.error);
 
   return (
-    <>
-      <div className="server-header">
-        <ServerIcon name={server.name} icon={info?.icon} size={64} />
-        {info && <Motd segments={info.motd} />}
+    <div className="overview">
+      <div className="overview-server">
+        <div className="server-header">
+          <ServerIcon name={server.name} icon={info?.icon} size={64} />
+          {info && <Motd segments={info.motd} />}
+        </div>
+        {online.status === "ok" && online.data.world && (
+          <WorldCard world={online.data.world} receivedAt={online.receivedAt} />
+        )}
       </div>
-      {online.status === "ok" && online.data.world && (
-        <WorldCard world={online.data.world} receivedAt={online.receivedAt} />
-      )}
 
       {unreachable ? (
         <UnreachableNotice help={t("server.unreachableHelp")} />
@@ -164,6 +199,6 @@ function Overview({
             ))}
         </section>
       )}
-    </>
+    </div>
   );
 }

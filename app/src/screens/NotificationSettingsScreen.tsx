@@ -13,6 +13,15 @@ export function NotificationSettingsScreen({
   servers: PairedServer[];
 }) {
   const { t } = useTranslation();
+  return (
+    <Screen title={t("settings.notifications")} back={paths.appSettings} narrow>
+      <NotificationSettings servers={servers} />
+    </Screen>
+  );
+}
+
+export function NotificationSettings({ servers }: { servers: PairedServer[] }) {
+  const { t } = useTranslation();
   const {
     settings,
     update: setSettings,
@@ -40,7 +49,7 @@ export function NotificationSettingsScreen({
   }
 
   return (
-    <Screen title={t("settings.notifications")} back={paths.appSettings}>
+    <>
       <NotificationsOff servers={servers} />
       {failures.map(({ server, error }) => (
         <p key={server.id} className="error small" role="alert">
@@ -98,6 +107,7 @@ export function NotificationSettingsScreen({
                   <button
                     className="icon-button"
                     aria-label={t("settings.removePeriod")}
+                    title={t("settings.removePeriod")}
                     onClick={() => {
                       setInvalidPeriod(null);
                       updatePeriods((ps) => ps.filter((_, j) => j !== i));
@@ -124,6 +134,6 @@ export function NotificationSettingsScreen({
           </>
         )}
       </div>
-    </Screen>
+    </>
   );
 }
