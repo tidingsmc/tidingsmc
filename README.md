@@ -1,110 +1,73 @@
 # Tidings
 
-Get a notification on your phone when friends join your Minecraft server.
+Get a notification on your phone when your friends join your Minecraft server.
 
-Tidings is a server-side Forge mod plus one web app (PWA) for players. Players pair their phone with each server once, then get notified when someone joins and can see who's online, for every server they're paired with, from a single app.
+Tidings is a server-side Forge mod and a web app (PWA). You pair your phone with a server once, and from then on you get notified when people join and can see who's online. One app works for all the servers you've paired with. There's no central Tidings service: each server sends its own push notifications.
 
-Everything is self-hosted: there is no central Tidings service.
+## Setting up a server
 
-## How it works
+Put the mod jar in `mods/` and start the server once. This creates `config/tidings-common.toml`, and the mod keeps its data in `tidings/data.json`. Back that file up, since losing it unpairs every device.
 
-```
- GitHub Pages (static)                       Each Minecraft server (self-hosted)
-┌───────────────────────────┐              ┌───────────────────────────────────┐
-│ Tidings PWA               │── HTTPS ───▶ │ Tidings Forge mod (server-only)   │
-│  • list of paired servers │   API calls  │  • small HTTP API on a local port │
-│  • who's online           │              │  • its own push key pair (VAPID)  │
-│  • one service worker     │              │  • paired devices + subscriptions │
-│    registration per server│              └───────────────┬───────────────────┘
-└─────────────▲─────────────┘                              │ Web Push
-              │                                            ▼
-              └──────── Google / Mozilla / Apple push services
+Phones need a way to reach the server over HTTPS. There are two options:
+
+- **Relay (easiest).** Deploy your own relay to Cloudflare. It's free and doesn't need a domain. The mod connects out to it, so this works on rented hosting too. You need Node 22+:
+
+```sh
+cd relay
+npm install
+npx wrangler login
+npm run deploy
 ```
 
-- **Server owners** add the mod and either deploy their own free relay on Cloudflare (the mod connects out to it, so rented hosting works), or expose the mod's HTTP port over HTTPS themselves (Cloudflare Tunnel, Tailscale Funnel, or a reverse proxy such as Caddy).
-- **Pairing**: on first join (or `/tidings pair`), the player gets a map showing a QR code that opens the PWA with a single-use, short-lived pairing code. Without a camera, `/tidings pair code` gives the server's address and a 6-digit code to type instead. The player then approves the device in the game chat before it's paired.
-- **Notifications**: the mod sends Web Push directly with its own key (encrypted per RFC 8291, signed with VAPID): when someone joins or leaves, and when the server starts or stops, depending on each device's settings. The PWA keeps one service worker registration per paired server (scope `/s/<serverId>/`), so one app can receive pushes from many servers.
-- **Security**: every API call except pairing requires a per-device token (stored hashed on the server). Pairing codes expire, are single-use and rate-limited, and a device only pairs once its player approves it in game. The QR code carries a 128-bit token instead of the 6 digits, so it keeps working even while someone floods the server with wrong codes.
-- **Privacy**: every paired device can see who's online and the list of everyone who has played on the server since the mod was installed (names, UUIDs and skins), to pick friends from. A player who runs `/tidings hide` is left out of who's online (they stay in the list, so friends can still pick them for when they show again) and nobody's phone is told when they join or leave (`/tidings show` undoes it); players in the game still see them as usual. With `announce-players = false`, players are hidden until they run `/tidings show` or pair a phone (unless they ran `/tidings hide`).
+Set `relay-url` to the relay's address (like `https://tidings-relay.<you>.workers.dev`) and restart the server. The mod logs a key: set it as the relay's `OWNER_KEY` secret, either in the Cloudflare dashboard (your worker → Settings → Variables and Secrets, type Secret) or with `npx wrangler secret put OWNER_KEY` from `relay/`. The mod connects within a minute. If you lose `data.json`, the key changes and you'll have to set it again.
 
-Not supported: Aternos, which only allows mods from its own list.
+- **Direct.** The API listens on `127.0.0.1:8765` (`port`, `bind-address`). Expose it over HTTPS yourself (Cloudflare Tunnel, Tailscale Funnel, Caddy...) and set `public-url`.
 
-## Server setup
+In both cases, set `app-url` to where the app is hosted, because the pairing QR codes open it. Tidings stays off until it's set. The server also needs outgoing HTTPS to reach the relay and the push services (Google, Mozilla, Apple).
 
-1. Put the mod jar in `mods/` and start the server once. It creates `config/tidings-common.toml` and keeps its data (server ID, push keys, paired devices) in `tidings/data.json`. Back that file up: losing it unpairs every device.
-2. Choose how players' phones reach the server: through a relay (easiest), or directly.
+## Commands
 
-   **Relay.** Deploy your own copy of the relay to Cloudflare (free account, no domain needed), with Node 22+:
+- `/tidings pair`: get a QR code. `/tidings pair code` gives an address and a 6-digit code to type instead.
+- `/tidings devices`: list and  unpair your devices.
+- `/tidings hide` / `show`: stop or resume telling other players' phones when you join or leave, and whether you show as online.
+- `/tidings help`
 
-   ```sh
-   cd relay
-   npm install
-   npx wrangler login
-   npm run deploy
-   ```
+Admins (permission level 3 or the console) also have `/tidings admin status`, `doctor` (checks that phones can reach the server and push works), `devices [player]` and `unpair <device>`.
 
-   Then set `relay-url` to its address, such as `https://tidings-relay.<you>.workers.dev`, and restart the server. The relay refuses every server until you tell it which one is yours: the mod logs its key, then set the relay's `OWNER_KEY` secret to it, either in the Cloudflare dashboard (Workers & Pages → your relay → Settings → Variables and Secrets → Add, type **Secret**) or with `npx wrangler secret put OWNER_KEY` in `relay/`. The mod connects by itself within a minute. Redeploying the relay keeps the secret. If you move servers, take `tidings/data.json` along; if you lose it, set `OWNER_KEY` to the new key the mod logs. The relay sees the app's requests (device tokens, who's online) like any HTTPS proxy, but it runs on your own account.
-
-   **Directly.** The API listens on `127.0.0.1:8765` (`port`, `bind-address`). Expose it over HTTPS and set `public-url` to that address.
-
-   Either way, set `app-url` to where the app is hosted: pairing QR codes open it. It's required: until it's set, Tidings logs why and stays off. The server must also be able to make outgoing HTTPS requests, to the relay and the browsers' push services (Google, Mozilla, Apple).
-3. On their first join, or with `/tidings pair`, players get a map with a QR code to scan with their phone. `/tidings pair code` gives the server's address and a 6-digit code to type in the app instead. `/tidings devices` lists their paired devices and unpairs them. `/tidings hide` and `/tidings show` choose whether other players' phones hear about them. `/tidings help` lists the commands.
-4. Admins (permission level 3, like `/kick`, or the server console) have `/tidings admin status` (is Tidings running, is the relay connected, and the key to set as its `OWNER_KEY`), `/tidings admin doctor` (checks from the server that phones reach the API, pairing links open the app, push services are reachable and the clock is right), `/tidings admin devices [player]` to list every paired device, and `/tidings admin unpair <device>` to unpair anyone's.
-
-The API itself is described in `app/src/lib/api.ts`.
+Set `announce-players = false` to keep players hidden until they pair a phone or run `/tidings show`.
 
 ## Add-ons
 
-Other mods can add tabs to a server's page in the app. They describe each page as blocks (headings, text, stats, lists, progress bars, choices, buttons, forms, cards) and the app draws them in its own style: an add-on runs no code on the phone, can only link to its own pages, and never sees device tokens. Views and actions run on the server thread, for the player whose device asks. Add-ons can also send notifications, which each player can turn off per add-on in the server's settings.
-
-**[Writing an add-on](docs/addons.md)** explains how to set up a mod, every block and field, actions, errors, security and limits. For a working add-on, see [tidingsmc-vanilla](https://github.com/tidingsmc/tidingsmc-vanilla).
-
-## Repository layout
-
-| Path | What |
-|---|---|
-| `core/` | Pairing, tokens, push sending, HTTP API, storage |
-| `forge/` | Forge 1.20.1 adapter: join/leave events, `/tidings` commands, QR code map |
-| `app/` | The PWA: Vite + React + TypeScript |
-| `relay/` | The optional relay: a Cloudflare Worker with one Durable Object |
+Other mods can add their own tabs to a server's page in the app, and send notifications. They describe pages as blocks (text, stats, lists, buttons, forms...) and the app renders them, so no add-on code runs on the phone. See [docs/addons.md](docs/addons.md), and [tidingsmc-vanilla-stats](https://github.com/tidingsmc/tidingsmc-vanilla-stats) for an example.
 
 ## Development
 
-Requirements: a JDK (17+; Gradle downloads Java 17 for Forge automatically) and Node 22+ (the relay's wrangler needs it).
+You need JDK 17+ and Node 22+.
 
 ```sh
-./gradlew :core:test          # core unit tests
-./gradlew :forge:build        # mod jar in forge/build/libs/
-./gradlew :forge:runServer    # dev Minecraft server with the mod (accept the EULA in forge/run/eula.txt,
-                              # set app-url = "http://localhost:5173/" in forge/run/config/tidings-common.toml)
+./gradlew :core:test          # core tests
+./gradlew :forge:build        # jar in forge/build/libs/
+./gradlew :forge:runServer    # dev server with the mod
 
 cd app && npm install && npm run dev
-
-cd app && npm test                  # app unit tests
-cd relay && npm install && npm test # relay tests, in a local Workers runtime
+cd app && npm test
+cd relay && npm install && npm test
 ```
 
-In development, the app talks to real servers: run the dev Minecraft server above, then pair with `localhost:8765` (or through your relay).
+For the dev server, accept the EULA in `forge/run/eula.txt` and set `app-url = "http://localhost:5173/"` in `forge/run/config/tidings-common.toml`. Then pair the app with `localhost:8765`.
+
+The API is documented in `app/src/lib/api.ts`.
 
 ### Testing on an Android phone
 
-`adb reverse` makes the phone's `localhost` reach this computer over USB, so the app gets the secure context it needs (camera, service worker, push) without HTTPS:
+The app needs a secure context for the camera, service worker and push. With USB debugging on, `adb reverse` lets the phone use `localhost`:
 
-1. Turn on USB debugging on the phone, plug it in and accept the prompt.
-2. Forward the app (Vite) and the mod's API:
+```sh
+adb reverse tcp:5173 tcp:5173  # app
+adb reverse tcp:8765 tcp:8765  # Tidings API
+```
 
-   ```sh
-   adb devices                    # the phone should show as "device"
-   adb reverse tcp:5173 tcp:5173  # app dev server
-   adb reverse tcp:8765 tcp:8765  # Tidings API
-   adb reverse --list             # check both are there
-   ```
-
-3. Open `http://localhost:5173` in Chrome on the phone, and pair with `localhost:8765`.
-
-The forwards are lost whenever the phone is unplugged or the adb server restarts: if the phone suddenly can't reach the app or the server, run step 2 again.
-
-On WSL, use the Windows `adb.exe` (from the Android platform tools installed on Windows): the phone authorizes that one, and WSL's own adb shows up as unauthorized.
+Open `http://localhost:5173` in Chrome on the phone and pair with `localhost:8765`. 
 
 ## License
 

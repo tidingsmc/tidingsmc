@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type OnlineResponse, type PairedServer } from "./api";
 import { pairingKey } from "./serverCache";
+import { whenVisible } from "./whenVisible";
 
 export type OnlineState =
   | { status: "loading" }
@@ -51,17 +52,15 @@ export function useOnline(server: PairedServer): OnlineState {
     let forKey = listeners.get(key);
     if (!forKey) listeners.set(key, (forKey = new Set()));
     forKey.add(setState);
-    const load = () => {
+    const timer = setInterval(() => {
       if (document.visibilityState === "visible") check(server);
-    };
-    load();
-    const timer = setInterval(load, REFRESH_MS);
-    document.addEventListener("visibilitychange", load);
+    }, REFRESH_MS);
+    const stopWatching = whenVisible(() => check(server));
     return () => {
       forKey.delete(setState);
       if (forKey.size === 0) listeners.delete(key);
       clearInterval(timer);
-      document.removeEventListener("visibilitychange", load);
+      stopWatching();
     };
   }, [server]);
 

@@ -28,7 +28,7 @@ public final class TidingsAddons {
     private TidingsAddons() {}
 
     /**
-     * Call it from your mod's constructor, with the context Forge gives it. A mod can add one tab.
+     * Call it from your mod's constructor with the context Forge gives it. A mod can add one tab
      *
      * @return what else Tidings offers the add-on, such as sending notifications: keep it
      * @throws IllegalStateException if the same mod registers twice

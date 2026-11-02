@@ -31,10 +31,10 @@ class DoctorTest {
 
     private ApiServer api;
 
-    /** Serves the app: a page, and its service worker next to it. */
+    /** Serves the app: a page, and its service worker next to it */
     private HttpServer app;
 
-    /** Answers 404 to anything, like a push service to a GET, with its Date. */
+    /** Answers 404 to anything, like a push service to a GET, with its Date */
     private HttpServer push;
 
     @BeforeEach
@@ -52,7 +52,6 @@ class DoctorTest {
                 exchange -> {
                     String path = exchange.getRequestURI().getPath();
                     int status =
-                            // Like hosts that don't redirect to the trailing slash.
                             path.equals("/tidings")
                                             || path.equals("/tidings/")
                                             || path.equals("/tidings/sw.js")
@@ -125,7 +124,7 @@ class DoctorTest {
         assertEquals(Doctor.Verdict.OK, verdictOf(findings, "Pairing links open the app"));
         assertEquals(Doctor.Verdict.OK, verdictOf(findings, "Reached the push services: Fake"));
         assertEquals(Doctor.Verdict.OK, verdictOf(findings, "clock is right"));
-        // Tests run on localhost.
+        // Tests run on localhost
         assertEquals(Doctor.Verdict.WARNING, verdictOf(findings, "only reachable from this"));
         assertTrue(findings.stream().noneMatch(f -> f.verdict() == Doctor.Verdict.PROBLEM));
     }
@@ -250,7 +249,7 @@ class DoctorTest {
         assertEquals(Doctor.Verdict.WARNING, verdictOf(findings, "Steve's Pixel"));
     }
 
-    /** Hangs up on every connection: fails right away, where a closed port may time out. */
+    /** Hangs up on every connection: fails right away, where a closed port may time out */
     static ServerSocket hangUpServer() throws IOException {
         ServerSocket socket = new ServerSocket(0, 50, InetAddress.getLoopbackAddress());
         Thread accepting =

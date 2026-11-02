@@ -3,7 +3,7 @@ package dev.tidings.core;
 import java.time.Instant;
 
 /**
- * A device paired with this server.
+ * A device paired with this server
  *
  * @param tokenHash see {@link Tokens#hash}
  * @param player the account that paired it

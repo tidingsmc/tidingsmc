@@ -65,7 +65,7 @@ describe("notificationContent", () => {
     expect(content({ kind: "player_joined" }).body).toBe("Someone joined");
   });
 
-  // Notifications are plain text: escaping would show "&lt;" on the phone.
+  // Escaping would show "&lt;" on the phone
   it("shows names as they are", () => {
     expect(
       content({ kind: "player_joined", player: { ...steve, name: "<b>&" } })

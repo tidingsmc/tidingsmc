@@ -59,7 +59,7 @@ function skyAt(hour: number, weather: WorldInfo["weather"]): [string, string] {
   const top = mix(top0, top1, t);
   const bottom = mix(bottom0, bottom1, t);
   if (weather === "clear") return [top, bottom];
-  // Rain greys the sky out, thunder darkens it.
+  // Rain greys the sky out and thunder darkens it
   const [grey, amount] =
     weather === "rain" ? ["#5d6573", 0.55] : ["#2a2e36", 0.7];
   return [mix(top, grey, amount), mix(bottom, grey, amount)];

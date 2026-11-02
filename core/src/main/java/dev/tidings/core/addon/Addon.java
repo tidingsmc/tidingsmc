@@ -45,7 +45,6 @@ public record Addon(
         }
         Objects.requireNonNull(title, "title");
         Objects.requireNonNull(icon, "icon");
-        // Keeps the order: the first view is the tab's.
         views = Collections.unmodifiableMap(new LinkedHashMap<>(views));
         actions = Map.copyOf(actions);
         if (views.isEmpty()) throw new IllegalArgumentException("An add-on needs a view");
@@ -57,7 +56,7 @@ public record Addon(
         return new Builder(title);
     }
 
-    /** The view the tab opens on. */
+    /** The view the tab opens on */
     public String firstView() {
         return views.keySet().iterator().next();
     }
@@ -77,7 +76,6 @@ public record Addon(
             return this;
         }
 
-        /** The first view added is the one the tab opens on. */
         public Builder view(String name, Function<Request, View> view) {
             if (views.putIfAbsent(name, Objects.requireNonNull(view)) != null) {
                 throw new IllegalArgumentException("Two views named " + name);
@@ -92,10 +90,6 @@ public record Addon(
             return this;
         }
 
-        /**
-         * For the loaders' entry points, such as Forge's {@code TidingsAddons.register}, which set
-         * {@code id} to the registering mod's, and for tests.
-         */
         public Addon build(String id) {
             return new Addon(id, title, icon, views, actions);
         }

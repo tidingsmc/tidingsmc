@@ -90,7 +90,7 @@ function ServerCard({ server }: { server: PairedServer }) {
   );
 }
 
-/** Faces stacked on a dashboard card before "+N" */
+// Faces stacked on a dashboard card before "+N"
 const SHOWN_PLAYERS = 5;
 
 function DashboardCard({ server }: { server: PairedServer }) {

@@ -143,7 +143,7 @@ export function Dropdown<T extends string>({
               onClick={() => choose(i)}
             >
               {option.label}
-              {/* Kept in place when hidden, so labels line up. */}
+              {/* Kept in place when hidden, so labels line up */}
               <Check
                 aria-hidden
                 style={{ visibility: i === selected ? "visible" : "hidden" }}

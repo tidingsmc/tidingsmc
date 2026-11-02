@@ -1,6 +1,6 @@
 import type { PairedServer } from "./api";
 
-/** Keyed by pairing rather than server, so pairing with a server again starts afresh. */
+/** Keyed by pairing rather than server, so pairing with a server again starts afresh */
 export const pairingKey = (server: PairedServer) =>
   `${server.id}:${server.pairedAt}`;
 

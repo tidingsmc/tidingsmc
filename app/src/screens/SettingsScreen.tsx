@@ -53,7 +53,7 @@ export function ServerSettings({
   const mutedAddons = settings?.mutedAddons;
 
   function muteAddon(id: string, muted: boolean) {
-    if (!mutedAddons) return; // not loaded yet
+    if (!mutedAddons) return;
     update({
       mutedAddons: muted
         ? [...mutedAddons.filter((a) => a !== id), id]

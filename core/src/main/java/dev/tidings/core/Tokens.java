@@ -6,7 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.HexFormat;
 
-/** Device tokens. The server only keeps their hash, so a leaked data file can't be replayed. */
+/** Device tokens. The server only keeps their hash, so a leaked data file can't be replayed */
 final class Tokens {
     static final SecureRandom RANDOM = new SecureRandom();
 

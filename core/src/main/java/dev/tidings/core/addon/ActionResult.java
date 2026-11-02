@@ -4,7 +4,7 @@ import com.google.gson.JsonObject;
 
 /**
  * What the app does once an action is done: it shows {@code message} if any, then opens {@code
- * link}, or else loads the current view again, so it shows what changed.
+ * link}, or else loads the current view again, so it shows what changed
  */
 public record ActionResult(String message, Link link) {
     public static ActionResult done() {

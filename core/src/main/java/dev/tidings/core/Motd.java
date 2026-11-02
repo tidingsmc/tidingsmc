@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-/** Turns a server description with legacy "§" codes into the segments the app renders. */
+/** Turns a server description with legacy "§" codes into the segments the app renders */
 public final class Motd {
     private static final String COLORS =
             "black dark_blue dark_green dark_aqua dark_red dark_purple gold gray dark_gray blue"
@@ -13,7 +13,6 @@ public final class Motd {
 
     private Motd() {}
 
-    /** Mirrors the app's MotdSegment, null color and false flags are left out of the JSON. */
     public record Segment(
             String text,
             String color,
@@ -52,10 +51,9 @@ public final class Motd {
         return segments;
     }
 
-    /** The style after a "§" code, or null if the code means nothing. */
+    /** The style after a "§" code, or null if the code means nothing */
     private static Segment applyCode(Segment s, char code) {
         int color = "0123456789abcdef".indexOf(code);
-        // Like Minecraft, a color also clears bold, italic and so on.
         if (color >= 0) return new Segment("", COLOR_NAMES[color], false, false, false, false);
         return switch (code) {
             case 'l' -> new Segment("", s.color, true, s.italic, s.underlined, s.strikethrough);
@@ -63,7 +61,7 @@ public final class Motd {
             case 'n' -> new Segment("", s.color, s.bold, s.italic, true, s.strikethrough);
             case 'm' -> new Segment("", s.color, s.bold, s.italic, s.underlined, true);
             case 'r' -> new Segment("", null, false, false, false, false);
-            // Obfuscated: the app has no way to show it, keep the text plain.
+            // Obfuscated
             case 'k' -> s;
             default -> null;
         };

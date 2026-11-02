@@ -68,14 +68,14 @@ public sealed interface Block
         return new Button(label, null, Map.of(), link, Button.Style.NORMAL, null);
     }
 
-    /** Calls {@code action} with what the player filled in, see {@link Request#values}. */
+    /** Calls {@code action} with what the player filled in, see {@link Request#values} */
     static Form form(String action, String submit, Field... fields) {
         return new Form(action, Map.of(), submit, List.of(fields));
     }
 
     /**
      * A chat as the game shows it with a box under it to write in that calls
-     * {@code action} with what was written as the value {@link Chat#VALUE}.
+     * {@code action} with what was written as the value {@link Chat#VALUE}
      */
     static Chat chat(List<ChatLine> lines, String action) {
         return new Chat(lines, action, Map.of(), null, Chat.DEFAULT_MAX_LENGTH, null);
@@ -94,7 +94,7 @@ public sealed interface Block
     }
 
     /**
-     * An image of the add-on's own: a PNG, JPEG, GIF or WebP file's bytes.
+     * An image of the add-on's own: a PNG, JPEG, GIF or WebP file's bytes
      *
      * @param alt what it shows, read by screen readers; "" if it's only decoration
      */
@@ -102,7 +102,7 @@ public sealed interface Block
         return new Image(Icon.dataUrl(bytes, Image.MAX_BYTES), alt, 0, false);
     }
 
-    /** {@link #image(byte[], String)}, from base64 or a {@code data:image/…;base64,} URL. */
+    /** {@link #image(byte[], String)}, from base64 or a {@code data:image/…;base64,} URL */
     static Image image(String base64, String alt) {
         return image(Icon.decode(base64, Image.MAX_BYTES), alt);
     }
@@ -310,7 +310,7 @@ public sealed interface Block
     }
 
     /**
-     * Either calls {@code action} with {@code params}, or opens {@code link}.
+     * Either calls {@code action} with {@code params}, or opens {@code link}
      *
      * @param confirm asked first, in a dialog, or null
      */
@@ -488,12 +488,12 @@ public sealed interface Block
                     Objects.requireNonNull(name, "name"), text, null, null, null, false);
         }
 
-        /** A line by {@code player} under their name. */
+        /** A line by {@code player} under their name */
         public static ChatLine of(PlayerProfile player, String text) {
             return of(player.name(), text).player(player);
         }
 
-        /** A line from the game rather than a player. */
+        /** A line from the game rather than a player */
         public static ChatLine system(String text) {
             return new ChatLine(null, text, null, null, null, false);
         }
@@ -557,7 +557,6 @@ public sealed interface Block
             }
             Set<String> seen = new HashSet<>();
             for (TreeNode node : nodes) {
-                // Parents first: then there can't be a loop, and the app draws it in one pass.
                 if (node.parent() != null && !seen.contains(node.parent())) {
                     throw new IllegalArgumentException(
                             "Tree node "
@@ -702,7 +701,7 @@ public sealed interface Block
     }
 
     /**
-     * Made with {@link Block#image(byte[], String)}.
+     * Made with {@link Block#image(byte[], String)}
      *
      * @param src a {@code data:image/…;base64,} URL
      * @param alt what it shows, read by screen readers; "" if it's only decoration

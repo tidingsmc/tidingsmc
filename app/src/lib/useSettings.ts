@@ -7,25 +7,20 @@ import {
 } from "./api";
 import { TranslatedError, errorText } from "./i18n";
 import { cachedPerServer, pairingKey } from "./serverCache";
+import { whenVisible } from "./whenVisible";
 
 export const settingsCache =
   cachedPerServer<DeviceSettings>("tidings.settings.");
 
 const RETRY_MS = 30_000;
 
-/**
- * This device's settings on a server. Changes show immediately; once every save has answered,
- * the screen shows what the server last confirmed, so failed changes roll back without undoing newer ones.
- * The last confirmed settings are kept on the device, so they still show while the server is unreachable;
- * `live` tells whether the server answered, and so whether they can be changed.
- */
 export function useSettings(server: PairedServer) {
   const [settings, setSettings] = useState<DeviceSettings | null>(() =>
     settingsCache.load(server),
   );
   const [error, setError] = useState<Error | null>(null);
   const [live, setLive] = useState(false);
-  // Settings as the server last confirmed them, and which save confirmed them (answers can arrive out of order).
+
   const confirmed = useRef<{ settings: DeviceSettings; save: number } | null>(
     null,
   );
@@ -33,7 +28,6 @@ export function useSettings(server: PairedServer) {
   const pairing = useRef(pairingKey(server));
 
   useEffect(() => {
-    // Pairing with the server again: what the previous pairing confirmed no longer holds.
     if (pairing.current !== pairingKey(server)) {
       pairing.current = pairingKey(server);
       confirmed.current = null;
@@ -43,9 +37,7 @@ export function useSettings(server: PairedServer) {
     }
     let cancelled = false;
     let loading = false;
-    // Answers that won't change by asking again (403, 400…) stop the retries.
     let gaveUp = false;
-    // Tried again every so often, and when the app comes back to the foreground or the device back online, until the server answers.
     const load = () => {
       if (
         loading ||
@@ -74,15 +66,12 @@ export function useSettings(server: PairedServer) {
           },
         );
     };
-    load();
     const timer = setInterval(load, RETRY_MS);
-    document.addEventListener("visibilitychange", load);
-    window.addEventListener("online", load);
+    const stopWatching = whenVisible(load);
     return () => {
       cancelled = true;
       clearInterval(timer);
-      document.removeEventListener("visibilitychange", load);
-      window.removeEventListener("online", load);
+      stopWatching();
     };
   }, [server]);
 

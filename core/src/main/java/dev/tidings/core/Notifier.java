@@ -20,11 +20,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/** Picks the devices that want to hear about something, and sends them a push. */
 final class Notifier {
     private static final Logger LOGGER = LoggerFactory.getLogger(Notifier.class);
 
-    /** News older than this isn't worth showing: a phone offline for longer misses it. */
+    // News older than this isn't worth showing
     static final Duration TTL = Duration.ofMinutes(10);
 
     private final Store store;
@@ -78,7 +77,6 @@ final class Notifier {
         try {
             byte[] payload = message.get().toString().getBytes(StandardCharsets.UTF_8);
             if (payload.length > WebPush.MAX_PAYLOAD) {
-                // Notification's limits should prevent it: one warning rather than one per device.
                 LOGGER.warn(
                         "Dropped {} notification: {} bytes, over a push's {}",
                         what,
@@ -101,16 +99,11 @@ final class Notifier {
             }
             return CompletableFuture.allOf(sends.toArray(CompletableFuture[]::new));
         } catch (RuntimeException e) {
-            // Called from the game's thread: a failed push mustn't break what the game does next.
             LOGGER.error("Couldn't send {} notifications", what, e);
             return CompletableFuture.completedFuture(null);
         }
     }
 
-    /**
-     * Drops a subscription its push service no longer knows. The device stays paired: the app sends
-     * its new subscription next time it's opened.
-     */
     private void forget(Device device, PushSubscription gone) {
         try {
             store.updateDevice(device.id(), d -> gone.equals(d.push()) ? d.withPush(null) : d);
@@ -119,16 +112,10 @@ final class Notifier {
                     device.player().name(),
                     device.name());
         } catch (RuntimeException e) {
-            // Caught whatever it is, so notify()'s future still completes normally.
             LOGGER.error("Couldn't forget an expired push subscription", e);
         }
     }
 
-    /**
-     * Like the app's notification tags: news with the same key (about the same player, about the
-     * server, or the same add-on's about the same player) replaces the previous one still waiting
-     * for the phone. At most 32 base64url characters.
-     */
     private static String topic(String key) {
         try {
             byte[] hash =

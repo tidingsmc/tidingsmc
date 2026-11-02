@@ -38,7 +38,7 @@ function parse(data: PushMessageData | null): PushMessage | undefined {
       !message.text
     )
       return undefined;
-    // A link the app wouldn't follow opens the add-on's first view instead.
+    // A link the app wouldn't follow opens the add-on's first view instead
     const link = message.link === undefined ? null : readLink(message.link);
     return { ...message, link: link ?? undefined };
   } catch {
@@ -72,12 +72,10 @@ function serverIdOfScope(): string {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const data = event.notification.data as { path?: string; serverId?: string };
-  // Notifications shown by an older version of this worker only have serverId.
   const path = data.path ?? paths.server(data.serverId ?? serverIdOfScope());
   event.waitUntil(openPath(path));
 });
 
-/** `path` is one of the app's routes, such as paths.server(…). */
 async function openPath(path: string) {
   const app = new URL("../../", self.registration.scope).href;
   const windows = await self.clients.matchAll({
@@ -112,7 +110,7 @@ async function show(message: PushMessage) {
 
 /**
  * A transparent 1×1 PNG. Without an icon, Chrome on Android makes one up from the first letter of the
- * app's address: only news about a player gets a picture, their face.
+ * app's address: only news about a player gets a picture, their face
  */
 const NO_ICON =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=";

@@ -5,7 +5,6 @@ export default defineConfig({
   plugins: [
     cloudflareTest({
       wrangler: { configPath: "./wrangler.jsonc" },
-      // The public half of the key test/relay.test.ts signs with.
       miniflare: {
         bindings: {
           OWNER_KEY:

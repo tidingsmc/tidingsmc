@@ -4,7 +4,7 @@ import java.net.URI;
 import java.security.GeneralSecurityException;
 
 /**
- * Where to send a device's notifications, as the browser's PushSubscription gives it.
+ * Where to send a device's notifications, as the browser's PushSubscription gives it
  *
  * @param p256dh the browser's public key for encrypting payloads, base64url
  * @param auth the browser's authentication secret, base64url
@@ -19,8 +19,6 @@ public record PushSubscription(URI endpoint, String p256dh, String auth) {
         if (p256dh == null || p256dh.isEmpty() || auth == null || auth.isEmpty()) {
             throw new IllegalArgumentException("Missing push keys");
         }
-        // From RFC 8291: an uncompressed P-256 point, and 16 random bytes. Checked now, or every
-        // push to this device would fail later without the subscription ever being dropped.
         try {
             WebPush.publicKey(decode(p256dh, "p256dh"));
         } catch (GeneralSecurityException e) {

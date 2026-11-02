@@ -41,7 +41,15 @@ class TidingsTest {
         tidings.rememberPlayer(steve);
         tidings.rememberPlayer(alex);
 
-        assertEquals(List.of(alex, steve), tidings.store().knownPlayers());
+        assertEquals(List.of(alex, steve), tidings.knownPlayers());
+    }
+
+    @Test
+    void givesTheRelayOwnerTheServersPushKey() {
+        Store store = Store.inMemory();
+        Tidings tidings = new Tidings(store, new FakeGame());
+
+        assertEquals(store.vapidKeys().applicationServerKey(), tidings.relayOwnerKey());
     }
 
     private static Device device(String id, PlayerProfile player) {

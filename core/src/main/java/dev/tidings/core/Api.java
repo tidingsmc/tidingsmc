@@ -22,14 +22,9 @@ import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.function.Supplier;
 
-/**
- * The API the app calls, whatever carries it: {@link ApiServer} over HTTP, {@link RelayClient}
- * through a relay.
- */
 public final class Api {
     private static final Logger LOGGER = LoggerFactory.getLogger(Api.class);
 
-    /** Transports read at most one byte more, so that {@link #handle} can refuse it. */
     public static final int MAX_BODY_BYTES = 64 * 1024;
 
     private static final int MAX_DEVICE_NAME_LENGTH = 64;
@@ -54,7 +49,7 @@ public final class Api {
     public record Request(
             String method, String path, String authorization, byte[] body, String client) {}
 
-    /** {@code body} is null for 204. */
+    /** {@code body} is null for 204 */
     public record Response(int status, JsonElement body) {
         static Response ok(JsonElement body) {
             return new Response(200, body);
@@ -161,23 +156,27 @@ public final class Api {
 
     /**
      * {@code POST /api/addons/<id>/view} with {@code {view?, params?, locale?}}, and {@code
-     * /action} with {@code {action, params?, values?, locale?}}: see {@link Addons}.
+     * /action} with {@code {action, params?, values?, locale?}}: see {@link Addons}
      */
     private Response addon(Request request) {
         String[] parts = request.path().substring(ADDONS_PATH.length()).split("/", -1);
         if (parts.length != 2) throw new HttpError(404, "Not found");
+
         String id = parts[0];
         String kind = parts[1];
         if (!kind.equals("view") && !kind.equals("action")) throw new HttpError(404, "Not found");
         if (!request.method().equals("POST")) throw methodNotAllowed();
+
         Device device = authenticate(request);
         JsonObject body = Json.object(readBody(request), "request");
         Map<String, String> params = Json.strings(body, "params");
+
         String locale = body.has("locale") ? Json.string(body, "locale") : null;
-        // The name and skin they have now, not when they paired.
         PlayerProfile player =
                 tidings.store().knownPlayer(device.player().id()).orElse(device.player());
+
         Addons addons = tidings.addons();
+
         if (kind.equals("view")) {
             String view = body.has("view") ? Json.string(body, "view") : null;
             return Response.ok(onServerThread(() -> addons.view(id, player, view, params, locale)));
@@ -188,10 +187,7 @@ public final class Api {
                 onServerThread(() -> addons.action(id, player, action, params, values, locale)));
     }
 
-    /**
-     * How many requests may wait on the server thread at once: during a lag spike, the others fail
-     * right away rather than hold every transport thread, which the rest of the API needs.
-     */
+    // How many requests may wait on the server thread at once
     private static final int MAX_WAITING_ON_SERVER = 4;
 
     private final Semaphore waitingOnServer = new Semaphore(MAX_WAITING_ON_SERVER);
@@ -340,12 +336,10 @@ public final class Api {
 
     private Response players(Device device) {
         JsonObject response = new JsonObject();
-        // Hidden players too: they're still worth picking as friends for when they show again.
         response.add("players", Json.players(tidings.store().knownPlayers()));
         return Response.ok(response);
     }
 
-    /** Without the players who aren't announced, except the device's own. */
     private List<PlayerProfile> shownTo(Device device, List<PlayerProfile> players) {
         UUID own = device.player().id();
         return players.stream()

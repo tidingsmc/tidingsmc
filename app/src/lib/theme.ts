@@ -2,7 +2,6 @@ import { useCallback, useState } from "react";
 
 export type Theme = "system" | "light" | "dark";
 
-/** Also read by the script in index.html, which applies the theme before the first paint. */
 const KEY = "tidings.theme";
 
 function load(): Theme {
@@ -14,9 +13,7 @@ function load(): Theme {
   }
 }
 
-/** The phone's status and navigation bars take the page's background, whichever theme it's in. */
 function syncBarColor() {
-  // index.html starts with one per system theme, for before this runs; one is enough once it does.
   document
     .querySelectorAll('meta[name="theme-color"]')
     .forEach((meta) => meta.remove());
@@ -47,7 +44,7 @@ export function useTheme() {
       if (theme === "system") localStorage.removeItem(KEY);
       else localStorage.setItem(KEY, theme);
     } catch {
-      // Still applied for now; just not remembered.
+      // Still applied
     }
     apply(theme);
     setTheme(theme);

@@ -4,7 +4,7 @@ import { build } from "esbuild";
 
 /**
  * Serves src/sw.ts as sw.js at the app's root, so it can be registered for any scope below it.
- * Dev serves it as an ES module (registered with type: 'module'); the build bundles it into one classic script.
+ * Dev serves it as an ES module (registered with type: 'module'); the build bundles it into one classic script
  */
 function serviceWorker(): Plugin {
   return {
@@ -41,6 +41,5 @@ function serviceWorker(): Plugin {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), serviceWorker()],
-  // Relative asset paths, so the build works from any folder (e.g. GitHub Pages' /tidings/).
   base: "./",
 });

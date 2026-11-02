@@ -28,7 +28,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
-/** {@code /tidings admin …}: for the server's owner and admins, in game or from the console. */
+/** {@code /tidings admin …}: for the server's owner and admins, in game or from the console */
 final class AdminCommands {
     private static final Logger LOGGER = LogUtils.getLogger();
 
@@ -38,7 +38,7 @@ final class AdminCommands {
         this.mod = mod;
     }
 
-    /** Same permission level as /kick and /ban. */
+    /** Same permission level as /kick and /ban */
     static LiteralArgumentBuilder<CommandSourceStack> command(TidingsMod mod) {
         AdminCommands admin = new AdminCommands(mod);
         return Commands.literal("admin")
@@ -81,7 +81,7 @@ final class AdminCommands {
                                                                                         "device")))));
     }
 
-    /** Tells the source why Tidings isn't running, if so. */
+    /** Tells the source why Tidings isn't running, if so */
     private Tidings running(CommandSourceStack source) {
         Tidings tidings = mod.tidings();
         if (tidings == null) {
@@ -109,7 +109,7 @@ final class AdminCommands {
             message.append(line("Relay owner key: "))
                     .append(
                             TidingsMod.copyable(
-                                    tidings.store().vapidKeys().applicationServerKey(),
+                                    tidings.relayOwnerKey(),
                                     ChatFormatting.GREEN));
         } else {
             message.append(line("Phones reach it at "))
@@ -135,7 +135,7 @@ final class AdminCommands {
         long hidden = online.stream().filter(p -> !tidings.isAnnounced(p.id())).count();
         message.append(
                 line(
-                        plural(tidings.store().knownPlayers().size(), "known player")
+                        plural(tidings.knownPlayers().size(), "known player")
                                 + ", "
                                 + online.size()
                                 + " online"
@@ -145,7 +145,7 @@ final class AdminCommands {
         return 1;
     }
 
-    /** Checks from this server what Tidings needs outside the game; answers once it's done. */
+    /** Checks from this server what Tidings needs outside the game; answers once it's done */
     private int doctor(CommandSourceStack source) {
         Tidings tidings = running(source);
         if (tidings == null) return 0;
@@ -226,7 +226,7 @@ final class AdminCommands {
         return tidings.devices().stream().map(d -> d.player().name()).distinct().toList();
     }
 
-    /** {@code playerName}: only theirs, or everyone's if null. */
+    /** {@code playerName}: only theirs, or everyone's if null */
     private int devices(CommandSourceStack source, String playerName) {
         Tidings tidings = running(source);
         if (tidings == null) return 0;
@@ -271,9 +271,9 @@ final class AdminCommands {
         return devices.size();
     }
 
-    /** By name, whatever its case, online or not. */
+    /** By name, whatever its case, online or not */
     private static Optional<PlayerProfile> knownPlayer(Tidings tidings, String name) {
-        return tidings.store().knownPlayers().stream()
+        return tidings.knownPlayers().stream()
                 .filter(p -> p.name().equalsIgnoreCase(name))
                 .findFirst();
     }
@@ -318,7 +318,6 @@ final class AdminCommands {
             return 0;
         }
         Device unpaired = device.get();
-        // Told to other ops too, like /kick.
         source.sendSuccess(
                 () ->
                         Component.literal("Unpaired ")

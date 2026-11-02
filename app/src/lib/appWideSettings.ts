@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type DeviceSettings, type PairedServer } from "./api";
 import { pairingKey } from "./serverCache";
 import { sentToServers } from "./storage";
+import { currentTimeZone } from "./util";
+import { whenVisible } from "./whenVisible";
 
 export type AppWideSettings = Pick<
   DeviceSettings,
@@ -11,6 +13,13 @@ export type AppWideSettings = Pick<
 const KEY = "tidings.appWideSettings";
 
 const synced = sentToServers("tidings.syncedAppWideSettings");
+
+// Left by versions that synced the time zone on its own
+try {
+  localStorage.removeItem("tidings.syncedTimeZones");
+} catch {
+  // Harmless leftover
+}
 
 function save(settings: AppWideSettings) {
   try {
@@ -52,16 +61,12 @@ function load(): AppWideSettings {
 const queues = new Map<string, Promise<unknown>>();
 
 async function sync(servers: PairedServer[]): Promise<SyncFailure[]> {
-  try {
-    synced.keepOnly(servers);
-  } catch {
-    // can wait
-  }
+  synced.keepOnly(servers);
   const results = await Promise.all(
     servers.map((server) => {
       const key = pairingKey(server);
       const run = (queues.get(key) ?? Promise.resolve()).then(async () => {
-        const settings = load();
+        const settings = { ...load(), timeZone: currentTimeZone() };
         const value = JSON.stringify(settings);
         if (synced.get(server) === value) return null;
         try {
@@ -69,11 +74,7 @@ async function sync(servers: PairedServer[]): Promise<SyncFailure[]> {
         } catch (error) {
           return { server, error };
         }
-        try {
-          synced.set(server, value);
-        } catch {
-          // can wait
-        }
+        synced.set(server, value);
         return null;
       });
       queues.set(
@@ -87,18 +88,7 @@ async function sync(servers: PairedServer[]): Promise<SyncFailure[]> {
 }
 
 export function useAppWideSettingsSync(servers: PairedServer[]) {
-  useEffect(() => {
-    const syncVisible = () => {
-      if (document.visibilityState === "visible") sync(servers);
-    };
-    syncVisible();
-    document.addEventListener("visibilitychange", syncVisible);
-    window.addEventListener("online", syncVisible);
-    return () => {
-      document.removeEventListener("visibilitychange", syncVisible);
-      window.removeEventListener("online", syncVisible);
-    };
-  }, [servers]);
+  useEffect(() => whenVisible(() => sync(servers)), [servers]);
 }
 
 export type SyncFailure = { server: PairedServer; error: unknown };

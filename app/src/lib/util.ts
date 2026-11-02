@@ -16,7 +16,7 @@ export function hostOf(url: string): string {
 
 /**
  * Only accepts Mojang's skin server, and always over HTTPS
- * (game profiles list skins as http://, which a secure page can't load).
+ * (game profiles list skins as http://, which a secure page can't load)
  */
 export function safeSkinUrl(url?: string): string | undefined {
   if (!url) return undefined;
@@ -34,7 +34,7 @@ export function currentTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-/** User-Agent Client Hints: only in Chromium browsers, and not in TypeScript's DOM types yet. */
+/** User-Agent Client Hints: only in Chromium browsers, and not in TypeScript's DOM types yet */
 interface UserAgentData {
   brands: { brand: string; version: string }[];
   mobile: boolean;
@@ -44,7 +44,7 @@ interface UserAgentData {
 
 /**
  * A name for this device, shown in game when it asks to pair and in /tidings devices: the phone's
- * model where the browser tells it (Chromium on Android), the browser and system on a computer.
+ * model where the browser tells it (Chromium on Android), the browser and system on a computer
  */
 export async function defaultDeviceName(t: TFunction): Promise<string> {
   const ua = navigator.userAgent;
@@ -54,7 +54,7 @@ export async function defaultDeviceName(t: TFunction): Promise<string> {
       .getHighEntropyValues(["model"])
       .then((values) => values.model?.trim())
       .catch(() => undefined);
-    // Samsung only gives its model number ("SM-S931B"): the brand makes it recognizable.
+    // Samsung only gives its model number ("SM-S931B"): the brand makes it recognizable
     if (model) return /^SM-/.test(model) ? `Samsung ${model}` : model;
   }
   if (/iPhone/.test(ua)) return t("device.iPhone");
@@ -68,7 +68,7 @@ export async function defaultDeviceName(t: TFunction): Promise<string> {
 }
 
 function browserName(ua: string, hints?: UserAgentData): string | undefined {
-  // Chromium lists itself and made-up brands ("Not A;Brand") next to the real one.
+  // Chromium lists itself and made-up brands ("Not A;Brand") next to the real one
   const brand = hints?.brands.find(
     (b) => !/Chromium|Not.?A.?Brand/i.test(b.brand),
   )?.brand;

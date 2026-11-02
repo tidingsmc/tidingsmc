@@ -23,7 +23,7 @@ import java.util.UUID;
  * @param text the notification's body, as plain text: 1 to {@link #MAX_TEXT_LENGTH} characters
  * @param player who it's about, if anyone: their face is shown, their own devices aren't told, and
  *     nobody is if they chose to be hidden from phones. A newer notification about the same player
- *     from the same add-on replaces the previous one still showing.
+ *     from the same add-on replaces the previous one still showing
  * @param link the add-on's view to open when it's tapped; null opens the add-on's first view
  * @param recipients the players whose devices may get it; null for every paired device
  */
@@ -32,7 +32,7 @@ public record Notification(String text, PlayerProfile player, Link link, Set<UUI
 
     /**
      * In bytes, as the link is sent: UTF-8 JSON. Push payloads are limited to about 4 KB, so links
-     * are kept far shorter than a view's can be.
+     * are kept far shorter than a view's can be
      */
     public static final int MAX_LINK_BYTES = 1024;
 
@@ -52,7 +52,6 @@ public record Notification(String text, PlayerProfile player, Link link, Set<UUI
         if (recipients != null) recipients = Set.copyOf(recipients);
     }
 
-    /** For every paired device, about no one in particular, opening the add-on's first view. */
     public static Notification of(String text) {
         return new Notification(text, null, null, null);
     }
@@ -65,19 +64,17 @@ public record Notification(String text, PlayerProfile player, Link link, Set<UUI
         return new Notification(text, player, Objects.requireNonNull(link, "link"), recipients);
     }
 
-    /** Only these players' devices may get it. */
     public Notification to(Collection<UUID> players) {
         return new Notification(text, player, link, Set.copyOf(players));
     }
 
-    /** Whether {@code player}'s devices may get it, as far as {@link #recipients} goes. */
     public boolean isFor(UUID player) {
         return recipients == null || recipients.contains(player);
     }
 
     /**
      * Its text, at most {@link #MAX_TEXT_LENGTH} UTF-16 characters, is at most 6 bytes each once
-     * escaped: with the link and the rest of the push, it stays under its 4 KB.
+     * escaped: with the link and the rest of the push, it stays under its 4 KB
      */
     private static int bytes(Link link) {
         return link.toJson().toString().getBytes(StandardCharsets.UTF_8).length;

@@ -19,7 +19,7 @@ describe("resolveLocale", () => {
 });
 
 describe("isLanguage", () => {
-  // Read back from localStorage and IndexedDB, which may hold anything.
+  // Read back from localStorage and IndexedDB, which may hold anything
   it("only accepts the app's languages", () => {
     expect(isLanguage("system")).toBe(true);
     expect(isLanguage("fr")).toBe(true);

@@ -22,7 +22,6 @@ function load(): Language {
 
 function apply(language: Language) {
   i18next.changeLanguage(resolveLocale(language, navigator.languages));
-  // Notifications then come in the browser's language: not worth bothering the player about.
   saveLanguage(language).catch(() => {});
 }
 
@@ -36,7 +35,6 @@ export function initLanguage() {
     .use(initReactI18next)
     .init(i18nOptions(resolveLocale(language, navigator.languages)));
   saveLanguage(language).catch(() => {});
-  // The phone's language changed, which matters while following it.
   addEventListener("languagechange", () => apply(load()));
 }
 
@@ -47,7 +45,7 @@ export function useLanguage() {
       if (language === "system") localStorage.removeItem(KEY);
       else localStorage.setItem(KEY, language);
     } catch {
-      // Still applied for now; just not remembered.
+      // Still applied
     }
     apply(language);
     setLanguage(language);
@@ -55,7 +53,7 @@ export function useLanguage() {
   return [language, choose] as const;
 }
 
-/** An error whose text is translated where it's shown, so it follows a change of language. */
+/** An error whose text is translated where it's shown, so it follows a change of language */
 export class TranslatedError extends Error {
   readonly text: (t: TFunction) => string;
 

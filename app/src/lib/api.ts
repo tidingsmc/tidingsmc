@@ -304,7 +304,7 @@ export const api: TidingsApi = {
       body: JSON.stringify({ ...action, locale }),
     }),
   unpair: (server) => {
-    // Requests still on their way would get a 401 too.
+    // Requests still on their way would get a 401
     leftTokens.add(server.token);
     return request(`${server.url}/api/devices/me`, {
       method: "DELETE",
