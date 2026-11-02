@@ -84,7 +84,7 @@ cd app && npm test                  # app unit tests
 cd relay && npm install && npm test # relay tests, in a local Workers runtime
 ```
 
-The app uses fake servers in development (`VITE_MOCK_API=true` in `app/.env.development`). To talk to a real server instead, put `VITE_MOCK_API=false` in `app/.env.development.local`, then pair with `localhost:8765`.
+In development, the app talks to real servers: run the dev Minecraft server above, then pair with `localhost:8765` (or through your relay).
 
 ### Testing on an Android phone
 

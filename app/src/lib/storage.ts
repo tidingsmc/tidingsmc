@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { mockServers, usingMockApi, type PairedServer } from "./api";
+import type { PairedServer } from "./api";
 import { infoCache } from "./useInfo";
 import { keepOnlineOnly } from "./useOnline";
 import { pairingKey } from "./serverCache";
@@ -11,7 +11,6 @@ const KEY = "tidings.servers";
 function load(): PairedServer[] {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw === null && usingMockApi) return mockServers();
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
