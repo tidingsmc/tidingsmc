@@ -16,6 +16,7 @@ export const paths = {
   pair: "#/pair",
   pairStep: (step: PairStep) => `#/pair/${step}`,
   appSettings: "#/settings",
+  notificationSettings: "#/settings/notifications",
   server: (id: string) => `#/server/${encodeURIComponent(id)}`,
   addon: (id: string, addon: AddonRoute) => {
     const tab = `#/server/${encodeURIComponent(id)}/addon/${addon.id}`;

@@ -5,9 +5,11 @@ import { onUnpaired, type PairedServer } from "./lib/api";
 import { navigate, parseRoute, paths, useRoute } from "./lib/router";
 import { unregister, useSubscriptionSync } from "./lib/notifications";
 import { useUnpairRetry } from "./lib/pendingUnpairs";
+import { useAppWideSettingsSync } from "./lib/appWideSettings";
 import { useServers } from "./lib/storage";
 import { useTimeZoneSync } from "./lib/timeZone";
 import { AppSettingsScreen } from "./screens/AppSettingsScreen";
+import { NotificationSettingsScreen } from "./screens/NotificationSettingsScreen";
 import { PairScreen } from "./screens/PairScreen";
 import { ServerListScreen } from "./screens/ServerListScreen";
 import { ServerScreen } from "./screens/ServerScreen";
@@ -20,6 +22,7 @@ export default function App() {
   const serversRef = useRef(servers);
   serversRef.current = servers;
   useTimeZoneSync(servers);
+  useAppWideSettingsSync(servers);
   useSubscriptionSync(servers);
   useUnpairRetry();
   // Servers that unpaired this device
@@ -52,6 +55,9 @@ export default function App() {
   switch (route.name) {
     case "appSettings":
       screen = <AppSettingsScreen servers={servers} />;
+      break;
+    case "notificationSettings":
+      screen = <NotificationSettingsScreen servers={servers} />;
       break;
     case "pair":
       screen = (
