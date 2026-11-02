@@ -162,6 +162,10 @@
   },
   "addon": {
     "updateApp": "Update Tidings to see everything on this page.",
+    "map": "Map",
+    "marker": "Marker",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
     "chatSend": "Send",
     "chatMessage": "Message",
     "chatTimes": "Show times",

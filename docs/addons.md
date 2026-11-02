@@ -14,7 +14,7 @@ Call `TidingsAddons.register` from your mod's constructor with a title, an icon,
 
 ## Views and blocks
 
-A view is a page: a function from `Request` to a `View` of blocks such as text, stats, lists, progress bars, choices, buttons, chats, cards and trees. `request.player()` is the checked player. Views are rebuilt on every open, so read the current state.
+A view is a page: a function from `Request` to a `View` of blocks such as text, stats, lists, progress bars, choices, buttons, chats, maps, cards and trees. `request.player()` is the checked player. Views are rebuilt on every open, so read the current state.
 
 To keep a page live return it with `view.refreshEvery(Duration.ofSeconds(5))`. The app reloads it at that rate while it's open and in front, from 2 seconds to 1 hour. Each reload is a request, which counts against the free Cloudflare quota when there's a relay, so pick the slowest rate that still feels live.
 
@@ -27,6 +27,8 @@ Icons are [pixelarticons](https://pixelarticons.com), picked by name with `Icon.
 Buttons and forms call actions, which change something and return an `ActionResult` (a message, or a view to open). Form fields arrive as strings in `request.value(name)`.
 
 A `Block.chat` shows lines like the game's chat, with a box to write in that calls its action with the text in `request.value(Block.Chat.VALUE)`. See [Tidings Vanilla Chat](https://github.com/tidingsmc/tidingsmc-vanilla-chat).
+
+A `Block.map(minX, minZ, maxX, maxZ)` is a top-down map in world coordinates (X right and Z down). Give it a `background(bytes)` image stretched over it with crisp pixels, `areas` such as buildings, and up to 500 `markers` (dot or `icon`).
 
 ## Notifications
 

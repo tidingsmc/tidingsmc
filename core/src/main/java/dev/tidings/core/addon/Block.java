@@ -25,7 +25,8 @@ public sealed interface Block
                 Block.Card,
                 Block.Tree,
                 Block.IconBlock,
-                Block.Image {
+                Block.Image,
+                Block.MapBlock {
 
     JsonObject toJson();
 
@@ -105,6 +106,14 @@ public sealed interface Block
     /** {@link #image(byte[], String)}, from base64 or a {@code data:image/…;base64,} URL */
     static Image image(String base64, String alt) {
         return image(Icon.decode(base64, Image.MAX_BYTES), alt);
+    }
+
+    /**
+     * A top-down map of the world from ({@code minX}, {@code minZ}) to ({@code maxX}, {@code
+     * maxZ}) (X to the right and Z down) with areas and markers the app draws over it
+     */
+    static MapBlock map(double minX, double minZ, double maxX, double maxZ) {
+        return new MapBlock(minX, minZ, maxX, maxZ, null, List.of(), List.of());
     }
 
     static Tree tree(List<TreeNode> nodes) {
@@ -740,6 +749,191 @@ public sealed interface Block
             json.addProperty("alt", alt);
             if (width > 0) json.addProperty("width", width);
             if (pixelated) json.addProperty("pixelated", true);
+            return json;
+        }
+    }
+
+    /**
+     * Made with {@link Block#map}. Coordinates are world positions, not block numbers: the block at
+     * x = 10 spans 10 to 11, so a map of blocks 0 to 15 is {@code map(0, 0, 16, 16)}. Use {@link
+     * MapArea#blocks} and {@link MapMarker#atBlock} to mark blocks.
+     *
+     * @param background a {@code data:image/…;base64,} URL stretched over the whole map with crisp
+     *     pixels, or null
+     */
+    record MapBlock(
+            double minX,
+            double minZ,
+            double maxX,
+            double maxZ,
+            String background,
+            List<MapArea> areas,
+            List<MapMarker> markers)
+            implements Block {
+
+        public static final int MAX_AREAS = 500;
+        public static final int MAX_MARKERS = 500;
+        public static final int MAX_IMAGE_CHARS = 256 * 1024;
+
+        public MapBlock {
+            for (double d : new double[] {minX, minZ, maxX, maxZ}) {
+                if (!Double.isFinite(d)) {
+                    throw new IllegalArgumentException("A map's bounds are finite");
+                }
+            }
+            if (minX >= maxX || minZ >= maxZ) {
+                throw new IllegalArgumentException("A map's min corner is before its max corner");
+            }
+            if (background != null && !background.startsWith("data:image/")) {
+                throw new IllegalArgumentException("Set a map's background with background(bytes)");
+            }
+            areas = List.copyOf(areas);
+            if (areas.size() > MAX_AREAS) {
+                throw new IllegalArgumentException("A map has at most " + MAX_AREAS + " areas");
+            }
+            markers = List.copyOf(markers);
+            if (markers.size() > MAX_MARKERS) {
+                throw new IllegalArgumentException("A map has at most " + MAX_MARKERS + " markers");
+            }
+            long images = background == null ? 0 : background.length();
+            for (MapMarker marker : markers) {
+                if (marker.icon() != null && marker.icon().isImage()) {
+                    images += marker.icon().id().length();
+                }
+            }
+            if (images > MAX_IMAGE_CHARS) {
+                throw new IllegalArgumentException(
+                        "A map's background and image icons are at most "
+                                + MAX_IMAGE_CHARS
+                                + " characters of base64 together, not "
+                                + images
+                                + ": use smaller images or named icons");
+            }
+        }
+
+        /**
+         * A PNG, JPEG, GIF or WebP of at most {@link Image#MAX_BYTES}
+         */
+        public MapBlock background(byte[] bytes) {
+            return new MapBlock(
+                    minX, minZ, maxX, maxZ, Icon.dataUrl(bytes, Image.MAX_BYTES), areas, markers);
+        }
+
+        public MapBlock background(String base64) {
+            return background(Icon.decode(base64, Image.MAX_BYTES));
+        }
+
+        public MapBlock areas(List<MapArea> areas) {
+            return new MapBlock(minX, minZ, maxX, maxZ, background, areas, markers);
+        }
+
+        public MapBlock markers(List<MapMarker> markers) {
+            return new MapBlock(minX, minZ, maxX, maxZ, background, areas, markers);
+        }
+
+        @Override
+        public JsonObject toJson() {
+            JsonObject json = typed("map");
+            json.addProperty("minX", minX);
+            json.addProperty("minZ", minZ);
+            json.addProperty("maxX", maxX);
+            json.addProperty("maxZ", maxZ);
+            if (background != null) json.addProperty("background", background);
+            if (!areas.isEmpty()) {
+                JsonArray array = new JsonArray();
+                areas.forEach(area -> array.add(area.toJson()));
+                json.add("areas", array);
+            }
+            if (!markers.isEmpty()) {
+                JsonArray array = new JsonArray();
+                markers.forEach(marker -> array.add(marker.toJson()));
+                json.add("markers", array);
+            }
+            return json;
+        }
+    }
+
+    /**
+     * An outlined rectangle on a {@link MapBlock}, between world positions like the map's bounds.
+     * Use {@link #blocks} to cover whole blocks.
+     */
+    record MapArea(double minX, double minZ, double maxX, double maxZ) {
+        public MapArea {
+            for (double d : new double[] {minX, minZ, maxX, maxZ}) {
+                if (!Double.isFinite(d)) {
+                    throw new IllegalArgumentException("An area's corners are finite");
+                }
+            }
+            if (minX >= maxX || minZ >= maxZ) {
+                throw new IllegalArgumentException(
+                        "An area has a width and a height: use MapArea.blocks for single blocks");
+            }
+        }
+
+        public static MapArea of(double x1, double z1, double x2, double z2) {
+            return new MapArea(
+                    Math.min(x1, x2), Math.min(z1, z2), Math.max(x1, x2), Math.max(z1, z2));
+        }
+
+        public static MapArea blocks(int x1, int z1, int x2, int z2) {
+            return new MapArea(
+                    Math.min(x1, x2),
+                    Math.min(z1, z2),
+                    Math.max(x1, x2) + 1.0,
+                    Math.max(z1, z2) + 1.0);
+        }
+
+        JsonObject toJson() {
+            JsonObject json = new JsonObject();
+            json.addProperty("minX", minX);
+            json.addProperty("minZ", minZ);
+            json.addProperty("maxX", maxX);
+            json.addProperty("maxZ", maxZ);
+            return json;
+        }
+    }
+
+    /**
+     * A point on a {@link MapBlock}
+     *
+     * @param label what the marker is, never blank: also read by screen readers
+     * @param icon a pixelarticons name or a small image such as a face, or null for a dot
+     * @param link opened from the label, or null
+     */
+    record MapMarker(double x, double z, String label, Icon icon, Link link) {
+        public MapMarker {
+            if (!Double.isFinite(x) || !Double.isFinite(z)) {
+                throw new IllegalArgumentException("A marker's position is finite");
+            }
+            Objects.requireNonNull(label, "label");
+            if (label.isBlank()) {
+                throw new IllegalArgumentException("A marker has a label");
+            }
+        }
+
+        public static MapMarker of(double x, double z, String label) {
+            return new MapMarker(x, z, label, null, null);
+        }
+
+        public static MapMarker atBlock(int x, int z, String label) {
+            return new MapMarker(x + 0.5, z + 0.5, label, null, null);
+        }
+
+        public MapMarker icon(Icon icon) {
+            return new MapMarker(x, z, label, icon, link);
+        }
+
+        public MapMarker link(Link link) {
+            return new MapMarker(x, z, label, icon, link);
+        }
+
+        JsonObject toJson() {
+            JsonObject json = new JsonObject();
+            json.addProperty("x", x);
+            json.addProperty("z", z);
+            json.addProperty("label", label);
+            if (icon != null) json.addProperty("icon", icon.id());
+            if (link != null) json.add("link", link.toJson());
             return json;
         }
     }

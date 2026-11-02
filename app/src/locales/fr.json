@@ -162,6 +162,10 @@
   },
   "addon": {
     "updateApp": "Mettez Tidings à jour pour tout voir sur cette page.",
+    "map": "Carte",
+    "marker": "Repère",
+    "zoomIn": "Zoomer",
+    "zoomOut": "Dézoomer",
     "chatSend": "Envoyer",
     "chatMessage": "Message",
     "chatTimes": "Afficher l'heure",
