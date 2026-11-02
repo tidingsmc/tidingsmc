@@ -953,7 +953,7 @@ function ChatBox({ block, context }: { block: ChatBlock; context: Context }) {
   const atBottom = useRef(true);
   const lines = list(block.lines).filter((l) => typeof l.text === "string");
   const last = lines.length ? JSON.stringify(lines[lines.length - 1]) : "";
-  
+
   useLayoutEffect(() => {
     const el = scroller.current;
     if (el && atBottom.current) el.scrollTop = el.scrollHeight;
