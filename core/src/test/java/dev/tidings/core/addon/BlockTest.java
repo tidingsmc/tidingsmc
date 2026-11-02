@@ -1,5 +1,6 @@
 package dev.tidings.core.addon;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,27 @@ class BlockTest {
         assertJson(
                 "{version:3,title:'Steve',player:{uuid:'" + id + "',name:'Steve'},blocks:[]}",
                 View.of("Steve").player(new PlayerProfile(id, "Steve", null)).toJson());
+    }
+
+    @Test
+    void aViewCanRefreshItself() {
+        assertJson(
+                "{version:3,title:'Chat',refresh:3,blocks:[]}",
+                View.of("Chat").refreshEvery(Duration.ofSeconds(3)).toJson());
+        assertJson(
+                "{version:3,refresh:3600,blocks:[]}",
+                View.of(null).refreshEvery(Duration.ofHours(1)).toJson());
+        for (Duration every : List.of(
+                Duration.ZERO,
+                Duration.ofMillis(1999),
+                Duration.ofSeconds(-5),
+                Duration.ofSeconds(3601),
+                Duration.ofDays(100_000))) {
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> View.of(null).refreshEvery(every),
+                    every.toString());
+        }
     }
 
     @Test

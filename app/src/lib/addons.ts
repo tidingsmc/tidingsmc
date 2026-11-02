@@ -15,7 +15,18 @@ export interface AddonView {
   version: number;
   title?: string;
   player?: { uuid: string; name: string; skinUrl?: string };
+  refresh?: number;
   blocks: Block[];
+}
+
+const MIN_REFRESH = 2;
+const MAX_REFRESH = 3600;
+
+export function refreshDelay(view: AddonView): number | null {
+  const { refresh } = view;
+  if (typeof refresh !== "number" || !Number.isFinite(refresh) || refresh <= 0)
+    return null;
+  return Math.min(Math.max(refresh, MIN_REFRESH), MAX_REFRESH) * 1000;
 }
 
 export interface ActionResult {
