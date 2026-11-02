@@ -95,6 +95,7 @@ export function FriendsSection({ server, friends, disabled, onChange }: Props) {
                   <button
                     className="icon-button remove-friend"
                     aria-label={t("friends.remove", { name })}
+                    title={t("friends.remove", { name })}
                     onClick={() =>
                       onChange({
                         ...friends,

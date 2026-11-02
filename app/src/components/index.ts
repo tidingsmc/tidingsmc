@@ -10,5 +10,6 @@ export { OnlineSummary } from "./OnlineSummary";
 export { Screen } from "./Screen";
 export { ServerIcon } from "./ServerIcon";
 export { SettingsLink } from "./SettingsLink";
+export { Sidebar } from "./Sidebar";
 export { Toggle } from "./Toggle";
 export { UnreachableNotice } from "./UnreachableNotice";

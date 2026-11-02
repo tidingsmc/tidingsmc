@@ -18,27 +18,22 @@ import {
 import { errorText } from "../lib/i18n";
 import { askPermission, subscribe } from "../lib/notifications";
 import { parseRoute, paths, type PairStep } from "../lib/router";
+import { useWide } from "../lib/useWide";
 import { defaultDeviceName, hostOf } from "../lib/util";
 import { QrScanDialog } from "../qrScanner";
 
-/** Camera access needs HTTPS (or localhost) and a browser that has it at all. */
 const canScan = Boolean(navigator.mediaDevices?.getUserMedia);
 
 type Field = "serverName" | "address" | "code";
 
 interface Props {
-  /** Scanning or typing a code; none to pick one. */
   step?: PairStep;
-  /** Filled in when the app was opened from the in-game QR code. */
   initialUrl?: string;
   initialCode?: string;
-  /** The servers this device is already paired with: at most one pairing per server. */
   servers: PairedServer[];
-  /** Approved and named: pairing is done. Until then, leaving cancels it. */
   onPaired: (server: PairedServer) => void;
 }
 
-/** The pairing this device already has with the server at `address`, if any. */
 function pairedAt(
   servers: PairedServer[],
   address: string,
@@ -51,17 +46,12 @@ function pairedAt(
   }
 }
 
-/** Tells the server to forget the unfinished pairing in `unfinished`, if any. Best effort. */
 function withdraw(unfinished: RefObject<PairedServer | undefined>) {
   const server = unfinished.current;
   unfinished.current = undefined;
   if (server) api.unpair(server).catch(() => {});
 }
 
-/**
- * A wizard: pick scanning or a code, scan or type it, name the server, then wait for the player
- * to approve this device in game. One trip back to the game, at the end.
- */
 export function PairScreen({
   step,
   initialUrl,
@@ -71,32 +61,31 @@ export function PairScreen({
 }: Props) {
   const { t } = useTranslation();
   const fromLink = Boolean(initialUrl && initialCode);
-  // Without a camera, typing a code is the only way: no choice to make.
-  const currentStep = step ?? (canScan ? undefined : "code");
+  const wide = useWide();
+  const scan = canScan && !wide;
+  const currentStep = scan ? step : "code";
+
   const [address, setAddress] = useState(initialUrl ?? "");
   const [code, setCode] = useState(initialCode ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  // Fields left empty or wrong, shown under each: the browser's own bubbles don't match the app.
   const [invalid, setInvalid] = useState<ReadonlySet<Field>>(new Set());
   const idPrefix = useId();
+
   const fieldId = (field: Field) => `${idPrefix}-${field}`;
-  // The code worked: left to name the server, then the player approves this device in game.
+
   const [toName, setToName] = useState<PairedServer>();
   const [serverName, setServerName] = useState("");
-  // Named: paired, but not until the player approves it in game.
   const [awaitingApproval, setAwaitingApproval] = useState<PairedServer>();
   const notificationsAllowed = useRef<Promise<boolean>>(Promise.resolve(false));
-  // The pairing under way, waiting for approval or a name: cancelled if the player leaves.
   const unfinished = useRef<PairedServer>(undefined);
-  // The step it started from: going back from there leaves it too.
   const pairingStep = useRef<PairStep>(undefined);
-  // The parent's callback changes on each render; waiting for approval shouldn't start over.
   const onPairedRef = useRef(onPaired);
+
   useEffect(() => {
     onPairedRef.current = onPaired;
   });
-  // From the QR code we can tell right away; a typed address is checked when submitting.
+
   const [alreadyPaired, setAlreadyPaired] = useState(() =>
     fromLink ? pairedAt(servers, initialUrl!) : undefined,
   );
@@ -112,15 +101,13 @@ export function PairScreen({
           approval = await api.approval(server);
         } catch (err) {
           if (stopped) return;
-          // Unreachable for a moment (no status), or the proxy in front of it is: keep waiting, the
-          // server says when it's over.
+          // Unreachable
           const blip =
             err instanceof ApiError &&
             (err.status === undefined ||
               err.status === 429 ||
               err.status >= 500);
           if (!blip) {
-            // Or the player could still approve a device that no longer has its token.
             withdraw(unfinished);
             setAwaitingApproval(undefined);
             setError(err);
@@ -131,7 +118,6 @@ export function PairScreen({
         if (stopped) return;
         if (approval === "approved") {
           unfinished.current = undefined;
-          // Without it, the server list and settings say notifications are off and offer to turn them on.
           if (await notificationsAllowed.current)
             await subscribe(server).catch(() => {});
           onPairedRef.current(server);
@@ -155,8 +141,6 @@ export function PairScreen({
     };
   }, [awaitingApproval]);
 
-  // Leaving the screen or the app, or going back a step, cancels a pairing not finished yet. Not
-  // switching apps: that's how players get to the game to approve it.
   useEffect(() => {
     const onPageHide = () => withdraw(unfinished);
     addEventListener("pagehide", onPageHide);
@@ -269,7 +253,6 @@ export function PairScreen({
         setAlreadyPaired(sameServer);
         return;
       }
-      // The name the owner chose, if any; otherwise the player names it.
       setServerName(res.serverName ?? "");
       const server: PairedServer = {
         id: res.serverId,
@@ -316,7 +299,7 @@ export function PairScreen({
 
   if (toName && !busy) {
     return (
-      <Screen title={t("pair.title")} back={paths.servers}>
+      <Screen title={t("pair.title")} back={paths.servers} narrow centered>
         <div className="centered">
           <p>
             <Trans
@@ -355,7 +338,7 @@ export function PairScreen({
 
   if (awaitingApproval || busy) {
     return (
-      <Screen title={t("pair.title")} back={paths.servers}>
+      <Screen title={t("pair.title")} back={paths.servers} narrow centered>
         <div className="centered">
           {awaitingApproval && (
             <>
@@ -399,7 +382,7 @@ export function PairScreen({
 
   if (alreadyPaired) {
     return (
-      <Screen title={t("pair.title")} back={paths.servers}>
+      <Screen title={t("pair.title")} back={paths.servers} narrow centered>
         <div className="centered">
           <p>
             <Trans
@@ -422,7 +405,7 @@ export function PairScreen({
 
   if (fromLink) {
     return (
-      <Screen title={t("pair.title")} back={paths.servers}>
+      <Screen title={t("pair.title")} back={paths.servers} narrow centered>
         <div className="centered">
           <form className="form" onSubmit={submitLink}>
             <p>
@@ -446,7 +429,9 @@ export function PairScreen({
     return (
       <Screen
         title={t("pair.title")}
-        back={canScan ? paths.pair : paths.servers}
+        back={scan ? paths.pair : paths.servers}
+        narrow
+        centered
       >
         <p className="muted">
           <Trans i18nKey="pair.codeHowTo" components={{ code: <code /> }} />
@@ -498,7 +483,7 @@ export function PairScreen({
   }
 
   return (
-    <Screen title={t("pair.title")} back={paths.servers}>
+    <Screen title={t("pair.title")} back={paths.servers} narrow centered>
       <p className="muted">
         <Trans i18nKey="pair.howTo" components={{ code: <code /> }} />
       </p>

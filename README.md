@@ -34,7 +34,7 @@ Not supported: Aternos, which only allows mods from its own list.
 1. Put the mod jar in `mods/` and start the server once. It creates `config/tidings-common.toml` and keeps its data (server ID, push keys, paired devices) in `tidings/data.json`. Back that file up: losing it unpairs every device.
 2. Choose how players' phones reach the server: through a relay (easiest), or directly.
 
-   **Relay.** Deploy your own copy of the relay to Cloudflare (free account, no domain needed), with Node 20+:
+   **Relay.** Deploy your own copy of the relay to Cloudflare (free account, no domain needed), with Node 22+:
 
    ```sh
    cd relay
@@ -70,7 +70,7 @@ Other mods can add tabs to a server's page in the app. They describe each page a
 
 ## Development
 
-Requirements: a JDK (17+; Gradle downloads Java 17 for Forge automatically) and Node 20+.
+Requirements: a JDK (17+; Gradle downloads Java 17 for Forge automatically) and Node 22+ (the relay's wrangler needs it).
 
 ```sh
 ./gradlew :core:test          # core unit tests

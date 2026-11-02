@@ -1,6 +1,8 @@
 import { Plus, Unlink } from "pixelarticons/react";
 import { useTranslation } from "react-i18next";
 import {
+  Avatar,
+  Motd,
   NotificationsOff,
   OnlineSummary,
   Screen,
@@ -11,6 +13,7 @@ import type { PairedServer } from "../lib/api";
 import { paths } from "../lib/router";
 import { useInfo } from "../lib/useInfo";
 import { useOnline } from "../lib/useOnline";
+import { useWide } from "../lib/useWide";
 
 interface Props {
   servers: PairedServer[];
@@ -24,9 +27,10 @@ export function ServerListScreen({
   onDismissUnpaired,
 }: Props) {
   const { t } = useTranslation();
+  const wide = useWide();
   return (
     <Screen
-      title="Tidings"
+      title={wide ? t("serverList.title") : "Tidings"}
       logo
       action={<SettingsLink href={paths.appSettings} />}
     >
@@ -45,20 +49,27 @@ export function ServerListScreen({
       ) : (
         <>
           <NotificationsOff servers={servers} snoozable />
-          <ul className="server-list">
+          <ul className={wide ? "server-list dashboard" : "server-list"}>
             {servers.map((server) => (
               <li key={server.id}>
-                <ServerCard server={server} />
+                {wide ? (
+                  <DashboardCard server={server} />
+                ) : (
+                  <ServerCard server={server} />
+                )}
               </li>
             ))}
           </ul>
         </>
       )}
-      <div className="bottom-bar">
-        <a className="button primary" href={paths.pair}>
-          <Plus /> {t("serverList.pair")}
-        </a>
-      </div>
+      {/* On a wide window the sidebar has it */}
+      {!wide && (
+        <div className="bottom-bar">
+          <a className="button primary" href={paths.pair}>
+            <Plus /> {t("serverList.pair")}
+          </a>
+        </div>
+      )}
     </Screen>
   );
 }
@@ -75,6 +86,53 @@ function ServerCard({ server }: { server: PairedServer }) {
           <OnlineSummary state={online} />
         </div>
       </div>
+    </a>
+  );
+}
+
+/** Faces stacked on a dashboard card before "+N" */
+const SHOWN_PLAYERS = 5;
+
+function DashboardCard({ server }: { server: PairedServer }) {
+  const { t } = useTranslation();
+  const online = useOnline(server);
+  const info = useInfo(server);
+  const players = online.status === "ok" ? online.data.players : [];
+
+  return (
+    <a className="card dashboard-card" href={paths.server(server.id)}>
+      <div className="dashboard-head">
+        <ServerIcon name={server.name} icon={info?.icon} size={48} />
+        <div className="card-main">
+          <span className="card-title">{server.name}</span>
+          <OnlineSummary state={online} />
+        </div>
+        {players.length > 0 && (
+          <ul className="head-stack">
+            {players.slice(0, SHOWN_PLAYERS).map((player) => (
+              <li
+                key={player.uuid}
+                title={
+                  player.uuid === server.player.uuid
+                    ? `${player.name} (${t("server.you")})`
+                    : player.name
+                }
+              >
+                <Avatar name={player.name} skinUrl={player.skinUrl} size={32} />
+                <span className="visually-hidden">{player.name}</span>
+              </li>
+            ))}
+            {players.length > SHOWN_PLAYERS && (
+              <li className="head-stack-more">
+                {t("serverList.morePlayers", {
+                  count: players.length - SHOWN_PLAYERS,
+                })}
+              </li>
+            )}
+          </ul>
+        )}
+      </div>
+      {info && info.motd.length > 0 && <Motd segments={info.motd} />}
     </a>
   );
 }

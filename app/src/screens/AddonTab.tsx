@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import {
   Check,
@@ -51,6 +52,7 @@ import { errorText } from "../lib/i18n";
 import { readImage } from "../lib/icons";
 import { navigate, paths, type AddonRoute } from "../lib/router";
 import { layoutTree } from "../lib/treeLayout";
+import { useWide } from "../lib/useWide";
 
 type ViewState =
   | { status: "loading" }
@@ -91,7 +93,6 @@ export function AddonTab({
         setState({ status: "ok", view, for: linkKey, reload: reloads }),
       (error: Error) =>
         !cancelled &&
-        // A failed reload after an action keeps the view, and the action's message, on screen.
         setState((previous) =>
           previous.status === "ok" && previous.for === linkKey
             ? previous
@@ -124,7 +125,6 @@ export function AddonTab({
             text: message,
             on: next ? JSON.stringify(next) : linkKey,
           });
-        // The same link as the open view doesn't change the hash: reload it instead.
         const href = next && context.href(next);
         if (href && href !== paths.addon(server.id, addon)) navigate(href);
         else setReloads((n) => n + 1);
@@ -187,9 +187,46 @@ function Blocks({
   nested: boolean;
 }) {
   if (!Array.isArray(blocks)) return null;
-  return blocks.map((block, i) => (
-    <BlockView key={i} block={block} context={context} nested={nested} />
-  ));
+  const views: ReactNode[] = [];
+  let cards: ReactNode[] = [];
+  const endCards = (at: number) => {
+    if (cards.length > 1) {
+      views.push(
+        <div key={`cards-${at}`} className="addon-cards">
+          {cards}
+        </div>,
+      );
+    } else {
+      views.push(...cards);
+    }
+    cards = [];
+  };
+  blocks.forEach((block: Block, i) => {
+    const view = (
+      <BlockView key={i} block={block} context={context} nested={nested} />
+    );
+    if (!nested && block?.type === "card") {
+      cards.push(view);
+    } else if (
+      !nested &&
+      block?.type === "progress" &&
+      blocks[i - 1]?.type === "choices"
+    ) {
+      endCards(i);
+      const choices = views.pop();
+      views.push(
+        <div key={`split-${i}`} className="addon-split">
+          {choices}
+          {view}
+        </div>,
+      );
+    } else {
+      endCards(i);
+      views.push(view);
+    }
+  });
+  endCards(blocks.length);
+  return views;
 }
 
 function BlockView({
@@ -258,7 +295,6 @@ function BlockView({
                 key={i}
                 href={context.href(link)}
                 aria-current={item.selected ? "page" : undefined}
-                // Choosing another one replaces it: back leaves the page rather than going through each.
                 onClick={(e) => {
                   e.preventDefault();
                   navigate(context.href(link), { replace: true });
@@ -300,7 +336,7 @@ function BlockView({
   }
 }
 
-/** Only base64 images */
+// Only base64 images
 function ImageView({ block }: { block: ImageBlock }) {
   const src = readImage(block.src);
   if (!src) return null;
@@ -358,34 +394,119 @@ function Row({ item, context }: { item: ListItem; context: Context }) {
   );
 }
 
-/** Card size and spacing in the tree, in CSS pixels: fixed, so the layout needs no measuring. */
-const CARD_WIDTH = 136;
-const CARD_HEIGHT = 64;
-const COLUMN_GAP = 28;
-const ROW_GAP = 10;
+interface TreeGeometry {
+  cardWidth: number;
+  cardHeight: number;
+  columnGap: number;
+  rowGap: number;
+  offsetY: number;
+  minHeight: number;
+}
+
+const PHONE_TREE: TreeGeometry = {
+  cardWidth: 136,
+  cardHeight: 64,
+  columnGap: 28,
+  rowGap: 10,
+  offsetY: 0,
+  minHeight: 0,
+};
+const TREE_BOTTOM_ROOM = 96;
 const TREE_PADDING = 12;
-/** About how tall an opened card gets, to leave room for one near the bottom. */
 const OPEN_CARD_HEIGHT = 170;
 
-const cardX = (column: number) =>
-  TREE_PADDING + column * (CARD_WIDTH + COLUMN_GAP);
-const cardY = (row: number) => TREE_PADDING + row * (CARD_HEIGHT + ROW_GAP);
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
 
-/**
- * Laid out left to right like Minecraft's advancement screen, scrolling sideways, with arrows from
- * each node to the ones under it. Cards show their title; tapping one opens it over its neighbours
- * to show the rest.
- */
+function fittedTree(
+  width: number,
+  height: number,
+  columns: number,
+  rows: number,
+): TreeGeometry {
+  const room = width - 2 * TREE_PADDING;
+  const cardWidth = clamp(
+    Math.floor((room - 40 * (columns - 1)) / columns),
+    136,
+    200,
+  );
+  const columnGap =
+    columns > 1
+      ? clamp(Math.floor((room - cardWidth * columns) / (columns - 1)), 28, 72)
+      : 28;
+  const roomY = height - 2 * TREE_PADDING;
+  const cardHeight = clamp(
+    Math.floor((roomY - 16 * (rows - 1)) / rows),
+    72,
+    104,
+  );
+  const rowGap =
+    rows > 1
+      ? clamp(Math.floor((roomY - cardHeight * rows) / (rows - 1)), 12, 48)
+      : 12;
+  const used = rows * cardHeight + (rows - 1) * rowGap;
+  return {
+    cardWidth,
+    cardHeight,
+    columnGap,
+    rowGap,
+    offsetY: Math.max(0, Math.floor((roomY - used) / 2)),
+    minHeight: height,
+  };
+}
+
+const cardX = (g: TreeGeometry, column: number) =>
+  TREE_PADDING + column * (g.cardWidth + g.columnGap);
+const cardY = (g: TreeGeometry, row: number) =>
+  TREE_PADDING + g.offsetY + row * (g.cardHeight + g.rowGap);
+
+// Like Minecraft's advancement screen
 function Tree({ nodes, context }: { nodes: unknown; context: Context }) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<string | null>(null);
   const [edges, setEdges] = useState({ left: false, right: false });
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  // Not again on each tap or scroll: a tree has up to 500 nodes.
   const layout = useMemo(() => layoutTree(buildTree(nodes)), [nodes]);
-  // Opens where the player is: the first node to do next, with what leads to it on its left.
   const next = layout.nodes.find((n) => n.item.node.state === "available");
   const nextColumn = next?.column ?? 0;
+  const wide = useWide();
+  const [available, setAvailable] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!wide || !el) return;
+    const measure = () => {
+      const width = el.clientWidth;
+      const height = Math.max(
+        0,
+        innerHeight -
+          (el.getBoundingClientRect().top + scrollY) -
+          TREE_BOTTOM_ROOM,
+      );
+      setAvailable((a) =>
+        a.width === width && a.height === height ? a : { width, height },
+      );
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      removeEventListener("resize", measure);
+    };
+  }, [wide]);
+  const measuring = wide && available.width === 0;
+  const g = useMemo(
+    () =>
+      wide && available.width > 0
+        ? fittedTree(
+            available.width,
+            available.height,
+            layout.columns,
+            layout.rows,
+          )
+        : PHONE_TREE,
+    [wide, available, layout.columns, layout.rows],
+  );
 
   const updateEdges = useCallback(() => {
     const el = scrollerRef.current;
@@ -400,29 +521,29 @@ function Tree({ nodes, context }: { nodes: unknown; context: Context }) {
   const scrolled = useRef(false);
   useLayoutEffect(() => {
     const el = scrollerRef.current;
-    if (!el || scrolled.current) return;
+    if (!el || scrolled.current || measuring) return;
     scrolled.current = true;
-    // The next node in the middle, what leads to it on its left.
-    el.scrollLeft = cardX(nextColumn) + CARD_WIDTH / 2 - el.clientWidth / 2;
+    el.scrollLeft = cardX(g, nextColumn) + g.cardWidth / 2 - el.clientWidth / 2;
     updateEdges();
-  }, [nextColumn, updateEdges]);
+  }, [g, measuring, nextColumn, updateEdges]);
 
   useEffect(() => {
     updateEdges();
     addEventListener("resize", updateEdges);
     return () => removeEventListener("resize", updateEdges);
-  }, [updateEdges, layout.columns]);
+  }, [updateEdges, layout.columns, g]);
 
   if (layout.nodes.length === 0) return null;
-  const width = cardX(layout.columns) - COLUMN_GAP + TREE_PADDING;
+  const width = cardX(g, layout.columns) - g.columnGap + TREE_PADDING;
   const opened = layout.nodes.find((n) => n.item.node.id === selected);
   const height = Math.max(
-    cardY(layout.rows) - ROW_GAP + TREE_PADDING,
-    opened ? cardY(opened.row) + OPEN_CARD_HEIGHT + TREE_PADDING : 0,
+    cardY(g, layout.rows) - g.rowGap + TREE_PADDING,
+    opened ? cardY(g, opened.row) + OPEN_CARD_HEIGHT + TREE_PADDING : 0,
+    g.minHeight,
   );
   const scrollBy = (direction: 1 | -1) =>
     scrollerRef.current?.scrollBy({
-      left: direction * (CARD_WIDTH + COLUMN_GAP) * 2,
+      left: direction * (g.cardWidth + g.columnGap) * 2,
       behavior: "smooth",
     });
 
@@ -434,6 +555,7 @@ function Tree({ nodes, context }: { nodes: unknown; context: Context }) {
             type="button"
             className="icon-button"
             aria-label={t("addon.scrollLeft")}
+            title={t("addon.scrollLeft")}
             disabled={!edges.left}
             onClick={() => scrollBy(-1)}
           >
@@ -443,6 +565,7 @@ function Tree({ nodes, context }: { nodes: unknown; context: Context }) {
             type="button"
             className="icon-button"
             aria-label={t("addon.scrollRight")}
+            title={t("addon.scrollRight")}
             disabled={!edges.right}
             onClick={() => scrollBy(1)}
           >
@@ -466,12 +589,11 @@ function Tree({ nodes, context }: { nodes: unknown; context: Context }) {
               const parent = layout.nodes[from];
               const child = layout.nodes[to];
               if (from === to) {
-                // Out of its right side, over its top, and back into its left side.
-                const left = cardX(child.column);
-                const right = left + CARD_WIDTH;
-                const y = cardY(child.row) + CARD_HEIGHT / 2;
-                const top = cardY(child.row) - ROW_GAP / 2;
-                const out = right + COLUMN_GAP / 2;
+                const left = cardX(g, child.column);
+                const right = left + g.cardWidth;
+                const y = cardY(g, child.row) + g.cardHeight / 2;
+                const top = cardY(g, child.row) - g.rowGap / 2;
+                const out = right + g.columnGap / 2;
                 const back = left - 8;
                 return (
                   <path
@@ -481,11 +603,11 @@ function Tree({ nodes, context }: { nodes: unknown; context: Context }) {
                   />
                 );
               }
-              const x1 = cardX(parent.column) + CARD_WIDTH;
-              const y1 = cardY(parent.row) + CARD_HEIGHT / 2;
-              const x2 = cardX(child.column);
-              const y2 = cardY(child.row) + CARD_HEIGHT / 2;
-              const middle = x1 + COLUMN_GAP / 2;
+              const x1 = cardX(g, parent.column) + g.cardWidth;
+              const y1 = cardY(g, parent.row) + g.cardHeight / 2;
+              const x2 = cardX(g, child.column);
+              const y2 = cardY(g, child.row) + g.cardHeight / 2;
+              const middle = x1 + g.columnGap / 2;
               return (
                 <path
                   key={to}
@@ -504,8 +626,10 @@ function Tree({ nodes, context }: { nodes: unknown; context: Context }) {
               onToggle={() =>
                 setSelected((id) => (id === item.node.id ? null : item.node.id))
               }
-              left={cardX(column)}
-              top={cardY(row)}
+              left={cardX(g, column)}
+              top={cardY(g, row)}
+              width={g.cardWidth}
+              height={g.cardHeight}
             />
           ))}
         </div>
@@ -514,7 +638,6 @@ function Tree({ nodes, context }: { nodes: unknown; context: Context }) {
   );
 }
 
-/** A node: its title, and once tapped its description, date and link too. */
 function TreeCard({
   item,
   context,
@@ -522,6 +645,8 @@ function TreeCard({
   onToggle,
   left,
   top,
+  width,
+  height,
 }: {
   item: TreeItem;
   context: Context;
@@ -529,6 +654,8 @@ function TreeCard({
   onToggle: () => void;
   left: number;
   top: number;
+  width: number;
+  height: number;
 }) {
   const { t } = useTranslation();
   const { node } = item;
@@ -538,7 +665,6 @@ function TreeCard({
   const link = readLink(node.link);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    // Wider once open: the part that's out of view comes in.
     if (open)
       ref.current?.scrollIntoView({
         behavior: "smooth",
@@ -552,7 +678,7 @@ function TreeCard({
       className="addon-tree-node"
       data-state={node.state}
       data-open={open || undefined}
-      style={{ left, top, minHeight: CARD_HEIGHT }}
+      style={{ left, top, width, minHeight: height }}
     >
       <button
         type="button"
