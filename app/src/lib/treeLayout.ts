@@ -1,20 +1,13 @@
-// Where each node of a tree block goes, drawn left to right like Minecraft's advancement screen:
-// depth across, each leaf on its own row, a parent level with the middle of its children.
-
 import type { TreeItem } from "./addons";
 
 export interface PlacedNode {
   item: TreeItem;
-  /** Depth, from 0. */
   column: number;
-  /** From 0; a parent between two rows gets half a row. */
   row: number;
 }
 
 export interface TreeLayout {
-  /** Parents before their children. */
   nodes: PlacedNode[];
-  /** By index in `nodes`; `from` and `to` are the same for a node that is its own parent. */
   edges: { from: number; to: number }[];
   columns: number;
   rows: number;

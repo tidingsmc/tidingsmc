@@ -7,11 +7,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-/** Checks for the names add-ons choose: of views, actions, params and fields. */
+/** Checks for the names add-ons choose: of views, actions, params and fields */
 final class Names {
     private static final Pattern NAME = Pattern.compile("[A-Za-z0-9_-]{1,64}");
 
-    /** What the app's routes and {@link Addons} accept for each param. */
+    /** What the app's routes and {@link Addons} accept for each param */
     static final int MAX_PARAMS = 16;
 
     static final int MAX_PARAM_LENGTH = 256;

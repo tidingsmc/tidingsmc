@@ -48,7 +48,6 @@ class AddonsTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> Notification.of("Hi").link(Link.to("home", params)));
-        // Counted as sent: each "é" is 2 bytes, each control character 6 once escaped.
         Map<String, String> accented =
                 Map.of("a", "é".repeat(250), "b", "é".repeat(250), "c", "é".repeat(250));
         assertThrows(

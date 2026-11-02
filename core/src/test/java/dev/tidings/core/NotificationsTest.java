@@ -174,7 +174,6 @@ class NotificationsTest {
         tidings.serverStarted(t0);
         tidings.playerJoined(alex, t0);
         assertTrue(tidings.serverStopping(t0).isDone());
-        // Kicked by the shutdown: "stopping" said it already.
         tidings.playerLeft(alex.id(), t0);
 
         assertEquals(
@@ -202,7 +201,6 @@ class NotificationsTest {
     void aNewerSubscriptionIsKeptWhenAnOldOneExpires() {
         pairDevice("steves-phone", steve);
         PushSubscription renewed = push("renewed");
-        // The app sends its new subscription while a push to the old one is on its way.
         CompletableFuture<PushSender.Result> answered = new CompletableFuture<>();
         Tidings slow =
                 new Tidings(tidings.store(), new FakeGame(), (to, payload, ttl, topic) -> answered);

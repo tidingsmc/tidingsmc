@@ -22,7 +22,7 @@ class RelayClientTest {
     private final PlayerProfile steve = new PlayerProfile(UUID.randomUUID(), "Steve", null);
     private final Tidings tidings = new Tidings(Store.inMemory(), new FakeGame());
 
-    /** Nothing listens there: it keeps retrying in the background, which these tests ignore. */
+    /** Nothing listens there: it keeps retrying in the background, which these tests ignore */
     private final RelayClient relay =
             new RelayClient(
                     new Api(tidings),
@@ -109,7 +109,7 @@ class RelayClientTest {
                                 URI.create("tidings-relay.someone.workers.dev")));
     }
 
-    /** The relay checks the signature against its own host, as JavaScript's URL.host writes it. */
+    /** The relay checks the signature against its own host, as JavaScript's URL.host writes it */
     @Test
     void signsTheRelaysHostHoweverTheOwnerWroteIt() {
         for (String url :
@@ -123,7 +123,7 @@ class RelayClientTest {
         assertEquals("localhost", RelayClient.hostOf(URI.create("http://localhost:80")));
     }
 
-    /** For /tidings admin status. */
+    /** For /tidings admin status */
     @Test
     void tellsWhyItIsNotConnected() throws Exception {
         try (ServerSocket hangUp = DoctorTest.hangUpServer();

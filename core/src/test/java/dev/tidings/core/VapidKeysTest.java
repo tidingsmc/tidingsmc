@@ -25,7 +25,7 @@ class VapidKeysTest {
                 new BigInteger(1, Arrays.copyOfRange(point, 33, 65)));
     }
 
-    /** About one key in 128 has a coordinate that fits in 31 bytes: it still takes 32. */
+    /** About one key in 128 has a coordinate that fits in 31 bytes: it still takes 32 */
     @Test
     void padsShortCoordinates() {
         VapidKeys keys;

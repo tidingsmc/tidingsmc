@@ -26,7 +26,6 @@ describe("normalizeServerUrl", () => {
     expect(normalizeServerUrl("mc.example.com")).toBe("https://mc.example.com");
   });
 
-  // Pairing again is refused by comparing this with the stored URL: the same server must come out the same.
   it("gives one URL per server however it's written", () => {
     for (const typed of [
       "mc.example.com",

@@ -6,17 +6,16 @@ import java.nio.charset.StandardCharsets;
 /**
  * A QR code for some text, in byte mode. The mod draws it on a map, so it needs no rendering, and
  * avoids bundling a library. Follows ISO/IEC 18004, structured like Nayuki's reference
- * implementation (MIT).
+ * implementation (MIT)
  */
 public final class QrCode {
-    /** Error correction level: how much of the code can be damaged and still read. */
+    // Error correction level
     public enum Ecc {
         LOW(1),
         MEDIUM(0),
         QUARTILE(3),
         HIGH(2);
 
-        /** As written in the format bits. */
         final int formatBits;
 
         Ecc(int formatBits) {
@@ -29,7 +28,6 @@ public final class QrCode {
 
     public final int version;
 
-    /** Width and height in modules, without the quiet zone around it. */
     public final int size;
 
     private final boolean[][] modules; // [y][x], true is dark
@@ -46,12 +44,6 @@ public final class QrCode {
         return modules[y][x];
     }
 
-    /**
-     * The smallest QR code holding {@code text} as UTF-8, with at least {@code ecc} error
-     * correction.
-     *
-     * @throws IllegalArgumentException if the text is too long for any QR code
-     */
     public static QrCode encode(String text, Ecc ecc) {
         byte[] data = text.getBytes(StandardCharsets.UTF_8);
         for (int version = MIN_VERSION; version <= MAX_VERSION; version++) {
@@ -65,7 +57,6 @@ public final class QrCode {
     }
 
     private static QrCode encode(byte[] data, int version, Ecc ecc) {
-        // Byte mode segment, terminator and padding.
         BitBuffer bits = new BitBuffer();
         bits.append(0b0100, 4);
         bits.append(data.length, version <= 9 ? 8 : 16);
@@ -104,7 +95,7 @@ public final class QrCode {
             }
         }
 
-        drawFormatBits(ecc, 0); // reserves the area, redrawn with the chosen mask
+        drawFormatBits(ecc, 0);
         drawVersion();
     }
 
@@ -145,14 +136,12 @@ public final class QrCode {
         for (int i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
         int bits = (data << 10 | rem) ^ 0x5412;
 
-        // Around the top left finder pattern.
         for (int i = 0; i <= 5; i++) setFunction(8, i, bit(bits, i));
         setFunction(8, 7, bit(bits, 6));
         setFunction(8, 8, bit(bits, 7));
         setFunction(7, 8, bit(bits, 8));
         for (int i = 9; i < 15; i++) setFunction(14 - i, 8, bit(bits, i));
 
-        // Split between the other two.
         for (int i = 0; i < 8; i++) setFunction(size - 1 - i, 8, bit(bits, i));
         for (int i = 8; i < 15; i++) setFunction(8, size - 15 + i, bit(bits, i));
         setFunction(8, size - 8, true); // always dark
@@ -181,7 +170,6 @@ public final class QrCode {
 
     private void drawCodewords(byte[] data) {
         int i = 0;
-        // Pairs of columns from the right, zigzagging up and down, skipping the timing column.
         for (int right = size - 1; right >= 1; right -= 2) {
             if (right == 6) right = 5;
             for (int vert = 0; vert < size; vert++) {
@@ -213,7 +201,6 @@ public final class QrCode {
             System.arraycopy(data, k, block, 0, dataLen);
             k += dataLen;
             byte[] eccBytes = reedSolomonRemainder(block, dataLen, divisor);
-            // Short blocks keep a gap where long blocks have their extra data byte.
             System.arraycopy(eccBytes, 0, block, shortBlockLen + 1 - blockEccLen, blockEccLen);
             blocks[i] = block;
         }
@@ -243,7 +230,7 @@ public final class QrCode {
                 best = mask;
                 bestPenalty = penalty;
             }
-            applyMask(mask); // XOR again: undone
+            applyMask(mask);
         }
         applyMask(best);
         drawFormatBits(ecc, best);
@@ -269,9 +256,7 @@ public final class QrCode {
     }
 
     /**
-     * How hard the code is to scan, to pick the mask: long runs of one color, 2×2 blocks, and an
-     * uneven dark/light balance. The standard's finder-lookalike rule is left out, as any mask
-     * gives a valid code.
+     * How hard the code is to scan, to pick the mask
      */
     private int penalty() {
         int result = 0;
@@ -316,8 +301,6 @@ public final class QrCode {
         return result;
     }
 
-    // Reed-Solomon over GF(2^8) with the polynomial 0x11D
-
     private static byte[] reedSolomonDivisor(int degree) {
         byte[] result = new byte[degree];
         result[degree - 1] = 1;
@@ -356,7 +339,6 @@ public final class QrCode {
 
     // Capacity
 
-    /** Modules left for data and error correction once function patterns are drawn. */
     private static int numRawDataModules(int version) {
         int result = (16 * version + 128) * version + 64;
         if (version >= 2) {
@@ -377,7 +359,6 @@ public final class QrCode {
         return ((x >>> i) & 1) != 0;
     }
 
-    /** Appends bits most significant first. */
     private static final class BitBuffer {
         private final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         private int current;
@@ -394,13 +375,10 @@ public final class QrCode {
             }
         }
 
-        /** Only called on a whole number of bytes. */
         byte[] toBytes() {
             return bytes.toByteArray();
         }
     }
-
-    // Per version (index 0 unused), in Ecc order: LOW, MEDIUM, QUARTILE, HIGH.
 
     private static final int[][] ECC_CODEWORDS_PER_BLOCK = {
         {

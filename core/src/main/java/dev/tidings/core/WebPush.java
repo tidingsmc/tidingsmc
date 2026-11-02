@@ -30,8 +30,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
@@ -49,36 +47,31 @@ import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Sends pushes straight to the browsers' push services (RFC 8030): encrypted for the device (RFC
- * 8291, aes128gcm) and signed with the server's VAPID key (RFC 8292).
+ * 8291, aes128gcm) and signed with the server's VAPID key (RFC 8292)
  */
 public final class WebPush implements PushSender, AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(WebPush.class);
     private static final int THREADS = 4;
 
-    /** The largest payload every push service must accept (RFC 8291 section 4). */
+    /** The largest payload every push service must accept (RFC 8291 section 4) */
     static final int MAX_PAYLOAD = 3993;
 
-    /** Payloads always fit in one record of this size. */
+    /** Payloads always fit in one record of this size */
     private static final int RECORD_SIZE = 4096;
 
     private static final Duration JWT_LIFETIME = Duration.ofHours(12);
-
-    /**
-     * A token is replaced this long before it expires, in case the push service's clock is ahead.
-     */
-    private static final Duration JWT_MARGIN = Duration.ofHours(1);
 
     private static final ECParameterSpec P256 = p256();
 
     /**
      * How long a push may take, from encrypting it to the push service's answer. Short enough for
-     * the game to wait for the "server stopping" pushes before it exits.
+     * the game to wait for the "server stopping" pushes before it exits
      */
     public static final Duration TIMEOUT = Duration.ofSeconds(4);
 
     /**
      * Shared by every instance: Java 17 can't close an HttpClient, so one per server start would
-     * keep its threads and connections around until it's garbage collected.
+     * keep its threads and connections around until it's garbage collected
      */
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(TIMEOUT).build();
 
@@ -86,11 +79,6 @@ public final class WebPush implements PushSender, AutoCloseable {
     private final String subject;
     private final Clock clock;
     private final ExecutorService executor;
-
-    /** By audience (the push service's origin). */
-    private final Map<String, Jwt> jwts = new HashMap<>();
-
-    private record Jwt(String token, Instant expiresAt) {}
 
     /**
      * @param subject how push services can reach the server's owner: an https: or mailto: URL
@@ -120,7 +108,6 @@ public final class WebPush implements PushSender, AutoCloseable {
         executor = pool;
     }
 
-    /** Pushes already on their way still go. */
     @Override
     public void close() {
         executor.shutdown();
@@ -132,7 +119,6 @@ public final class WebPush implements PushSender, AutoCloseable {
         String host = to.endpoint().getHost();
         CompletableFuture<Result> sent;
         try {
-            // Encrypting costs a key pair per push: not on the caller's thread (the game's).
             sent =
                     CompletableFuture.supplyAsync(() -> request(to, payload, ttl, topic), executor)
                             .thenCompose(
@@ -163,7 +149,6 @@ public final class WebPush implements PushSender, AutoCloseable {
                                         + ", k="
                                         + keys.applicationServerKey())
                         .header("TTL", Long.toString(ttl.toSeconds()))
-                        // Each push shows a notification: worth waking the phone for.
                         .header("Urgency", "high")
                         .header("Content-Encoding", "aes128gcm")
                         .header("Content-Type", "application/octet-stream")
@@ -191,21 +176,16 @@ public final class WebPush implements PushSender, AutoCloseable {
         return Result.FAILED;
     }
 
-    /** The endpoint's origin, as browsers serialize it: without the default port. */
+    /** The endpoint's origin, as browsers serialize it: without the default port */
     static String audience(URI endpoint) {
         int port = endpoint.getPort();
         boolean defaultPort = port == -1 || port == 443;
         return endpoint.getScheme() + "://" + endpoint.getHost() + (defaultPort ? "" : ":" + port);
     }
 
-    /** A VAPID token for {@code audience}, reused while it has more than {@link #JWT_MARGIN}. */
-    synchronized String jwt(String audience) {
-        Instant now = clock.instant();
-        Jwt cached = jwts.get(audience);
-        if (cached != null && now.isBefore(cached.expiresAt.minus(JWT_MARGIN))) {
-            return cached.token;
-        }
-        Instant expiresAt = now.plus(JWT_LIFETIME);
+    /** A VAPID token for {@code audience} */
+    String jwt(String audience) {
+        Instant expiresAt = clock.instant().plus(JWT_LIFETIME);
         JsonObject header = new JsonObject();
         header.addProperty("typ", "JWT");
         header.addProperty("alg", "ES256");
@@ -215,13 +195,11 @@ public final class WebPush implements PushSender, AutoCloseable {
         claims.addProperty("sub", subject);
         String unsigned = base64Url(header.toString()) + "." + base64Url(claims.toString());
         try {
-            // JWTs want the bare r and s, not the DER encoding Java uses by default.
+            // JWTs want the bare r and s, not the DER encoding Java uses by default
             Signature es256 = Signature.getInstance("SHA256withECDSAinP1363Format");
             es256.initSign(keys.privateKey());
             es256.update(unsigned.getBytes(StandardCharsets.US_ASCII));
-            String token = unsigned + "." + Base64Url.encode(es256.sign());
-            jwts.put(audience, new Jwt(token, expiresAt));
-            return token;
+            return unsigned + "." + Base64Url.encode(es256.sign());
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("Couldn't sign a VAPID token", e);
         }
@@ -240,7 +218,7 @@ public final class WebPush implements PushSender, AutoCloseable {
     }
 
     /**
-     * The push's body as RFC 8291 defines it, in a single record.
+     * The push's body as RFC 8291 defines it, in a single record
      *
      * @param uaPublic the device's public key (p256dh)
      * @param asKeys a key pair used for this push only
@@ -258,7 +236,6 @@ public final class WebPush implements PushSender, AutoCloseable {
             byte[] ecdhSecret = ecdh.generateSecret();
             byte[] asPublic = VapidKeys.uncompressed((ECPublicKey) asKeys.getPublic());
 
-            // Each HKDF here only needs one block of output: expanding is a single HMAC.
             byte[] prkKey = hmac(authSecret, ecdhSecret);
             byte[] ikm =
                     hmac(
@@ -273,7 +250,6 @@ public final class WebPush implements PushSender, AutoCloseable {
                     Cipher.ENCRYPT_MODE,
                     new SecretKeySpec(cek, "AES"),
                     new GCMParameterSpec(128, nonce));
-            // 2: the padding delimiter of the last record (RFC 8188), and there's only one.
             byte[] ciphertext = aes.doFinal(concat(payload, new byte[] {2}));
 
             return ByteBuffer.allocate(16 + 4 + 1 + asPublic.length + ciphertext.length)
@@ -289,14 +265,12 @@ public final class WebPush implements PushSender, AutoCloseable {
         }
     }
 
-    /** A P-256 public key from its uncompressed point. */
     static ECPublicKey publicKey(byte[] point) throws GeneralSecurityException {
         if (point.length != 65 || point[0] != 4) {
             throw new InvalidKeyException("Not an uncompressed P-256 point");
         }
         BigInteger x = new BigInteger(1, Arrays.copyOfRange(point, 1, 33));
         BigInteger y = new BigInteger(1, Arrays.copyOfRange(point, 33, 65));
-        // KeyFactory doesn't check it: y² = x³ + ax + b (mod p).
         BigInteger p = ((ECFieldFp) P256.getCurve().getField()).getP();
         BigInteger a = P256.getCurve().getA();
         BigInteger b = P256.getCurve().getB();

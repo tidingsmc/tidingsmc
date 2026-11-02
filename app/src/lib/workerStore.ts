@@ -1,9 +1,3 @@
-// The service worker can't read localStorage, so the app also keeps here what notifications need:
-// - each paired server's name. Notifications use it rather than a name sent in the push, so a server
-//   can't pass itself off as another.
-// - the language picked in the app's settings.
-// No window-only APIs here: the service worker imports this file.
-
 import { isLanguage, type Language } from "../locales";
 
 const DB_NAME = "tidings";
@@ -12,7 +6,6 @@ const SETTINGS = "settings";
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    // Version 2 added the settings store.
     const request = indexedDB.open(DB_NAME, 2);
     request.onupgradeneeded = () => {
       const db = request.result;
@@ -55,7 +48,6 @@ async function read(store: string, key: string): Promise<unknown> {
   }
 }
 
-/** Replaces the stored names with these servers' names. */
 export function saveServerNames(
   servers: { id: string; name: string }[],
 ): Promise<void> {

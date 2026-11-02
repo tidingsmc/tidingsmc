@@ -6,7 +6,7 @@ final class FakeGame implements Game {
     String motd = "§6A Minecraft Server";
     byte[] icon;
 
-    /** Null to make serverName() fail. */
+    /** Null to make serverName() fail */
     String serverName = "Test server";
 
     @Override

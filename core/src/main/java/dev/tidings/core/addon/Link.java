@@ -4,7 +4,7 @@ import com.google.gson.JsonObject;
 
 import java.util.Map;
 
-/** Opens one of the same add-on's views. Add-ons can't link anywhere else. */
+/** Opens one of the same add-on's views. Add-ons can't link anywhere else */
 public record Link(String view, Map<String, String> params) {
     public Link {
         Names.check(view, "view");
@@ -19,7 +19,7 @@ public record Link(String view, Map<String, String> params) {
         return new Link(view, params);
     }
 
-    /** As views and push messages send it to the app. */
+    /** As views and push messages send it to the app */
     public JsonObject toJson() {
         JsonObject json = new JsonObject();
         json.addProperty("view", view);

@@ -7,7 +7,6 @@ import { unregister, useSubscriptionSync } from "./lib/notifications";
 import { useUnpairRetry } from "./lib/pendingUnpairs";
 import { useAppWideSettingsSync } from "./lib/appWideSettings";
 import { useServers } from "./lib/storage";
-import { useTimeZoneSync } from "./lib/timeZone";
 import { useWide } from "./lib/useWide";
 import { AppSettingsScreen } from "./screens/AppSettingsScreen";
 import { NotificationSettingsScreen } from "./screens/NotificationSettingsScreen";
@@ -25,7 +24,6 @@ export default function App() {
   const serversRef = useRef(servers);
   serversRef.current = servers;
 
-  useTimeZoneSync(servers);
   useAppWideSettingsSync(servers);
   useSubscriptionSync(servers);
   useUnpairRetry();

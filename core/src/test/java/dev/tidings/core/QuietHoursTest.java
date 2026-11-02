@@ -57,7 +57,7 @@ class QuietHoursTest {
     void usesTheDeviceTimeZone() {
         QuietHours quiet = new QuietHours(true, List.of(NIGHT));
 
-        // 21:30 UTC is 22:30 in Paris (winter time).
+        // 21:30 UTC is 22:30 in Paris (winter time)
         assertTrue(quiet.isQuietAt(Instant.parse("2026-11-10T21:30:00Z"), PARIS));
     }
 

@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 
-/** {@code /tidings help}, and {@code /tidings} alone: what each command does. */
+/** {@code /tidings help}, and {@code /tidings} alone: what each command does */
 final class HelpCommand {
     private HelpCommand() {}
 
@@ -48,7 +48,7 @@ final class HelpCommand {
         return 1;
     }
 
-    /** Clicking it fills in the command, for the player to run or complete. */
+    /** Clicking it fills in the command, for the player to run or complete */
     private static Component entry(String command, String what) {
         return Component.literal("\n  ")
                 .append(

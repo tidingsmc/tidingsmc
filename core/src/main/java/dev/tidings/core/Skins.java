@@ -9,10 +9,6 @@ import java.util.Base64;
 public final class Skins {
     private Skins() {}
 
-    /**
-     * The skin URL in a game profile's "textures" property (base64 JSON from Mojang's session
-     * server), or null if it has none.
-     */
     public static String skinUrl(String texturesProperty) {
         if (texturesProperty == null) return null;
         try {

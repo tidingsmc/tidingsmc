@@ -2,7 +2,6 @@ package dev.tidings.core;
 
 import java.util.Base64;
 
-/** Base64url without padding, as Web Push and tokens use it. */
 final class Base64Url {
     private Base64Url() {}
 

@@ -28,10 +28,6 @@ import java.util.concurrent.CompletionException;
 
 import javax.net.ssl.SSLException;
 
-/**
- * Checks what Tidings needs outside the game, from this server: phones reaching the API, pairing
- * links opening the app, the push services, the clock. For /tidings admin doctor.
- */
 public final class Doctor {
     public enum Verdict {
         OK,
@@ -40,8 +36,6 @@ public final class Doctor {
     }
 
     public record Finding(Verdict verdict, String text) {}
-
-    /** Where Chrome and Android, Firefox, and Safari and iPhones get their pushes from. */
     private static final Map<String, URI> PUSH_SERVICES = new LinkedHashMap<>();
 
     static {
@@ -52,11 +46,8 @@ public final class Doctor {
     }
 
     static final Duration TIMEOUT = Duration.ofSeconds(8);
-
-    /** The relay refuses signatures further off; push services accept less than a day. */
     static final Duration MAX_CLOCK_SKEW = Duration.ofMinutes(5);
 
-    /** Shared, like {@link WebPush}'s: Java 17 can't close an HttpClient. */
     private static final HttpClient HTTP =
             HttpClient.newBuilder()
                     .connectTimeout(TIMEOUT)
@@ -75,13 +66,6 @@ public final class Doctor {
         this.pushServices = pushServices;
     }
 
-    /**
-     * Never completes exceptionally: what fails is a finding.
-     *
-     * @param publicUrl where phones reach the API: the relay's or the mod's own address
-     * @param appUrl where pairing links open the app
-     * @param relay null without one
-     */
     public CompletableFuture<List<Finding>> examine(
             URI publicUrl, URI appUrl, RelayClient relay, List<Device> devices) {
         CompletableFuture<List<Finding>> api = api(publicUrl, appUrl);
@@ -112,7 +96,6 @@ public final class Doctor {
                         + (problem == null ? ": still trying." : ": " + problem + "."));
     }
 
-    /** The API answers a request without a token with 401, and the CORS header the app needs. */
     private CompletableFuture<List<Finding>> api(URI publicUrl, URI appUrl) {
         List<Finding> findings = new ArrayList<>();
         if (isLocal(publicUrl)) {
@@ -177,7 +160,6 @@ public final class Doctor {
                         + " instead of Tidings' API: does it lead to the mod's port?");
     }
 
-    /** The app answers, and serves its service worker next to the page. */
     private CompletableFuture<List<Finding>> app(URI appUrl) {
         if (!isLocal(appUrl) && !"https".equals(appUrl.getScheme())) {
             return CompletableFuture.completedFuture(
@@ -229,10 +211,6 @@ public final class Doctor {
                 "app-url " + appUrl + " doesn't look like the Tidings app: " + why + ".");
     }
 
-    /**
-     * Each push service answers anything at all. A failure matters most for a service some device
-     * uses. Their Date header also tells whether this server's clock is right.
-     */
     private CompletableFuture<List<Finding>> pushServices(List<Device> devices) {
         Map<String, CompletableFuture<HttpResponse<Void>>> answers = new LinkedHashMap<>();
         pushServices.forEach((name, url) -> answers.put(name, get(url)));
@@ -292,7 +270,7 @@ public final class Doctor {
                                                 d.push().endpoint().getHost(), service.getHost()));
     }
 
-    /** How far ahead of this server's clock {@code response}'s Date is. */
+    /** How far ahead of this server's clock {@code response}'s Date is */
     private static Optional<Duration> skew(HttpResponse<?> response, Instant now) {
         return response.headers()
                 .firstValue("Date")
@@ -353,14 +331,12 @@ public final class Doctor {
         if (cause instanceof HttpConnectTimeoutException || cause instanceof HttpTimeoutException) {
             return "no answer within " + TIMEOUT.toSeconds() + " seconds.";
         }
-        // HttpClient wraps the real reason: an unresolved name is a ConnectException too.
         for (Throwable c = cause; c != null; c = c.getCause()) {
             if (c instanceof UnknownHostException || c instanceof UnresolvedAddressException) {
                 return "its name doesn't resolve.";
             }
         }
         if (cause instanceof ConnectException) {
-            // Its message says why: "Connection refused", "No route to host"…
             String reason = null;
             for (Throwable c = cause; c != null; c = c.getCause()) {
                 if (c.getMessage() != null) reason = c.getMessage();
@@ -383,7 +359,7 @@ public final class Doctor {
 
     /**
      * {@code file} in the same folder as the page at {@code page}. Hosts that don't redirect to the
-     * folder's trailing slash serve it at .../tidings too.
+     * folder's trailing slash serve it at .../tidings too
      */
     static URI nextTo(URI page, String file) {
         String path = Objects.requireNonNullElse(page.getPath(), "");

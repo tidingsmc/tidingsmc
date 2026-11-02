@@ -2,7 +2,7 @@
 
 An add-on is a tab that your mod adds to a server's page in the Tidings app, so players can see what your mod knows and act on it from their phone. You don't write app code: your mod returns pages made of blocks, and the app draws them.
 
-**To learn, read [Tidings Vanilla](https://github.com/tidingsmc/tidingsmc-vanilla)**, a complete add-on with stats, leaderboards, advancement trees and notifications.
+**To learn, read [Tidings Vanilla Stats](https://github.com/tidingsmc/tidingsmc-vanilla-stats)**, a complete add-on with stats, leaderboards, advancement trees and notifications.
 
 ## Setup
 
@@ -43,3 +43,12 @@ Throw `AddonError` to show the player a message. Any paired player can call any 
 ## Threading
 
 Views and actions run on the server thread and must be quick, so cache expensive data.
+
+## Community add-ons
+
+There are two ways to share your addon:
+
+- **Host it in the [tidingsmc](https://github.com/tidingsmc) organization.** [Open an issue](https://github.com/tidingsmc/tidingsmc/issues/new) asking to join, and you can create your add-on's repository there. This gives it a shared home where others can help maintain it.
+- **Keep it in your own repository.** Add the `tidings-addon` topic to it so people can find it alongside the others.
+
+Browse existing add-ons under the [`tidings-addon` topic](https://github.com/topics/tidings-addon) or in the [organization](https://github.com/tidingsmc).

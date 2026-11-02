@@ -17,16 +17,11 @@ function load(): PairedServer[] {
   }
 }
 
-/**
- * Paired servers, persisted on this device.
- * Their names are also copied to IndexedDB, for the service worker (see workerStore.ts).
- */
 export function useServers() {
   const [servers, setServers] = useState<PairedServer[]>(load);
 
   useEffect(() => {
     localStorage.setItem(KEY, JSON.stringify(servers));
-    // Notifications then show the server as "Tidings": not worth bothering the player about.
     saveServerNames(servers).catch(() => {});
     infoCache.keepOnly(servers);
     settingsCache.keepOnly(servers);
@@ -46,7 +41,6 @@ export function useServers() {
     (id: string) => setServers((list) => list.filter((s) => s.id !== id)),
     [],
   );
-  /** Removes `server` only if it's still this pairing, not a newer one with the same server. */
   const removePairing = useCallback(
     (server: PairedServer) =>
       setServers((list) =>
@@ -58,10 +52,6 @@ export function useServers() {
   return { servers, upsert, remove, removePairing };
 }
 
-/**
- * What this device last told each of its servers about something (its time zone, its push subscription),
- * so it's only sent again once it changes.
- */
 export function sentToServers(key: string) {
   const load = (): Record<string, string> => {
     try {
@@ -70,15 +60,19 @@ export function sentToServers(key: string) {
       return {};
     }
   };
-  const save = (sent: Record<string, string>) =>
-    localStorage.setItem(key, JSON.stringify(sent));
+  const save = (sent: Record<string, string>) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(sent));
+    } catch {
+      // Sent again next time
+    }
+  };
 
   return {
     get: (server: PairedServer): string | undefined =>
       load()[pairingKey(server)],
     set: (server: PairedServer, value: string) =>
       save({ ...load(), [pairingKey(server)]: value }),
-    /** Forgets pairings that are gone (left, or paired again). */
     keepOnly(servers: PairedServer[]) {
       const current = new Set(servers.map(pairingKey));
       save(

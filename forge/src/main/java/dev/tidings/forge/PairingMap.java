@@ -38,7 +38,7 @@ import java.util.function.Function;
 /**
  * The maps players scan to pair. Each code gets its own map ID: once the code stops working (used,
  * replaced or expired), every copy of its map is taken away and the ID goes to the next map, so the
- * world doesn't fill up with map files.
+ * world doesn't fill up with map files
  */
 final class PairingMap {
     private static final String TAG = "tidings_pairing";
@@ -54,19 +54,19 @@ final class PairingMap {
 
     private PairingMap() {}
 
-    /** Where {@link #give} put the map. */
+    /** Where {@link #give} put the map */
     enum Given {
         HAND,
         OFFHAND,
         INVENTORY,
-        /** Nowhere: their inventory is full. */
+        /** Nowhere: their inventory is full */
         NOWHERE
     }
 
     /**
      * Gives {@code player} a map with {@code link} as a QR code, where it's easiest to scan: in
      * their hand if it's empty, else in an empty hotbar slot that gets selected, else in their off
-     * hand, else in their inventory.
+     * hand, else in their inventory
      *
      * @throws IllegalArgumentException if the link is too long to fit on a map
      */
@@ -146,12 +146,12 @@ final class PairingMap {
         }
     }
 
-    /** Locked, so the game doesn't draw the terrain over it. */
+    /** Locked, so the game doesn't draw the terrain over it */
     private static MapItemSavedData blank() {
         return MapItemSavedData.createFresh(0, 0, (byte) 0, false, false, Level.OVERWORLD).locked();
     }
 
-    /** The map IDs pairing maps use, kept with the world. */
+    /** The map IDs pairing maps use, kept with the world */
     private static final class Ids extends SavedData {
         private static final String NAME = "tidings_pairing_maps";
 
@@ -180,7 +180,6 @@ final class PairingMap {
                 Use use = entry.getValue();
                 if (codeOf.apply(use.player).filter(use.code::equals).isPresent()) continue;
                 entries.remove();
-                // Copies no one can reach yet, in a closed chest, show nothing meanwhile.
                 level.setMapData(MapItem.makeKey(entry.getKey()), blank());
                 free.addLast(entry.getKey());
                 setDirty();

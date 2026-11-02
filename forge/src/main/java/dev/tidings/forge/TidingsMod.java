@@ -71,15 +71,13 @@ public final class TidingsMod {
     public static final String MOD_ID = "tidings";
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    /** Null until the server has started, or if Tidings couldn't start. */
     private Tidings tidings;
 
-    /** How the app reaches the API: an {@link ApiServer} or a {@link RelayClient}. */
     private AutoCloseable api;
 
     /**
      * Where phones reach {@link #api}, and where it listens without a relay: as configured when it
-     * started, since Forge reloads the config file when it's edited.
+     * started, since Forge reloads the config file when it's edited
      */
     private String publicUrl;
 
@@ -87,7 +85,6 @@ public final class TidingsMod {
 
     private WebPush push;
 
-    /** Why Tidings isn't running, for /tidings admin status; null while it is. */
     private String problem;
 
     public TidingsMod(FMLJavaModLoadingContext context) {
@@ -114,7 +111,6 @@ public final class TidingsMod {
             problem = "couldn't read " + dataFile;
             return;
         }
-        // The field is null once the server stopped, with approval requests maybe still queued.
         push = new WebPush(store.vapidKeys(), TidingsConfig.vapidSubject());
         Tidings tidings =
                 new Tidings(
@@ -127,7 +123,6 @@ public final class TidingsMod {
                                     ServerPlayer player =
                                             server.getPlayerList().getPlayer(device.player().id());
                                     if (player == null) {
-                                        // No one to approve it: tell the app right away.
                                         tidings.playerOffline(
                                                 device.player().id(), device.id(), Instant.now());
                                         return;
@@ -164,7 +159,6 @@ public final class TidingsMod {
                     bindAddress,
                     port,
                     e);
-            // Pairing codes would be useless without the API.
             tidings.close();
             this.tidings = null;
             problem = "couldn't listen on " + bindAddress + ":" + port;
@@ -179,8 +173,6 @@ public final class TidingsMod {
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         if (tidings == null) return;
-        // The JVM may exit right after the server stops: give the pushes a moment to go. Each one
-        // gives up after WebPush.TIMEOUT, so this only runs out if the game itself is that slow.
         try {
             tidings.serverStopping(Instant.now())
                     .get(WebPush.TIMEOUT.plusSeconds(1).toMillis(), TimeUnit.MILLISECONDS);
@@ -214,7 +206,6 @@ public final class TidingsMod {
         PlayerProfile profile = profile(player);
         tidings.playerJoined(profile, Instant.now());
         MinecraftServer server = player.server;
-        // Saving writes the data file: not on the game's thread.
         CompletableFuture.supplyAsync(() -> tidings.rememberPlayer(profile), Util.ioPool())
                 .whenCompleteAsync(
                         (firstTime, error) -> {
@@ -225,7 +216,6 @@ public final class TidingsMod {
                                         error);
                                 return;
                             }
-                            // They may have left meanwhile, or the server stopped.
                             if (!firstTime
                                     || this.tidings != tidings
                                     || server.getPlayerList().getPlayer(profile.id()) != player) {
@@ -241,14 +231,11 @@ public final class TidingsMod {
     public void onServerTick(TickEvent.ServerTickEvent event) {
         Tidings tidings = this.tidings;
         if (tidings == null || event.phase != TickEvent.Phase.END) return;
-        // Twice a second: a used map goes about when the phone that scanned it gets to the next
-        // step.
         if (event.getServer().getTickCount() % 10 != 0) return;
         Instant now = Instant.now();
         PairingMap.sweep(event.getServer(), player -> tidings.pairingCodeOf(player, now));
     }
 
-    /** Framed, a map shows to everyone and is out of reach once its code stops working. */
     @SubscribeEvent
     public void onEntityInteract(PlayerInteractEvent.EntityInteract event) {
         if (!(event.getTarget() instanceof ItemFrame)
@@ -281,7 +268,6 @@ public final class TidingsMod {
                                                         pair(
                                                                 context.getSource()
                                                                         .getPlayerOrException()))
-                                        // What the app's "Use a code" step tells players to run.
                                         .then(
                                                 Commands.literal("code")
                                                         .executes(
@@ -318,32 +304,32 @@ public final class TidingsMod {
                         .then(AdminCommands.command(this)));
     }
 
-    /** Null until the server has started, or if Tidings couldn't start: see {@link #problem}. */
+    /** Null until the server has started, or if Tidings couldn't start: see {@link #problem} */
     Tidings tidings() {
         return tidings;
     }
 
-    /** How phones reach the API: an {@link ApiServer} or a {@link RelayClient}, or null. */
+    /** How phones reach the API: an {@link ApiServer} or a {@link RelayClient}, or null */
     AutoCloseable api() {
         return api;
     }
 
-    /** Where phones reach the API, as it was started. */
+    /** Where phones reach the API, as it was started */
     String publicUrl() {
         return publicUrl;
     }
 
-    /** Where the API listens, as it was started; null with a relay. */
+    /** Where the API listens, as it was started; null with a relay */
     String listenAddress() {
         return listenAddress;
     }
 
-    /** Why Tidings isn't running, if it was tried. */
+    /** Why Tidings isn't running, if it was tried */
     String problem() {
         return problem;
     }
 
-    /** {@code /tidings <name> <device>}. */
+    /** {@code /tidings <name> <device>} */
     private static LiteralArgumentBuilder<CommandSourceStack> deviceCommand(
             String name, BiFunction<ServerPlayer, String, Integer> run) {
         return Commands.literal(name)
@@ -357,7 +343,7 @@ public final class TidingsMod {
                                                                 context, "device"))));
     }
 
-    /** Tells the player Tidings isn't running, if so. */
+    /** Tells the player Tidings isn't running, if so */
     private boolean notRunning(ServerPlayer player) {
         if (tidings != null) return false;
         player.sendSystemMessage(
@@ -366,7 +352,7 @@ public final class TidingsMod {
         return true;
     }
 
-    /** Their map shows the previous code, which stops working. Null if they can't pair. */
+    /** Their map shows the previous code, which stops working. Null if they can't pair */
     private Pairing.Issued newCode(ServerPlayer player) {
         if (notRunning(player)) return null;
         Pairing.Issued code = tidings.startPairing(profile(player), Instant.now()).orElse(null);
@@ -424,11 +410,9 @@ public final class TidingsMod {
         return 1;
     }
 
-    /** The server's address and a pairing code, to type in the app. */
     private int code(ServerPlayer player) {
         Pairing.Issued code = newCode(player);
         if (code == null) return 0;
-        // The app adds https:// itself.
         String address = publicUrl.replaceFirst("^https://", "");
         player.sendSystemMessage(
                 Component.literal("On your phone, open ")
@@ -445,7 +429,7 @@ public final class TidingsMod {
         return 1;
     }
 
-    /** Bold, and copied to the clipboard on click. */
+    /** Bold, and copied to the clipboard on click */
     static Component copyable(String text, ChatFormatting color) {
         return Component.literal(text)
                 .withStyle(
@@ -462,7 +446,6 @@ public final class TidingsMod {
     }
 
     private static Component welcome(boolean announced) {
-        // Siblings inherit their parent's style: only the first part is gold.
         MutableComponent message =
                 Component.empty()
                         .append(
@@ -507,7 +490,7 @@ public final class TidingsMod {
                 .append(runnable("/tidings show"));
     }
 
-    /** Runs {@code command} on click. */
+    /** Runs {@code command} on click */
     static Component runnable(String command) {
         return Component.literal(command)
                 .withStyle(
@@ -608,7 +591,7 @@ public final class TidingsMod {
         return 0;
     }
 
-    /** The device is paired either way: failing to save this only keeps them hidden. */
+    /** The device is paired either way: failing to save this only keeps them hidden */
     private void announceOnPairing(ServerPlayer player) {
         try {
             if (tidings.announceIfUndecided(player.getUUID())) {

@@ -18,7 +18,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Serves the {@link Api} over HTTP, for owners who put their own HTTPS in front of it. */
 public final class ApiServer implements AutoCloseable {
     private static final Gson GSON = new Gson();
     private static final int THREADS = 16;
@@ -30,14 +29,6 @@ public final class ApiServer implements AutoCloseable {
     private final HttpServer server;
     private final ExecutorService executor;
 
-    /**
-     * Starts listening right away. Port 0 picks a free port, see {@link #port}.
-     *
-     * @param clientHeader the header a proxy on this machine puts the caller's address in, for the
-     *     pairing rate limit: "X-Forwarded-For" (its last address counts), "CF-Connecting-IP"… Null
-     *     if there's no such proxy: a plain TCP tunnel (ssh -R…) passes the client's own headers,
-     *     which it could fake.
-     */
     public ApiServer(Api api, InetSocketAddress address, String clientHeader) throws IOException {
         this.api = api;
         this.clientHeader = clientHeader == null || clientHeader.isBlank() ? null : clientHeader;
@@ -63,10 +54,6 @@ public final class ApiServer implements AutoCloseable {
         server.start();
     }
 
-    /**
-     * Without a limit, slow clients could hold every thread. The JDK's server only takes it as a
-     * system property, read when it first starts: for the whole JVM, so it's left alone if set.
-     */
     private static void limitRequestTime() {
         if (System.getProperty("sun.net.httpserver.maxReqTime") == null) {
             System.setProperty("sun.net.httpserver.maxReqTime", MAX_REQUEST_SECONDS);

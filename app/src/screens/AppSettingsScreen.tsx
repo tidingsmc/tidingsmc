@@ -75,7 +75,7 @@ export function AppSettingsScreen({ servers }: { servers: PairedServer[] }) {
                       aria-checked={value === theme}
                       onClick={() => setTheme(value)}
                     >
-                      {/* "System" follows the computer's setting: a laptop, not a phone. */}
+                      {/* "System" follows the computer's setting: a laptop, not a phone */}
                       {value === "system" ? <Laptop /> : themes[value].icon}
                       {t(`appSettings.themes.${value}`)}
                     </button>
@@ -114,7 +114,7 @@ export function AppSettingsScreen({ servers }: { servers: PairedServer[] }) {
           </div>
         </section>
 
-        {/* Required by Minecraft's usage guidelines for anything using its name. */}
+        {/* Required by Minecraft's usage guidelines for anything using its name */}
         <p className="muted small footer-note">{t("appSettings.disclaimer")}</p>
       </Screen>
     );
@@ -167,7 +167,7 @@ export function AppSettingsScreen({ servers }: { servers: PairedServer[] }) {
         </p>
       </div>
 
-      {/* Required by Minecraft's usage guidelines for anything using its name. */}
+      {/* Required by Minecraft's usage guidelines for anything using its name */}
       <p className="muted small footer-note">{t("appSettings.disclaimer")}</p>
     </Screen>
   );

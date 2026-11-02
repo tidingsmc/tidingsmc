@@ -1,5 +1,4 @@
-// Forge 1.20.1 adapter: wires Minecraft events and commands to :core.
-// Based on the Forge 1.20.1 MDK.
+// Based on the Forge 1.20.1 MDK
 plugins {
     id 'eclipse'
     id 'idea'
@@ -70,7 +69,6 @@ tasks.named('processResources', ProcessResources).configure {
 }
 
 tasks.named('jar', Jar).configure {
-    // Ship :core inside the mod jar. Its only dependency (Gson) comes with Minecraft.
     from(project(':core').sourceSets.main.output)
 
     manifest {

@@ -115,7 +115,7 @@ class StoreTest {
         assertEquals(List.of(), store.devices());
     }
 
-    /** A directory where the store writes its temporary file makes every save fail. */
+    /** A directory where the store writes its temporary file makes every save fail */
     private static void breakSaving(Path file) throws IOException {
         Files.createDirectory(file.resolveSibling(file.getFileName() + ".tmp"));
     }

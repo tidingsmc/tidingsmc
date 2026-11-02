@@ -32,24 +32,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Serves the {@link Api} through a relay (the Cloudflare Worker in {@code relay/}), for servers
- * that can't be reached from the internet: the mod connects out to the relay over a WebSocket, and
- * the relay passes the app's requests along it.
- *
- * <p>The relay only accepts the server whose VAPID key its owner set as OWNER_KEY. Every connection
- * proves it holds that key by signing the time.
+ * that can't be reached from the internet
  */
 public final class RelayClient implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(RelayClient.class);
     private static final Gson GSON = new Gson();
 
-    /** Bumped when the frames change: the relay refuses other versions with 426. */
     static final int PROTOCOL = 1;
 
     private static final Duration PING_EVERY = Duration.ofSeconds(30);
-
-    /** The relay answers every ping: without a word for this long, the connection is dead. */
     private static final Duration SILENCE_LIMIT = Duration.ofSeconds(75);
-
     private static final Duration MAX_RETRY_DELAY = Duration.ofMinutes(1);
 
     private static final int WORKERS = 4;
@@ -65,7 +57,6 @@ public final class RelayClient implements AutoCloseable {
     private final String host;
     private final Clock clock;
 
-    /** Shared, like {@link WebPush}'s: Java 17 can't close an HttpClient. */
     private static final HttpClient HTTP =
             HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 
@@ -78,13 +69,12 @@ public final class RelayClient implements AutoCloseable {
     private Instant lastHeard;
     private Duration retryDelay = Duration.ofSeconds(1);
 
-    /** What went wrong last, so that a relay down for hours doesn't log every minute. */
     private String lastProblem;
 
     /**
-     * Starts connecting right away, and keeps reconnecting until {@link #close}.
+     * Starts connecting right away, and keeps reconnecting until {@link #close}
      *
-     * @param relayUrl the relay's address, e.g. https://tidings-relay.someone.workers.dev
+     * @param relayUrl the relay's address
      */
     public RelayClient(Api api, VapidKeys keys, URI relayUrl) {
         this(api, keys, relayUrl, Clock.systemUTC());
@@ -135,25 +125,18 @@ public final class RelayClient implements AutoCloseable {
         workers.shutdownNow();
     }
 
-    /** Whether phones' requests can come through the relay right now. */
     public synchronized boolean isConnected() {
         return socket != null;
     }
 
-    /** Why it isn't connected, as last logged; null while connected or before a first failure. */
     public synchronized String problem() {
         return socket == null ? lastProblem : null;
     }
 
-    /** The relay's address without its scheme, e.g. tidings-relay.someone.workers.dev */
     public String host() {
         return host;
     }
 
-    /**
-     * The relay's host as it sees itself, for the signature: like JavaScript's {@code URL.host},
-     * lowercase and without the default port, however the owner wrote the relay URL.
-     */
     static String hostOf(URI relayUrl) {
         String host = relayUrl.getHost().toLowerCase(Locale.ROOT);
         int port = relayUrl.getPort();
@@ -161,7 +144,6 @@ public final class RelayClient implements AutoCloseable {
         return port == -1 || port == defaultPort ? host : host + ":" + port;
     }
 
-    /** What the relay checks: {@code key} signed this, for this relay, at about this time. */
     static String signedText(String host, long time) {
         return "tidings-relay\n" + host + "\n" + time;
     }
@@ -171,7 +153,6 @@ public final class RelayClient implements AutoCloseable {
         try {
             startConnecting();
         } catch (RuntimeException e) {
-            // Thrown on the scheduler, it would silently end the reconnecting for good.
             retry(e.toString());
         }
     }
@@ -252,7 +233,7 @@ public final class RelayClient implements AutoCloseable {
         scheduler.schedule(this::connect, delay.toMillis(), TimeUnit.MILLISECONDS);
     }
 
-    /** Ignores news of a connection already replaced. */
+    /** Ignores news of a connection already replaced */
     private synchronized void retry(WebSocket from, String problem) {
         if (from == socket) retry(problem);
     }
@@ -263,8 +244,6 @@ public final class RelayClient implements AutoCloseable {
             socket = this.socket;
             if (socket == null) return;
             if (Duration.between(lastHeard, clock.instant()).compareTo(SILENCE_LIMIT) > 0) {
-                // onError/onClose won't come for a connection that silently died: abort() gets
-                // neither, so retry here.
                 socket.abort();
                 retry("the relay stopped answering");
                 return;
@@ -274,17 +253,16 @@ public final class RelayClient implements AutoCloseable {
     }
 
     private synchronized void send(WebSocket socket, String text) {
-        // WebSocket allows one message in flight at a time.
         sending =
                 sending.handle((ok, error) -> null)
                         .thenCompose(nothing -> socket.sendText(text, true));
     }
 
     /**
-     * Answers one request frame from the relay.
+     * Answers one request frame from the relay
      *
      * <p>Request: {@code {id, method, path, authorization?, client, body?}}, the body as text.
-     * Response: {@code {id, status, body?}}, the body as JSON text.
+     * Response: {@code {id, status, body?}}, the body as JSON text
      */
     String answer(String frame) {
         JsonObject request;
@@ -329,7 +307,6 @@ public final class RelayClient implements AutoCloseable {
                 String frame = text.toString();
                 text.setLength(0);
                 if (!frame.equals("pong")) {
-                    // Off the WebSocket's thread: answering may take a while (saving the store…).
                     workers.execute(
                             () -> {
                                 String reply;

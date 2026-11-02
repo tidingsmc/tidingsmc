@@ -53,7 +53,7 @@ public record VapidKeys(ECPublicKey publicKey, ECPrivateKey privateKey) {
         return Base64Url.encode(uncompressed(publicKey));
     }
 
-    /** {@code key} as Web Push writes P-256 public keys: 0x04, then X and Y on 32 bytes each. */
+    /** {@code key} as Web Push writes P-256 public keys: 0x04, then X and Y on 32 bytes each */
     static byte[] uncompressed(ECPublicKey key) {
         byte[] point = new byte[65];
         point[0] = 4;

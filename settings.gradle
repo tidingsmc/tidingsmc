@@ -9,7 +9,6 @@ pluginManagement {
 }
 
 plugins {
-    // Lets Gradle download the Java 17 toolchain Forge 1.20.1 needs.
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
 }
 

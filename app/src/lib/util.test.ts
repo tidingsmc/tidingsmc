@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { safeSkinUrl } from "./util";
 
 describe("safeSkinUrl", () => {
-  // Game profiles list skins as http://, which a secure page can't load.
+  // Game profiles list skins as http://, which a secure page can't load
   it("loads Mojang's skins over HTTPS", () => {
     expect(safeSkinUrl("http://textures.minecraft.net/texture/abc")).toBe(
       "https://textures.minecraft.net/texture/abc",
@@ -12,7 +12,7 @@ describe("safeSkinUrl", () => {
     );
   });
 
-  // Skin URLs come from the server: it mustn't make the app or the service worker fetch anything else.
+  // Skin URLs come from the server: it mustn't make the app or the service worker fetch anything else
   it("refuses every other host", () => {
     for (const url of [
       "https://example.com/skin.png",

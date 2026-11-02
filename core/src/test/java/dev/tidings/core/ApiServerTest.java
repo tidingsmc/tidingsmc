@@ -41,7 +41,7 @@ class ApiServerTest {
     private Tidings tidings;
     private ApiServer server;
 
-    /** Devices the game was asked to approve. */
+    /** Devices the game was asked to approve */
     private final List<Device> requests = new ArrayList<>();
 
     @BeforeEach
@@ -65,7 +65,7 @@ class ApiServerTest {
         return call(method, path, token, body, null);
     }
 
-    /** {@code forwardedFor}: the client a proxy on this machine says it forwards for, or null. */
+    /** {@code forwardedFor}: the client a proxy on this machine says it forwards for, or null */
     private HttpResponse<String> call(
             String method, String path, String token, String body, String forwardedFor)
             throws IOException, InterruptedException {
@@ -92,7 +92,7 @@ class ApiServerTest {
         return token;
     }
 
-    /** Sends {@code code} as the app does, and gets its token. */
+    /** Sends {@code code} as the app does, and gets its token */
     private String sendCode(String code) throws IOException, InterruptedException {
         HttpResponse<String> response =
                 call("POST", "/api/pair", null, "{\"code\":\"" + code + "\"}");
@@ -100,7 +100,7 @@ class ApiServerTest {
         return json(response).get("token").getAsString();
     }
 
-    /** What the app does once the player named the server. */
+    /** What the app does once the player named the server */
     private void askApproval(String token) throws IOException, InterruptedException {
         assertEquals(204, call("POST", "/api/devices/me/approval", token, null).statusCode());
     }
@@ -366,7 +366,6 @@ class ApiServerTest {
         assertEquals(409, response.statusCode());
         assertEquals(Tidings.MAX_DEVICES_PER_PLAYER, tidings.store().devices().size());
 
-        // The code still works once a device is unpaired.
         tidings.store().removeDevice(steve.id(), "d0");
         assertEquals(
                 200, call("POST", "/api/pair", null, "{\"code\":\"" + code + "\"}").statusCode());

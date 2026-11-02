@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.Random;
 
-/** Scans the codes with ZXing, the library most Android scanners use. */
+/** Scans the codes with ZXing, the library most Android scanners use */
 class QrCodeTest {
     private static final int SCALE = 3;
     private static final int QUIET = 4;

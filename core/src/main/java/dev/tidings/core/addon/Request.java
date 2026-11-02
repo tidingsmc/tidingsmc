@@ -5,10 +5,10 @@ import dev.tidings.core.PlayerProfile;
 import java.util.Map;
 
 /**
- * What the app asks an add-on for.
+ * What the app asks an add-on for
  *
  * @param player the player whose device asks: Tidings checked its token. The add-on decides what
- *     they may see and do.
+ *     they may see and do
  * @param name the view or action
  * @param params from the {@link Link}, {@link Block.Button} or {@link Block.Form}: they come from
  *     the app, so check them like any input

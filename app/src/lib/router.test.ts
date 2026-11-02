@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { parseRoute, paths } from "./router";
 
 describe("parseRoute", () => {
-  // As TidingsMod.pair builds it: Java's URLEncoder for the address, the token as is.
   it("reads the pairing link from the in-game QR code", () => {
     const link =
       "https://tidingsmc.github.io/tidingsmc/#pair=https%3A%2F%2Fmc.example.com&code=Zm9vYmFyYmF6cXV4cXV1eA";
@@ -48,7 +47,6 @@ describe("parseRoute", () => {
     expect(parseRoute("#/server")).toEqual({ name: "servers" });
   });
 
-  // The service worker builds this path itself when a notification is tapped (sw.ts, notificationclick).
   it("reads the path a tapped notification opens", () => {
     expect(parseRoute(`#/server/${encodeURIComponent("1f2e3d4c")}`)).toEqual({
       name: "server",

@@ -49,7 +49,6 @@ final class Json {
         return json;
     }
 
-    /** Mirrors the app's PushMessage, for kind "addon". */
     static JsonObject addonPushMessage(String addonId, Notification notification) {
         JsonObject json = pushMessage("addon", notification.player());
         json.addProperty("addon", addonId);
@@ -58,7 +57,6 @@ final class Json {
         return json;
     }
 
-    /** Mirrors the app's PushMessage. */
     static JsonObject pushMessage(NotificationKind kind, PlayerProfile player) {
         return pushMessage(kind.name().toLowerCase(Locale.ROOT), player);
     }
@@ -227,10 +225,6 @@ final class Json {
                 o.has("push") ? readStoredPush(o.get("push")) : null);
     }
 
-    /**
-     * A subscription saved before its checks got stricter is dropped rather than failing the whole
-     * file: the app sends a new one next time it's opened.
-     */
     private static PushSubscription readStoredPush(JsonElement json) {
         try {
             return readPush(json);
@@ -260,7 +254,6 @@ final class Json {
         throw new IllegalArgumentException("Expected text for " + field);
     }
 
-    /** An object of strings, such as an add-on's params; empty if {@code field} is missing. */
     static Map<String, String> strings(JsonObject o, String field) {
         if (!o.has(field)) return Map.of();
         JsonObject strings = object(o.get(field), field);

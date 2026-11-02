@@ -6,7 +6,6 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Objects;
 
-/** Daily periods in the device's time zone during which it gets no notifications. */
 public record QuietHours(boolean enabled, List<Period> periods) {
 
     public QuietHours {

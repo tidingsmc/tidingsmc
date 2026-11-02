@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Join and leave notifications for chosen players only */
 public record FriendFilter(boolean enabled, List<Friend> players) {
 
     public FriendFilter {

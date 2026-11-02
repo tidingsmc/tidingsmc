@@ -18,10 +18,10 @@ import java.util.regex.Pattern;
 
 /**
  * The add-ons the app shows tabs for. Mods register theirs through their loader's entry point, such
- * as Forge's {@code TidingsAddons.register}, while the game loads.
+ * as Forge's {@code TidingsAddons.register}, while the game loads
  *
  * <p>The app reaches them at {@code POST /api/addons/<id>/view} and {@code /action}, authenticated
- * like the rest of the API: add-ons never see device tokens.
+ * like the rest of the API: add-ons never see device tokens
  */
 public final class Addons {
     private static final Addons REGISTERED = new Addons();
@@ -31,21 +31,21 @@ public final class Addons {
     private static final Pattern LOCALE = Pattern.compile("[A-Za-z0-9-]{1,35}");
 
     /**
-     * By ID: mods load in parallel, so the order they register in changes from a start to another.
+     * By ID: mods load in parallel, so the order they register in changes from a start to another
      */
     private final Map<String, Addon> addons = new TreeMap<>();
 
-    /** What the running Tidings offers add-ons; null while it isn't running. */
+    /** What the running Tidings offers add-ons; null while it isn't running */
     private volatile Host host;
 
     /**
      * More would be spam: what's over is dropped, see {@link AddonContext#notify}. Enough for a
-     * burst of news, such as several players dying in the same fight.
+     * burst of news, such as several players dying in the same fight
      */
     public static final int MAX_NOTIFICATIONS_PER_MINUTE = 10;
 
     /**
-     * How the running Tidings serves {@link AddonContext}. Its methods may be called on any thread.
+     * How the running Tidings serves {@link AddonContext}. Its methods may be called on any thread
      */
     public interface Host {
         void notify(String addonId, Notification notification);
@@ -55,17 +55,16 @@ public final class Addons {
         Optional<PlayerProfile> knownPlayer(UUID player);
     }
 
-    /** Thrown when the app asks for an add-on, view or action that doesn't exist (anymore). */
+    /** Thrown when the app asks for an add-on, view or action that doesn't exist (anymore) */
     public static final class NotFound extends RuntimeException {
         NotFound(String message) {
             super(message);
         }
     }
 
-    /** For tests: the game uses {@link #registered}. */
+    /** For tests: the game uses {@link #registered} */
     public Addons() {}
 
-    /** What other mods registered. */
     public static Addons registered() {
         return REGISTERED;
     }
@@ -73,7 +72,7 @@ public final class Addons {
     /**
      * For the loader's entry point, which sets each add-on's ID to its mod's, such as Forge's
      * {@code TidingsAddons}: it takes the only one, so that a mod can't register under another's
-     * ID.
+     * ID
      *
      * @throws IllegalStateException if it was already taken
      */
@@ -86,12 +85,12 @@ public final class Addons {
         return REGISTERED::put;
     }
 
-    /** Called by Tidings once it runs: add-ons' contexts work through {@code host} from then on. */
+    /** Called by Tidings once it runs: add-ons' contexts work through {@code host} from then on */
     public synchronized void connect(Host host) {
         this.host = Objects.requireNonNull(host, "host");
     }
 
-    /** Called by Tidings once it stops, unless another one connected since. */
+    /** Called by Tidings once it stops, unless another one connected since */
     public synchronized void disconnect(Host host) {
         if (this.host == host) this.host = null;
     }
@@ -102,7 +101,7 @@ public final class Addons {
 
     /**
      * For tests and their own instances: {@link #registered} only takes add-ons through {@link
-     * #registrar}.
+     * #registrar}
      *
      * @throws IllegalStateException if another add-on has the same ID, or on {@link #registered}
      */
@@ -124,12 +123,12 @@ public final class Addons {
         return new AddonContext(this, addon);
     }
 
-    /** By ID. */
+    /** By ID */
     public synchronized List<Addon> all() {
         return List.copyOf(addons.values());
     }
 
-    /** For /api/info: {@code [{id, title, icon}]}. */
+    /** For /api/info: {@code [{id, title, icon}]} */
     public JsonArray toJson() {
         JsonArray json = new JsonArray();
         for (Addon addon : all()) {
@@ -149,7 +148,7 @@ public final class Addons {
     }
 
     /**
-     * Runs on the caller's thread: the API calls it on the server thread.
+     * Runs on the caller's thread: the API calls it on the server thread
      *
      * @param view null for the add-on's first view
      * @throws IllegalArgumentException if the request is invalid
@@ -171,7 +170,7 @@ public final class Addons {
     }
 
     /**
-     * Runs on the caller's thread: the API calls it on the server thread.
+     * Runs on the caller's thread: the API calls it on the server thread
      *
      * @throws IllegalArgumentException if the request is invalid
      */
@@ -195,7 +194,7 @@ public final class Addons {
     /**
      * Runs the add-on's own code. Only an {@link AddonError} is meant for the player: anything
      * else, even an IllegalArgumentException such as a NumberFormatException, is a bug in the
-     * add-on, which the API logs and answers with a generic error.
+     * add-on, which the API logs and answers with a generic error
      */
     private static JsonObject call(String what, Supplier<JsonObject> code) {
         try {
@@ -225,7 +224,7 @@ public final class Addons {
 
     /**
      * Form values come from the app, which doesn't say which form they're from: only these limits
-     * apply, not each field's own, see {@link Request#values}.
+     * apply, not each field's own, see {@link Request#values}
      */
     private static final int MAX_VALUES = 64;
 

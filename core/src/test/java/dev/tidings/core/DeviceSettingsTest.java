@@ -83,7 +83,7 @@ class DeviceSettingsTest {
                         true,
                         List.of(new QuietHours.Period(LocalTime.of(11, 0), LocalTime.of(14, 0))));
 
-        // Noon UTC is 21:00 in Tokyo.
+        // Noon UTC is 21:00 in Tokyo
         assertTrue(
                 everything(FriendFilter.off(), lunch, ZoneId.of("Asia/Tokyo"))
                         .wants(NotificationKind.PLAYER_JOINED, STEVE, NOON_UTC, ME, false));
@@ -121,6 +121,15 @@ class DeviceSettingsTest {
         DeviceSettings muted = settings.withMutedAddons(Set.of("vanilla"));
         assertFalse(muted.wantsAddon("vanilla", STEVE, NOON_UTC, ME, false));
         assertTrue(muted.wantsAddon("bounties", STEVE, NOON_UTC, ME, false));
+    }
+
+    @Test
+    void refusesMoreMutedAddonsThanAnyServerHas() {
+        Set<String> tooMany = new HashSet<>();
+        for (int i = 0; i <= DeviceSettings.MAX_MUTED_ADDONS; i++) tooMany.add("addon" + i);
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> DeviceSettings.defaults().withMutedAddons(tooMany));
     }
 
     @Test
@@ -170,11 +179,6 @@ class DeviceSettingsTest {
                                     DeviceSettings.defaults(), JsonParser.parseString(changes)),
                     changes);
         }
-        Set<String> tooMany = new HashSet<>();
-        for (int i = 0; i <= DeviceSettings.MAX_MUTED_ADDONS; i++) tooMany.add("addon" + i);
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> DeviceSettings.defaults().withMutedAddons(tooMany));
     }
 
     @Test

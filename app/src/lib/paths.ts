@@ -1,14 +1,9 @@
-// The app's routes as links, without React: the service worker imports this file too.
-// router.ts parses them back.
-
-/** An add-on's tab on a server's page; without `view`, the tab's first view. */
 export interface AddonRoute {
   id: string;
   view?: string;
   params?: Record<string, string>;
 }
 
-/** The pairing wizard's steps that have their own route, so the back gesture goes between them. */
 export type PairStep = "scan" | "code";
 
 export const paths = {

@@ -1,37 +1,21 @@
-// Tidings relay: lets players' phones reach a Minecraft server that has no public address. The mod
-// connects out to /connect over a WebSocket; the app's /api/* requests go down that WebSocket and
-// the mod's answers come back up. One relay serves one Minecraft server.
-
 import { DurableObject } from "cloudflare:workers";
 
 interface Env {
   RELAY: DurableObjectNamespace<Relay>;
   /**
    * The only server allowed to connect: its key, as the mod logs it. A secret, so redeploying keeps
-   * it. Until it's set, the relay refuses every server.
+   * it. Until it's set, the relay refuses every server
    */
   OWNER_KEY?: string;
 }
 
-/** Must match RelayClient.PROTOCOL in the mod. */
 const PROTOCOL = "1";
-
-/** How far the mod's clock may be from Cloudflare's, for its signature. */
 const MAX_CLOCK_SKEW_SECONDS = 5 * 60;
-
-/** The app treats a request as failed after about this long anyway. */
 const REQUEST_TIMEOUT_MS = 15_000;
-
-/** As in the mod. */
 const MAX_BODY_BYTES = 64 * 1024;
-
-/**
- * Refuses a server while OWNER_KEY isn't set, so the mod can tell the owner what to set it to. Not
- * 403: that's for another server's relay.
- */
+// Refuses a server while OWNER_KEY isn't set so the mod can tell the owner what to set it to
 const NOT_SET_UP = 428;
-
-/** WebSocket close code for a connection replaced by a newer one from the same server. */
+// WebSocket close code for a connection replaced by a newer one from the same server
 const REPLACED = 4000;
 
 const CORS = { "Access-Control-Allow-Origin": "*" };
@@ -98,24 +82,19 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 interface Waiting {
-  /** Which connection it went down, see {@link Attachment}. */
   connection: string;
   answer: (frame: ResponseFrame) => void;
 }
 
-/** Kept with each WebSocket, through hibernation. */
 interface Attachment {
   connection: string;
 }
 
-/** The one instance that holds the mod's WebSocket. It sleeps between requests (hibernation). */
 export class Relay extends DurableObject<Env> {
-  /** Requests waiting for the mod's answer. Never lost to hibernation: they keep it awake. */
   private readonly waiting = new Map<string, Waiting>();
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    // Answered without waking this object up, so idle connections cost nothing.
     ctx.setWebSocketAutoResponse(
       new WebSocketRequestResponsePair("ping", "pong"),
     );
@@ -167,11 +146,11 @@ export class Relay extends DurableObject<Env> {
         new TextEncoder().encode(`tidings-relay\n${url.host}\n${time}`),
       );
     } catch {
-      // A malformed key or signature.
+      // Malformed
     }
     if (!valid) return new Response("Invalid signature\n", { status: 401 });
 
-    // Checked once the signature is: only the key's holder learns the relay isn't set up.
+    // Checked once the signature is: only the key's holder learns the relay isn't set up
     const owner = this.env.OWNER_KEY?.trim();
     if (!owner) {
       return new Response(
@@ -272,7 +251,6 @@ export class Relay extends DurableObject<Env> {
     code: number,
     reason: string,
   ): Promise<void> {
-    // The answers on their way are lost with it.
     const { connection } = ws.deserializeAttachment() as Attachment;
     for (const [id, waiting] of this.waiting) {
       if (waiting.connection === connection)
@@ -281,7 +259,7 @@ export class Relay extends DurableObject<Env> {
     try {
       ws.close(code, reason);
     } catch {
-      // Already closed.
+      // Closed already
     }
   }
 }

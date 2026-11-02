@@ -8,7 +8,7 @@ import java.util.Objects;
 
 /**
  * Something the player fills in, in a {@link Block.Form}. What they chose reaches the action as
- * text, by {@link #name}: a toggle's as "true" or "false".
+ * text, by {@link #name}: a toggle's as "true" or "false"
  */
 public sealed interface Field permits Field.TextField, Field.Toggle, Field.Select {
     String name();
@@ -23,12 +23,12 @@ public sealed interface Field permits Field.TextField, Field.Toggle, Field.Selec
         return new Toggle(name, label, value);
     }
 
-    /** {@code value}: the option chosen at first. */
+    /** {@code value}: the option chosen at first */
     static Select select(String name, String label, List<Option> options, String value) {
         return new Select(name, label, options, value);
     }
 
-    /** What the app lets players type at most, and what {@link Addons} accepts. */
+    /** What the app lets players type at most, and what {@link Addons} accepts */
     int MAX_TEXT_LENGTH = 1000;
 
     /**

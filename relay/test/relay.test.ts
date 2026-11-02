@@ -1,7 +1,7 @@
 import { exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it } from "vitest";
 
-// Throwaway keys made for these tests only. vitest.config.ts sets OWNER_KEY to the owner's public half.
+// Throwaway keys
 const OWNER: JsonWebKey = {
   kty: "EC",
   crv: "P-256",
@@ -26,7 +26,6 @@ function base64Url(bytes: ArrayBuffer): string {
     .replace(/=+$/, "");
 }
 
-/** The key as the mod logs it and sends it: the uncompressed point, base64url. */
 async function publicKeyOf(jwk: JsonWebKey): Promise<string> {
   const { d: _, ...publicJwk } = jwk;
   const key = await crypto.subtle.importKey(
@@ -41,14 +40,12 @@ async function publicKeyOf(jwk: JsonWebKey): Promise<string> {
 
 interface Connection {
   key?: JsonWebKey;
-  /** The host the mod signs, as RelayClient.signedText puts it. */
   host?: string;
   time?: number;
   protocol?: string;
   upgrade?: boolean;
 }
 
-/** Connects like RelayClient does. */
 async function connect({
   key = OWNER,
   host = "relay.example.dev",
@@ -63,7 +60,6 @@ async function connect({
     false,
     ["sign"],
   );
-  // WebCrypto signs in the same format as Java's SHA256withECDSAinP1363Format.
   const signature = await crypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
     signer,
@@ -88,10 +84,8 @@ interface RequestFrame {
   body?: string;
 }
 
-/** The mod's connections, each with its close, for afterEach to close and wait for. */
 const open: { socket: WebSocket; closed: Promise<CloseEvent> }[] = [];
 
-/** Accepts the mod's end of the connection and keeps it for afterEach. */
 function accept(socket: WebSocket): Promise<CloseEvent> {
   socket.accept();
   const closed = new Promise<CloseEvent>((resolve) =>
@@ -101,10 +95,6 @@ function accept(socket: WebSocket): Promise<CloseEvent> {
   return closed;
 }
 
-/**
- * Plays the mod: connects as the owner and answers each request with `answer`. Undefined leaves
- * it unanswered.
- */
 async function mod(
   answer: (
     frame: RequestFrame,
@@ -130,14 +120,13 @@ async function mod(
 const app = (path: string, init?: RequestInit) =>
   exports.default.fetch(`${RELAY}${path}`, init);
 
-// Waits for the relay to close its end too, so the next test starts with no server connected.
 afterEach(async () => {
   const sockets = open.splice(0);
   for (const { socket } of sockets) {
     try {
       socket.close(1000, "Test over");
     } catch {
-      // Already closed.
+      // Closed
     }
   }
   await Promise.all(sockets.map(({ closed }) => closed));
@@ -315,7 +304,6 @@ describe("the mod's connection", () => {
     expect(response.status).toBe(400);
   });
 
-  // What keeps RelayClient from reconnecting: it gives up after 75 s without a word.
   it("answers the mod's pings", async () => {
     const { socket } = await mod();
     const pong = new Promise((resolve) =>
@@ -327,7 +315,6 @@ describe("the mod's connection", () => {
     expect(await pong).toBe("pong");
   });
 
-  // The mod reconnecting after a silent network failure: the old connection is dead anyway.
   it("replaces the previous one", async () => {
     const first = await mod(() => ({ status: 200, body: '"first"' }));
     const second = await mod(() => ({ status: 200, body: '"second"' }));

@@ -12,35 +12,24 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.function.Predicate;
 
-/**
- * Pairing codes: single-use, valid for {@link #CODE_LIFETIME}, at most one per player. Each comes
- * in two forms that redeem the same pairing: 6 digits to type, rate-limited since they can be
- * guessed, and a token too long to guess for the QR code, which the rate limit never blocks.
- */
 public final class Pairing {
     public static final Duration CODE_LIFETIME = Duration.ofMinutes(5);
     static final int MAX_FAILURES = 10;
     static final int MAX_FAILURES_OVERALL = 60;
     static final Duration FAILURE_WINDOW = Duration.ofMinutes(1);
 
-    /** Random bytes in a token: 128 bits, and short enough to keep the QR code easy to scan. */
     private static final int TOKEN_BYTES = 16;
 
     private final Random random;
 
-    /** By 6-digit code. */
     private final Map<String, Pending> codes = new HashMap<>();
-
-    /** The 6-digit code of each token. */
     private final Map<String, String> codesByToken = new HashMap<>();
 
     private final Map<String, Deque<Instant>> failuresByClient = new HashMap<>();
-
     private final Deque<Instant> failures = new ArrayDeque<>();
 
     private record Pending(PlayerProfile player, String token, Instant expiresAt) {}
 
-    /** A pairing code in its two forms: {@code code} to type, {@code token} for the QR code. */
     public record Issued(String code, String token) {}
 
     public Pairing() {
@@ -61,7 +50,6 @@ public final class Pairing {
         record Refused() implements Redemption {}
     }
 
-    /** A new code for {@code player}, their previous one stops working. */
     public synchronized Issued issue(PlayerProfile player, Instant now) {
         codes.values().removeIf(p -> p.player.id().equals(player.id()) || expired(p, now));
         codesByToken.values().retainAll(codes.keySet());
@@ -79,7 +67,7 @@ public final class Pairing {
 
     /**
      * Uses up {@code code} if {@code pair} accepts its player. {@code pair} runs while no one else
-     * can redeem the code; if it returns false or throws, the code stays valid.
+     * can redeem the code; if it returns false or throws, the code stays valid
      *
      * @param code either form of the code
      * @param client who is guessing, such as their IP address, for the rate limit
@@ -88,7 +76,6 @@ public final class Pairing {
             String code, String client, Instant now, Predicate<PlayerProfile> pair) {
         String key = code == null ? null : code.strip();
         String byToken = key == null ? null : codesByToken.get(key);
-        // Can't be guessed: even while someone floods wrong codes, the QR code still works.
         if (byToken != null) {
             Pending pending = codes.get(byToken);
             if (expired(pending, now)) {
@@ -127,7 +114,7 @@ public final class Pairing {
         if (pending != null) codesByToken.remove(pending.token);
     }
 
-    /** The code {@code player} was given last, if it's still valid. */
+    /** The code {@code player} was given last if it's still valid */
     public synchronized Optional<String> codeOf(UUID player, Instant now) {
         return codes.entrySet().stream()
                 .filter(e -> e.getValue().player.id().equals(player) && !expired(e.getValue(), now))

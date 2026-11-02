@@ -75,7 +75,7 @@ final class TidingsConfig {
 
     private TidingsConfig() {}
 
-    /** What's wrong with the settings, or null if Tidings can start with them. */
+    /** What's wrong with the settings, or null if Tidings can start with them */
     static String problem() {
         if (appUrl().isEmpty()) return "app-url isn't set";
         if (!isWebAddress(appUrl())) return "app-url " + appUrl() + " isn't a web address";
@@ -99,17 +99,17 @@ final class TidingsConfig {
         }
     }
 
-    /** Without its fragment: pairing links put theirs. */
+    /** Without its fragment: pairing links put theirs */
     static String appUrl() {
         return APP_URL.get().strip().replaceAll("#.*$", "");
     }
 
-    /** The app's address without "https://", for players to type on their phone. */
+    /** The app's address without "https://", for players to type on their phone */
     static String appAddress() {
         return appUrl().replaceFirst("^https://", "").replaceAll("/+$", "");
     }
 
-    /** Empty without a relay. */
+    /** Empty without a relay */
     static String relayUrl() {
         return RELAY_URL.get().strip().replaceAll("/+$", "");
     }

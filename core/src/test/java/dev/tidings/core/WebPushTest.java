@@ -2,7 +2,6 @@ package dev.tidings.core;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,7 +38,7 @@ class WebPushTest {
                         new ECPrivateKeySpec(new BigInteger(1, decode(base64Url)), WebPush.p256()));
     }
 
-    /** RFC 8291 appendix A. */
+    /** RFC 8291 appendix A */
     @Test
     void encryptsLikeTheRfcExample() throws GeneralSecurityException {
         KeyPair asKeys =
@@ -128,22 +127,6 @@ class WebPushTest {
     }
 
     @Test
-    void reusesTokensUntilTheyAreAboutToExpire() {
-        VapidKeys keys = VapidKeys.generate();
-        MutableClock clock = new MutableClock();
-        WebPush push = new WebPush(keys, "https://mc.example.com", clock);
-
-        String first = push.jwt("https://fcm.googleapis.com");
-        clock.now = NOW.plus(Duration.ofHours(10));
-        assertEquals(first, push.jwt("https://fcm.googleapis.com"));
-        assertNotEquals(first, push.jwt("https://web.push.apple.com"), "one per push service");
-
-        clock.now = NOW.plus(Duration.ofHours(11));
-        assertNotEquals(first, push.jwt("https://fcm.googleapis.com"));
-        push.close();
-    }
-
-    @Test
     void tellsGoneSubscriptionsFromFailures() {
         assertEquals(PushSender.Result.DELIVERED, WebPush.resultOf(201));
         assertEquals(PushSender.Result.GONE, WebPush.resultOf(404));
@@ -151,24 +134,5 @@ class WebPushTest {
         assertEquals(PushSender.Result.FAILED, WebPush.resultOf(403));
         assertEquals(PushSender.Result.FAILED, WebPush.resultOf(429));
         assertEquals(PushSender.Result.FAILED, WebPush.resultOf(503));
-    }
-
-    private static final class MutableClock extends Clock {
-        Instant now = NOW;
-
-        @Override
-        public Instant instant() {
-            return now;
-        }
-
-        @Override
-        public java.time.ZoneId getZone() {
-            return ZoneOffset.UTC;
-        }
-
-        @Override
-        public Clock withZone(java.time.ZoneId zone) {
-            return this;
-        }
     }
 }

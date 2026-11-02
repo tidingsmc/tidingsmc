@@ -44,7 +44,6 @@ export function QrScanDialog({
       const video = videoRef.current;
       if (stopped || !video) return;
       if (video.readyState >= video.HAVE_ENOUGH_DATA) {
-        // Decoding a smaller copy is plenty for a QR code filling part of the view, and much faster.
         const scale = Math.min(1, 480 / Math.max(video.videoWidth, 1));
         canvas.width = Math.round(video.videoWidth * scale);
         canvas.height = Math.round(video.videoHeight * scale);

@@ -3,6 +3,7 @@ import { api, type PairedServer } from "./api";
 import { TranslatedError } from "./i18n";
 import { navigate } from "./router";
 import { sentToServers } from "./storage";
+import { whenVisible } from "./whenVisible";
 
 export function pushSupported(): boolean {
   return (
@@ -88,23 +89,17 @@ export async function enableNotifications(server: PairedServer): Promise<void> {
 }
 
 export function useSubscriptionSync(servers: PairedServer[]) {
-  useEffect(() => {
-    const sync = () => {
-      if (
-        document.visibilityState !== "visible" ||
-        !pushSupported() ||
-        Notification.permission !== "granted"
-      )
-        return;
-      sentSubscriptions.keepOnly(servers);
-      for (const server of servers) {
-        subscribe(server).catch(() => {}); // tried again next time the app is opened
-      }
-    };
-    sync();
-    document.addEventListener("visibilitychange", sync);
-    return () => document.removeEventListener("visibilitychange", sync);
-  }, [servers]);
+  useEffect(
+    () =>
+      whenVisible(() => {
+        if (!pushSupported() || Notification.permission !== "granted") return;
+        sentSubscriptions.keepOnly(servers);
+        for (const server of servers) {
+          subscribe(server).catch(() => {}); // tried again next time the app is opened
+        }
+      }),
+    [servers],
+  );
 }
 
 export type PushState = "unsupported" | "blocked" | "off" | "on";
@@ -133,11 +128,7 @@ export function usePushStates(servers: PairedServer[]) {
     setStates(new Map(servers.map((server, i) => [server.id, list[i]])));
   }, [servers]);
   useEffect(() => {
-    refresh();
-    const onVisible = () => {
-      if (document.visibilityState === "visible") refresh();
-    };
-    document.addEventListener("visibilitychange", onVisible);
+    const stopWatching = whenVisible(refresh);
     subscriptionChanges.addEventListener("change", refresh);
     let status: PermissionStatus | undefined;
     let cancelled = false;
@@ -151,7 +142,7 @@ export function usePushStates(servers: PairedServer[]) {
       .catch(() => {});
     return () => {
       cancelled = true;
-      document.removeEventListener("visibilitychange", onVisible);
+      stopWatching();
       subscriptionChanges.removeEventListener("change", refresh);
       status?.removeEventListener("change", refresh);
     };

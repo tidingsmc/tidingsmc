@@ -5,8 +5,8 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 /**
- * An icon the app draws for an add-on. Either one of <a href="https://pixelarticons.com">pixelarticons</a> 
- * by name (drawn in the app's colors) or a small image of the add-on's own.
+ * An icon the app draws for an add-on. Either one of <a href="https://pixelarticons.com">pixelarticons</a>
+ * by name (drawn in the app's colors) or a small image of the add-on's own
  */
 public final class Icon {
     public static final int MAX_IMAGE_BYTES = 16 * 1024;
@@ -44,7 +44,7 @@ public final class Icon {
 
     /**
      * One of pixelarticons by its name on pixelarticons.com, such as {@code "trophy"} or {@code
-     * "arrow-right"}. The app draws {@link #DEFAULT} for one it doesn't have.
+     * "arrow-right"}. The app draws {@link #DEFAULT} for one it doesn't have
      *
      * @throws IllegalArgumentException if it isn't lowercase words joined by "-"
      */
@@ -59,7 +59,7 @@ public final class Icon {
 
     /**
      * An image of the add-on's own: a PNG, JPEG, GIF or WebP file's bytes. Small images are drawn
-     * with crisp pixels, so a 16×16 texture works as is.
+     * with crisp pixels, so a 16×16 texture works as is
      *
      * @throws IllegalArgumentException if it's another format, or bigger than {@link
      *     #MAX_IMAGE_BYTES}
@@ -69,7 +69,7 @@ public final class Icon {
     }
 
     /**
-     * {@link #image(byte[])}, from base64 or a {@code data:image/…;base64,} URL.
+     * {@link #image(byte[])}, from base64 or a {@code data:image/…;base64,} URL
      *
      * @throws IllegalArgumentException if it isn't base64, or isn't a fitting image
      */
@@ -77,7 +77,7 @@ public final class Icon {
         return image(decode(base64, MAX_IMAGE_BYTES));
     }
 
-    /** A PNG, JPEG, GIF or WebP of at most {@code max} bytes, as a data URL. */
+    /** A PNG, JPEG, GIF or WebP of at most {@code max} bytes, as a data URL */
     static String dataUrl(byte[] bytes, int max) {
         Objects.requireNonNull(bytes, "bytes");
         if (bytes.length > max) {
@@ -91,7 +91,7 @@ public final class Icon {
         return "data:" + type + ";base64," + Base64.getEncoder().encodeToString(bytes);
     }
 
-    /** Base64, or a {@code data:…;base64,} URL, of at most {@code max} bytes once decoded. */
+    /** Base64, or a {@code data:…;base64,} URL, of at most {@code max} bytes once decoded */
     static byte[] decode(String base64, int max) {
         Objects.requireNonNull(base64, "base64");
         String data = base64.strip();

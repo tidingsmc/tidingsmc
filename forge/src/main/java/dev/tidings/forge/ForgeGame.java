@@ -37,7 +37,6 @@ final class ForgeGame implements Game {
 
     @Override
     public String motd() {
-        // Null when server.properties has none.
         return Objects.requireNonNullElse(server.getMotd(), "");
     }
 
@@ -45,7 +44,6 @@ final class ForgeGame implements Game {
     public synchronized byte[] icon() {
         File file = server.getFile("server-icon.png");
         if (!file.isFile()) return null;
-        // Read again only if the owner changed it.
         long modified = file.lastModified();
         if (icon == null || modified != iconModified) {
             try {
@@ -65,7 +63,7 @@ final class ForgeGame implements Game {
 
     @Override
     public WorldState world() {
-        // Worlds are only safe to read on the server thread.
+        // Worlds are only safe to read on the server thread
         return onServerThread(
                 () -> {
                     ServerLevel level = server.overworld();
@@ -81,13 +79,10 @@ final class ForgeGame implements Game {
     @Override
     public <T> T onServerThread(Supplier<T> task) {
         if (server.isSameThread()) return task.get();
-        // QUEUED until the server thread takes it, unless the caller gave up on it first.
         AtomicReference<Status> status = new AtomicReference<>(Status.QUEUED);
         CompletableFuture<T> future =
                 server.submit(
                         () -> {
-                            // submit() runs it right here, on the caller's thread, once the server
-                            // has stopped: the game mustn't be touched from there.
                             if (!server.isSameThread()) throw stopping();
                             if (!status.compareAndSet(Status.QUEUED, Status.STARTED)) return null;
                             return task.get();
@@ -97,11 +92,8 @@ final class ForgeGame implements Game {
                 return future.get(5, TimeUnit.SECONDS);
             } catch (TimeoutException e) {
                 if (status.compareAndSet(Status.QUEUED, Status.ABANDONED)) {
-                    // It will never run: the caller can safely retry.
                     throw new IllegalStateException("The server thread is too busy", e);
                 }
-                // Already running: its effects will happen, so wait for them rather than answer
-                // an error that invites a retry, such as a second purchase.
                 try {
                     return future.get(30, TimeUnit.SECONDS);
                 } catch (TimeoutException stillRunning) {
