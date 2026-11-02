@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTree, type TreeItem } from "./addons";
+import { buildTree, refreshDelay, type TreeItem } from "./addons";
 
 /** The tree as nested IDs, to compare shapes. */
 const shape = (items: TreeItem[]): unknown[] =>
@@ -60,5 +60,25 @@ describe("buildTree", () => {
   it("is empty for anything but a list", () => {
     expect(buildTree(undefined)).toEqual([]);
     expect(buildTree({ id: "a" })).toEqual([]);
+  });
+});
+
+describe("refreshDelay", () => {
+  const delay = (refresh: unknown) =>
+    refreshDelay({ version: 3, blocks: [], refresh } as never);
+
+  it("is the view's rate in milliseconds", () => {
+    expect(delay(3)).toBe(3000);
+    expect(delay(2.5)).toBe(2500);
+  });
+
+  it("is null when the view doesn't refresh", () => {
+    for (const refresh of [undefined, 0, -3, NaN, Infinity, "3", null])
+      expect(delay(refresh)).toBeNull();
+  });
+
+  it("stays within the allowed rates", () => {
+    expect(delay(0.1)).toBe(2000);
+    expect(delay(1e9)).toBe(3_600_000);
   });
 });

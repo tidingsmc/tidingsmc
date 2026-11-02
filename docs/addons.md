@@ -16,6 +16,8 @@ Call `TidingsAddons.register` from your mod's constructor with a title, an icon,
 
 A view is a page: a function from `Request` to a `View` of blocks such as text, stats, lists, progress bars, choices, buttons, cards and trees. `request.player()` is the checked player. Views are rebuilt on every open, so read the current state.
 
+To keep a page live return it with `view.refreshEvery(Duration.ofSeconds(5))`. The app reloads it at that rate while it's open and in front, from 2 seconds to 1 hour. Each reload is a request, which counts against the free Cloudflare quota when there's a relay, so pick the slowest rate that still feels live.
+
 ## Icons and images
 
 Icons are [pixelarticons](https://pixelarticons.com), picked by name with `Icon.named("sword")`, or small images of your own such as item textures with `Icon.image(bytes)`. The tab, list rows and tree nodes take one, and `Block.icon` puts one in the page. `Block.image` adds a bigger image, from its bytes or base64.

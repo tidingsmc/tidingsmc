@@ -30,6 +30,7 @@ import {
   buildTree,
   readLink,
   readParams,
+  refreshDelay,
   text,
   VIEW_VERSION,
   type AddonLink,
@@ -74,11 +75,15 @@ export function AddonTab({
   addon: AddonRoute;
 }) {
   const { t, i18n } = useTranslation();
+
   const [state, setState] = useState<ViewState>({ status: "loading" });
   const [reloads, setReloads] = useState(0);
+  const [refreshes, setRefreshes] = useState(0);
   const [busy, setBusy] = useState(false);
+
   const link = addon.view ? { view: addon.view, params: addon.params } : null;
   const linkKey = JSON.stringify(link);
+
   const [message, setMessage] = useState<{
     text: string;
     error?: boolean;
@@ -95,14 +100,39 @@ export function AddonTab({
         !cancelled &&
         setState((previous) =>
           previous.status === "ok" && previous.for === linkKey
-            ? previous
+            ? { ...previous }
             : { status: "error", error, for: linkKey },
         ),
     );
     return () => {
       cancelled = true;
     };
-  }, [server, addon.id, linkKey, i18n.language, reloads]);
+  }, [server, addon.id, linkKey, i18n.language, reloads, refreshes]);
+
+  const delay =
+    state.status === "ok" && state.for === linkKey
+      ? refreshDelay(state.view)
+      : null;
+  useEffect(() => {
+    if (delay === null || busy) return;
+    let due = false;
+    const refresh = () => setRefreshes((n) => n + 1);
+    const timer = window.setTimeout(() => {
+      if (document.hidden) due = true;
+      else refresh();
+    }, delay);
+    const onVisible = () => {
+      if (due && !document.hidden) {
+        due = false;
+        refresh();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [state, delay, busy]);
 
   const context: Context = {
     href: (link) => paths.addon(server.id, { id: addon.id, ...link }),
