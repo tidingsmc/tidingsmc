@@ -4,7 +4,7 @@ export interface AddonInfo {
   icon?: string;
 }
 
-export const VIEW_VERSION = 3;
+export const VIEW_VERSION = 4;
 
 export interface AddonLink {
   view: string;
@@ -46,9 +46,10 @@ export type Block =
     }
   | ButtonBlock
   | FormBlock
+  | ChatBlock
   | { type: "card"; blocks: Block[] }
   | { type: "tree"; nodes: TreeNode[] }
-  /** `icon` as in lib/icons: a pixelarticons name, or a small base64 image. */
+  /** `icon` as in lib/icons: a pixelarticons name or a small base64 image */
   | { type: "icon"; icon: string; label?: string }
   | ImageBlock;
 
@@ -121,6 +122,52 @@ export interface FormBlock {
   params?: Record<string, string>;
   submit: string;
   fields: Field[];
+}
+
+export interface ChatBlock {
+  type: "chat";
+  lines: ChatLine[];
+  action?: string;
+  params?: Record<string, string>;
+  placeholder?: string;
+  maxLength?: number;
+  empty?: string;
+}
+
+export interface ChatLine {
+  name?: string;
+  text: string;
+  tag?: string;
+  time?: number;
+  player?: { uuid: string; name: string; skinUrl?: string };
+  whisper?: boolean;
+}
+
+export function chatTime(time: unknown): string {
+  if (typeof time !== "number" || !Number.isFinite(time)) return "";
+  const date = new Date(time);
+  if (Number.isNaN(date.getTime())) return "";
+  return [date.getHours(), date.getMinutes()]
+    .map((n) => String(n).padStart(2, "0"))
+    .join(":");
+}
+
+export const CHAT_VALUE = "text";
+
+export function splitMentions(
+  text: string,
+): { text: string; mention: boolean }[] {
+  const parts: { text: string; mention: boolean }[] = [];
+  const mention = /(?<![\w@])@\w{3,16}(?!\w)/g;
+  let at = 0;
+  for (const match of text.matchAll(mention)) {
+    if (match.index > at)
+      parts.push({ text: text.slice(at, match.index), mention: false });
+    parts.push({ text: match[0], mention: true });
+    at = match.index + match[0].length;
+  }
+  if (at < text.length) parts.push({ text: text.slice(at), mention: false });
+  return parts;
 }
 
 export type Field =

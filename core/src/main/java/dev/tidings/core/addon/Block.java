@@ -1,5 +1,6 @@
 package dev.tidings.core.addon;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,7 @@ public sealed interface Block
                 Block.Choices,
                 Block.Button,
                 Block.Form,
+                Block.Chat,
                 Block.Card,
                 Block.Tree,
                 Block.IconBlock,
@@ -56,12 +58,12 @@ public sealed interface Block
         return new Choices(items);
     }
 
-    /** Calls {@code action} when tapped. */
+    /** Calls {@code action} when tapped */
     static Button button(String label, String action) {
         return new Button(label, action, Map.of(), null, Button.Style.NORMAL, null);
     }
 
-    /** Opens {@code link} when tapped. */
+    /** Opens {@code link} when tapped */
     static Button button(String label, Link link) {
         return new Button(label, null, Map.of(), link, Button.Style.NORMAL, null);
     }
@@ -71,13 +73,22 @@ public sealed interface Block
         return new Form(action, Map.of(), submit, List.of(fields));
     }
 
+    /**
+     * A chat as the game shows it with a box under it to write in that calls
+     * {@code action} with what was written as the value {@link Chat#VALUE}.
+     */
+    static Chat chat(List<ChatLine> lines, String action) {
+        return new Chat(lines, action, Map.of(), null, Chat.DEFAULT_MAX_LENGTH, null);
+    }
 
-    /** An icon on its own line, such as {@code Block.icon(Icon.named("trophy"))}. */
+    static Chat chat(List<ChatLine> lines) {
+        return new Chat(lines, null, Map.of(), null, Chat.DEFAULT_MAX_LENGTH, null);
+    }
+
     static IconBlock icon(Icon icon) {
         return new IconBlock(icon, null);
     }
 
-    /** An icon with a line of text next to it. */
     static IconBlock icon(Icon icon, String label) {
         return new IconBlock(icon, label);
     }
@@ -100,7 +111,7 @@ public sealed interface Block
         return new Tree(nodes);
     }
 
-    /** Groups blocks together. Can't contain another card. */
+    /** Groups blocks together, can't contain another card */
     static Card card(Block... blocks) {
         return new Card(List.of(blocks));
     }
@@ -132,7 +143,7 @@ public sealed interface Block
         }
     }
 
-    /** Numbers side by side, such as "Deaths 12", "Playtime 3 h". */
+    /** Numbers side by side, such as "Deaths 12" */
     record Stats(List<Stat> items) implements Block {
         public Stats {
             items = List.copyOf(items);
@@ -153,7 +164,6 @@ public sealed interface Block
         }
     }
 
-    /** The value is shown as is: format it for the player's {@link Request#locale}. */
     record Stat(String label, String value) {
         public Stat {
             Objects.requireNonNull(label, "label");
@@ -231,7 +241,6 @@ public sealed interface Block
             return new ListItem(title, subtitle, trailing, player, link, icon);
         }
 
-        /** Shown instead of the player's face if both are set */
         public ListItem icon(Icon icon) {
             return new ListItem(title, subtitle, trailing, player, link, icon);
         }
@@ -241,20 +250,14 @@ public sealed interface Block
             json.addProperty("title", title);
             if (subtitle != null) json.addProperty("subtitle", subtitle);
             if (trailing != null) json.addProperty("trailing", trailing);
-            if (player != null) {
-                JsonObject p = new JsonObject();
-                p.addProperty("uuid", player.id().toString());
-                p.addProperty("name", player.name());
-                if (player.skinUrl() != null) p.addProperty("skinUrl", player.skinUrl());
-                json.add("player", p);
-            }
+            if (player != null) json.add("player", playerJson(player));
             if (link != null) json.add("link", link.toJson());
             if (icon != null) json.addProperty("icon", icon.id());
             return json;
         }
     }
 
-    /** A bar filled to {@code value / max} such as advancements done */
+    /** A progress bar filled to {@code value / max} */
     record Progress(String label, long value, long max) implements Block {
         public Progress {
             Objects.requireNonNull(label, "label");
@@ -273,7 +276,7 @@ public sealed interface Block
         }
     }
 
-    /** A row of options, one of them selected, each opening its own view: a sort order, a stat… */
+    /** A row of options each opening its own view */
     record Choices(List<Choice> items) implements Block {
         public Choices {
             items = List.copyOf(items);
@@ -394,6 +397,135 @@ public sealed interface Block
         }
     }
 
+    /**
+     * @param action called with what's written, or null for a chat that can only be read
+     * @param placeholder shown in the empty box, or null
+     * @param maxLength of what can be written, which the action must check too
+     * @param empty shown instead of the lines when there are none, or null
+     */
+    record Chat(
+            List<ChatLine> lines,
+            String action,
+            Map<String, String> params,
+            String placeholder,
+            int maxLength,
+            String empty)
+            implements Block {
+
+        public static final String VALUE = "text";
+        public static final int MAX_LINES = 200;
+        public static final int DEFAULT_MAX_LENGTH = 256;
+
+        public Chat {
+            lines = List.copyOf(lines);
+            if (lines.size() > MAX_LINES) {
+                throw new IllegalArgumentException("A chat shows at most " + MAX_LINES + " lines");
+            }
+            if (action != null) Names.check(action, "action");
+            params = Names.checkParams(params);
+            if (maxLength < 1 || maxLength > Field.MAX_TEXT_LENGTH) {
+                throw new IllegalArgumentException(
+                        "maxLength must be between 1 and " + Field.MAX_TEXT_LENGTH);
+            }
+        }
+
+        public Chat params(Map<String, String> params) {
+            return new Chat(lines, action, params, placeholder, maxLength, empty);
+        }
+
+        public Chat placeholder(String placeholder) {
+            return new Chat(lines, action, params, placeholder, maxLength, empty);
+        }
+
+        public Chat maxLength(int maxLength) {
+            return new Chat(lines, action, params, placeholder, maxLength, empty);
+        }
+
+        public Chat empty(String text) {
+            return new Chat(lines, action, params, placeholder, maxLength, text);
+        }
+
+        @Override
+        public JsonObject toJson() {
+            JsonObject json = typed("chat");
+            JsonArray array = new JsonArray();
+            lines.forEach(line -> array.add(line.toJson()));
+            json.add("lines", array);
+            if (action != null) {
+                json.addProperty("action", action);
+                if (!params.isEmpty()) json.add("params", Names.toJson(params));
+                if (placeholder != null) json.addProperty("placeholder", placeholder);
+                json.addProperty("maxLength", maxLength);
+            }
+            if (empty != null) json.addProperty("empty", empty);
+            return json;
+        }
+    }
+
+    /**
+     * A line of a {@link Chat}: {@code [tag] <name> text}
+     *
+     * @param name who wrote it, or null for a line from the game such as "Steve joined the game",
+     *     shown in yellow
+     * @param tag before the name, in grey, such as "Phone", or null
+     * @param time when, which the app shows in the phone's time zone, or null
+     * @param player who wrote it, whose face players can choose to see instead of the name, or null
+     * @param whisper whether it was for one player only, shown in grey italics as in the game
+     */
+    record ChatLine(
+            String name,
+            String text,
+            String tag,
+            Instant time,
+            PlayerProfile player,
+            boolean whisper) {
+        public ChatLine {
+            Objects.requireNonNull(text, "text");
+        }
+
+        public static ChatLine of(String name, String text) {
+            return new ChatLine(
+                    Objects.requireNonNull(name, "name"), text, null, null, null, false);
+        }
+
+        /** A line by {@code player} under their name. */
+        public static ChatLine of(PlayerProfile player, String text) {
+            return of(player.name(), text).player(player);
+        }
+
+        /** A line from the game rather than a player. */
+        public static ChatLine system(String text) {
+            return new ChatLine(null, text, null, null, null, false);
+        }
+
+        public ChatLine tag(String tag) {
+            return new ChatLine(name, text, tag, time, player, whisper);
+        }
+
+        public ChatLine time(Instant time) {
+            return new ChatLine(name, text, tag, time, player, whisper);
+        }
+
+        public ChatLine player(PlayerProfile player) {
+            return new ChatLine(name, text, tag, time, player, whisper);
+        }
+
+        public ChatLine whispered() {
+            return new ChatLine(name, text, tag, time, player, true);
+        }
+
+        JsonObject toJson() {
+            JsonObject json = new JsonObject();
+            if (name != null) json.addProperty("name", name);
+            json.addProperty("text", text);
+            if (tag != null) json.addProperty("tag", tag);
+            if (time != null) json.addProperty("time", time.toEpochMilli());
+            if (player != null) json.add("player", playerJson(player));
+            if (whisper) json.addProperty("whisper", true);
+            return json;
+        }
+    }
+
     record Card(List<Block> blocks) implements Block {
         public Card {
             blocks = List.copyOf(blocks);
@@ -504,12 +636,10 @@ public sealed interface Block
             this(id, parent, title, subtitle, trailing, state, badge, link, null);
         }
 
-        /** A top-level node */
         public static TreeNode of(String id, String title) {
             return new TreeNode(id, null, title, null, null, State.NONE, null, null, null);
         }
 
-        /** A node under {@code parent}'s */
         public static TreeNode of(String id, String parent, String title) {
             return new TreeNode(id, parent, title, null, null, State.NONE, null, null, null);
         }
@@ -554,8 +684,8 @@ public sealed interface Block
     }
 
     /**
-     * @param icon a pixelarticons name, or a small image
-     * @param label next to the icon, or null for the icon alone
+     * @param icon a pixelarticons name or a small image
+     * @param label next to the icon or null for the icon alone
      */
     record IconBlock(Icon icon, String label) implements Block {
         public IconBlock {
@@ -613,6 +743,14 @@ public sealed interface Block
             if (pixelated) json.addProperty("pixelated", true);
             return json;
         }
+    }
+
+    private static JsonObject playerJson(PlayerProfile player) {
+        JsonObject json = new JsonObject();
+        json.addProperty("uuid", player.id().toString());
+        json.addProperty("name", player.name());
+        if (player.skinUrl() != null) json.addProperty("skinUrl", player.skinUrl());
+        return json;
     }
 
     private static JsonObject typed(String type) {
