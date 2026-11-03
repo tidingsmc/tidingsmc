@@ -5,10 +5,12 @@ import com.google.gson.JsonObject;
 
 import dev.tidings.core.PlayerProfile;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -135,7 +137,9 @@ public final class Addons {
             JsonObject a = new JsonObject();
             a.addProperty("id", addon.id());
             a.addProperty("title", addon.title());
-            a.addProperty("icon", addon.icon().id());
+            // Older apps only read data URLs here, and nothing tells them to update
+            Icon icon = addon.icon();
+            a.addProperty("icon", icon.isImage() ? icon.image().dataUrl() : icon.id());
             json.add(a);
         }
         return json;
@@ -153,7 +157,10 @@ public final class Addons {
      * @param view null for the add-on's first view
      * @throws IllegalArgumentException if the request is invalid
      */
-    public JsonObject view(
+    /** A page as the API answers it, and the hashes of the images it refers to */
+    public record Shown(JsonObject json, Set<String> images) {}
+
+    public Shown view(
             String addonId,
             PlayerProfile player,
             String view,
@@ -166,7 +173,12 @@ public final class Addons {
         Request r = request(player, name, params, Map.of(), locale);
         return call(
                 addonId + " view " + name,
-                () -> Objects.requireNonNull(code.apply(r), "returned null").toJson());
+                () -> {
+                    View page = Objects.requireNonNull(code.apply(r), "returned null");
+                    Set<String> images = new HashSet<>();
+                    page.images().forEach(image -> images.add(image.hash()));
+                    return new Shown(page.toJson(), images);
+                });
     }
 
     /**
@@ -196,7 +208,7 @@ public final class Addons {
      * else, even an IllegalArgumentException such as a NumberFormatException, is a bug in the
      * add-on, which the API logs and answers with a generic error
      */
-    private static JsonObject call(String what, Supplier<JsonObject> code) {
+    private static <T> T call(String what, Supplier<T> code) {
         try {
             return code.get();
         } catch (AddonError e) {

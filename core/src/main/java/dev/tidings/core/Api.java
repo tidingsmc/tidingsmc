@@ -8,6 +8,7 @@ import com.google.gson.JsonParser;
 
 import dev.tidings.core.addon.AddonError;
 import dev.tidings.core.addon.Addons;
+import dev.tidings.core.addon.ImageData;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,8 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -146,10 +149,53 @@ public final class Api {
                         default -> throw methodNotAllowed();
                     };
             default -> {
+                if (request.path().startsWith(IMAGES_PATH)) yield image(request);
                 if (!request.path().startsWith(ADDONS_PATH)) throw new HttpError(404, "Not found");
                 yield addon(request);
             }
         };
+    }
+
+    private static final String IMAGES_PATH = "/api/images/";
+
+    // How many images sent to devices are remembered, see sent
+    private static final int MAX_SENT_IMAGES = 50_000;
+
+    // "<device ID> <hash>" of the images each device was sent in a view, least recent first: a
+    // device can fetch only those, so one player's images don't reach another's devices
+    private final Map<String, Boolean> sentImages =
+            Collections.synchronizedMap(
+                    new LinkedHashMap<>(16, 0.75f, true) {
+                        @Override
+                        protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
+                            return size() > MAX_SENT_IMAGES;
+                        }
+                    });
+
+    /** Remembers the images of {@code shown} as sent to {@code device} */
+    private JsonObject sent(Device device, Addons.Shown shown) {
+        shown.images().forEach(hash -> sentImages.put(device.id() + " " + hash, true));
+        return shown.json();
+    }
+
+    /**
+     * {@code GET /api/images/<hash>}: an add-on's image that views sent to this device refer to as
+     * {@code image:<hash>}, as {@code {type, data}} with the bytes in base64 so the relay can carry
+     * it. A hash always means the same bytes, so the app keeps what it gets
+     */
+    private Response image(Request request) {
+        if (!request.method().equals("GET")) throw methodNotAllowed();
+        Device device = authenticate(request);
+        String hash = request.path().substring(IMAGES_PATH.length());
+        if (sentImages.get(device.id() + " " + hash) == null) {
+            throw new HttpError(404, "No such image");
+        }
+        ImageData image =
+                ImageData.find(hash).orElseThrow(() -> new HttpError(404, "No such image"));
+        JsonObject body = new JsonObject();
+        body.addProperty("type", image.type());
+        body.addProperty("data", image.base64());
+        return Response.ok(body);
     }
 
     private static final String ADDONS_PATH = "/api/addons/";
@@ -179,7 +225,8 @@ public final class Api {
 
         if (kind.equals("view")) {
             String view = body.has("view") ? Json.string(body, "view") : null;
-            return Response.ok(onServerThread(() -> addons.view(id, player, view, params, locale)));
+            return Response.ok(
+                    sent(device, onServerThread(() -> addons.view(id, player, view, params, locale))));
         }
         String action = Json.string(body, "action");
         Map<String, String> values = Json.strings(body, "values");

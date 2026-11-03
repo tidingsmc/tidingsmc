@@ -35,11 +35,12 @@ class IconTest {
     }
 
     @Test
-    void imagesBecomeDataUrls() {
+    void imagesAreSentByReference() {
         String base64 = Base64.getEncoder().encodeToString(PNG);
         Icon icon = Icon.image(PNG);
         assertTrue(icon.isImage());
-        assertEquals("data:image/png;base64," + base64, icon.id());
+        assertEquals("image:" + icon.image().hash(), icon.id());
+        assertEquals(base64, icon.image().base64());
         assertEquals(icon, Icon.image(base64));
         assertEquals(icon, Icon.image("data:image/png;base64," + base64));
         assertEquals(icon, Icon.image("data:image/gif;base64," + base64));
@@ -47,11 +48,11 @@ class IconTest {
 
     @Test
     void otherFormatsAreRecognized() {
-        assertTrue(Icon.image(new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 0}).id()
-                .startsWith("data:image/jpeg;base64,"));
-        assertTrue(Icon.image("GIF89a".getBytes()).id().startsWith("data:image/gif;base64,"));
-        assertTrue(Icon.image("RIFF\0\0\0\0WEBPVP8 ".getBytes()).id()
-                .startsWith("data:image/webp;base64,"));
+        assertEquals(
+                "image/jpeg",
+                Icon.image(new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 0}).image().type());
+        assertEquals("image/gif", Icon.image("GIF89a".getBytes()).image().type());
+        assertEquals("image/webp", Icon.image("RIFF\0\0\0\0WEBPVP8 ".getBytes()).image().type());
     }
 
     @Test

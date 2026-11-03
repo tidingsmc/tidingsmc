@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -29,6 +30,19 @@ public sealed interface Block
                 Block.MapBlock {
 
     JsonObject toJson();
+
+    /** The images of its own the app fetches to show it, see {@link View#MAX_IMAGES} */
+    default Set<ImageData> images() {
+        return Set.of();
+    }
+
+    private static Set<ImageData> iconImages(Stream<Icon> icons) {
+        Set<ImageData> images = new HashSet<>();
+        icons.forEach(icon -> {
+            if (icon != null && icon.isImage()) images.add(icon.image());
+        });
+        return images;
+    }
 
     static Heading heading(String text) {
         return new Heading(text);
@@ -95,17 +109,18 @@ public sealed interface Block
     }
 
     /**
-     * An image of the add-on's own: a PNG, JPEG, GIF or WebP file's bytes
+     * An image of the add-on's own: a PNG, JPEG, GIF or WebP file's bytes. The app fetches it once
+     * and keeps it, see {@link ImageData}
      *
      * @param alt what it shows, read by screen readers; "" if it's only decoration
      */
     static Image image(byte[] bytes, String alt) {
-        return new Image(Icon.dataUrl(bytes, Image.MAX_BYTES), alt, 0, false);
+        return new Image(ImageData.of(bytes, Image.MAX_BYTES), alt, 0, false);
     }
 
     /** {@link #image(byte[], String)}, from base64 or a {@code data:image/…;base64,} URL */
     static Image image(String base64, String alt) {
-        return image(Icon.decode(base64, Image.MAX_BYTES), alt);
+        return new Image(ImageData.of(base64, Image.MAX_BYTES), alt, 0, false);
     }
 
     /**
@@ -194,6 +209,11 @@ public sealed interface Block
 
         public ItemList empty(String text) {
             return new ItemList(items, text);
+        }
+
+        @Override
+        public Set<ImageData> images() {
+            return iconImages(items.stream().map(ListItem::icon));
         }
 
         @Override
@@ -544,6 +564,13 @@ public sealed interface Block
         }
 
         @Override
+        public Set<ImageData> images() {
+            Set<ImageData> images = new HashSet<>();
+            blocks.forEach(block -> images.addAll(block.images()));
+            return images;
+        }
+
+        @Override
         public JsonObject toJson() {
             JsonObject json = typed("card");
             JsonArray array = new JsonArray();
@@ -578,6 +605,11 @@ public sealed interface Block
                     throw new IllegalArgumentException("Two tree nodes have the ID " + node.id());
                 }
             }
+        }
+
+        @Override
+        public Set<ImageData> images() {
+            return iconImages(nodes.stream().map(TreeNode::icon));
         }
 
         @Override
@@ -701,6 +733,11 @@ public sealed interface Block
         }
 
         @Override
+        public Set<ImageData> images() {
+            return iconImages(Stream.of(icon));
+        }
+
+        @Override
         public JsonObject toJson() {
             JsonObject json = typed("icon");
             json.addProperty("icon", icon.id());
@@ -712,20 +749,20 @@ public sealed interface Block
     /**
      * Made with {@link Block#image(byte[], String)}
      *
-     * @param src a {@code data:image/…;base64,} URL
+     * @param image at most {@link #MAX_BYTES}
      * @param alt what it shows, read by screen readers; "" if it's only decoration
      * @param width in CSS pixels, at most {@link #MAX_WIDTH}, or 0 for the image's own: never wider
      *     than the page
      * @param pixelated scaled up with crisp pixels, for pixel art such as textures
      */
-    record Image(String src, String alt, int width, boolean pixelated) implements Block {
+    record Image(ImageData image, String alt, int width, boolean pixelated) implements Block {
         public static final int MAX_BYTES = 64 * 1024;
         public static final int MAX_WIDTH = 1024;
 
         public Image {
-            Objects.requireNonNull(src, "src");
-            if (!src.startsWith("data:image/")) {
-                throw new IllegalArgumentException("Make images with Block.image");
+            Objects.requireNonNull(image, "image");
+            if (image.size() > MAX_BYTES) {
+                throw new IllegalArgumentException("An image is at most " + MAX_BYTES + " bytes");
             }
             Objects.requireNonNull(alt, "alt");
             if (width < 0 || width > MAX_WIDTH) {
@@ -735,17 +772,22 @@ public sealed interface Block
         }
 
         public Image width(int width) {
-            return new Image(src, alt, width, pixelated);
+            return new Image(image, alt, width, pixelated);
         }
 
         public Image pixelArt() {
-            return new Image(src, alt, width, true);
+            return new Image(image, alt, width, true);
+        }
+
+        @Override
+        public Set<ImageData> images() {
+            return Set.of(image);
         }
 
         @Override
         public JsonObject toJson() {
             JsonObject json = typed("image");
-            json.addProperty("src", src);
+            json.addProperty("src", image.ref());
             json.addProperty("alt", alt);
             if (width > 0) json.addProperty("width", width);
             if (pixelated) json.addProperty("pixelated", true);
@@ -758,22 +800,21 @@ public sealed interface Block
      * x = 10 spans 10 to 11, so a map of blocks 0 to 15 is {@code map(0, 0, 16, 16)}. Use {@link
      * MapArea#blocks} and {@link MapMarker#atBlock} to mark blocks.
      *
-     * @param background a {@code data:image/…;base64,} URL stretched over the whole map with crisp
-     *     pixels, or null
+     * @param background stretched over the whole map with crisp pixels, at most {@link
+     *     Image#MAX_BYTES}, or null
      */
     record MapBlock(
             double minX,
             double minZ,
             double maxX,
             double maxZ,
-            String background,
+            ImageData background,
             List<MapArea> areas,
             List<MapMarker> markers)
             implements Block {
 
         public static final int MAX_AREAS = 500;
         public static final int MAX_MARKERS = 500;
-        public static final int MAX_IMAGE_CHARS = 256 * 1024;
 
         public MapBlock {
             for (double d : new double[] {minX, minZ, maxX, maxZ}) {
@@ -784,8 +825,9 @@ public sealed interface Block
             if (minX >= maxX || minZ >= maxZ) {
                 throw new IllegalArgumentException("A map's min corner is before its max corner");
             }
-            if (background != null && !background.startsWith("data:image/")) {
-                throw new IllegalArgumentException("Set a map's background with background(bytes)");
+            if (background != null && background.size() > Image.MAX_BYTES) {
+                throw new IllegalArgumentException(
+                        "A map's background is at most " + Image.MAX_BYTES + " bytes");
             }
             areas = List.copyOf(areas);
             if (areas.size() > MAX_AREAS) {
@@ -795,32 +837,28 @@ public sealed interface Block
             if (markers.size() > MAX_MARKERS) {
                 throw new IllegalArgumentException("A map has at most " + MAX_MARKERS + " markers");
             }
-            long images = background == null ? 0 : background.length();
-            for (MapMarker marker : markers) {
-                if (marker.icon() != null && marker.icon().isImage()) {
-                    images += marker.icon().id().length();
-                }
-            }
-            if (images > MAX_IMAGE_CHARS) {
-                throw new IllegalArgumentException(
-                        "A map's background and image icons are at most "
-                                + MAX_IMAGE_CHARS
-                                + " characters of base64 together, not "
-                                + images
-                                + ": use smaller images or named icons");
-            }
+        }
+
+        @Override
+        public Set<ImageData> images() {
+            Set<ImageData> images = iconImages(markers.stream().map(MapMarker::icon));
+            if (background != null) images.add(background);
+            return images;
         }
 
         /**
-         * A PNG, JPEG, GIF or WebP of at most {@link Image#MAX_BYTES}
+         * A PNG, JPEG, GIF or WebP of at most {@link Image#MAX_BYTES}. The app fetches it once and
+         * keeps it, so a map that refreshes doesn't resend it, see {@link ImageData}
          */
         public MapBlock background(byte[] bytes) {
             return new MapBlock(
-                    minX, minZ, maxX, maxZ, Icon.dataUrl(bytes, Image.MAX_BYTES), areas, markers);
+                    minX, minZ, maxX, maxZ, ImageData.of(bytes, Image.MAX_BYTES), areas, markers);
         }
 
+        /** {@link #background(byte[])}, from base64 or a {@code data:image/…;base64,} URL */
         public MapBlock background(String base64) {
-            return background(Icon.decode(base64, Image.MAX_BYTES));
+            return new MapBlock(
+                    minX, minZ, maxX, maxZ, ImageData.of(base64, Image.MAX_BYTES), areas, markers);
         }
 
         public MapBlock areas(List<MapArea> areas) {
@@ -838,7 +876,7 @@ public sealed interface Block
             json.addProperty("minZ", minZ);
             json.addProperty("maxX", maxX);
             json.addProperty("maxZ", maxZ);
-            if (background != null) json.addProperty("background", background);
+            if (background != null) json.addProperty("background", background.ref());
             if (!areas.isEmpty()) {
                 JsonArray array = new JsonArray();
                 areas.forEach(area -> array.add(area.toJson()));

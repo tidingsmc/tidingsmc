@@ -1,6 +1,5 @@
 package dev.tidings.core.addon;
 
-import java.util.Base64;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -36,10 +35,12 @@ public final class Icon {
     public static final Icon LIGHTBULB = named("lightbulb");
     public static final Icon SLIDERS = named("sliders");
 
-    private final String id;
+    private final String name;
+    private final ImageData image;
 
-    private Icon(String id) {
-        this.id = id;
+    private Icon(String name, ImageData image) {
+        this.name = name;
+        this.image = image;
     }
 
     /**
@@ -54,18 +55,19 @@ public final class Icon {
             throw new IllegalArgumentException(
                     "Invalid icon name \"" + name + "\": use pixelarticons' names, like arrow-right");
         }
-        return new Icon(name);
+        return new Icon(name, null);
     }
 
     /**
      * An image of the add-on's own: a PNG, JPEG, GIF or WebP file's bytes. Small images are drawn
-     * with crisp pixels, so a 16×16 texture works as is
+     * with crisp pixels, so a 16×16 texture works as is. The app fetches it once and keeps it, see
+     * {@link ImageData}
      *
      * @throws IllegalArgumentException if it's another format, or bigger than {@link
      *     #MAX_IMAGE_BYTES}
      */
     public static Icon image(byte[] bytes) {
-        return new Icon(dataUrl(bytes, MAX_IMAGE_BYTES));
+        return new Icon(null, ImageData.of(bytes, MAX_IMAGE_BYTES));
     }
 
     /**
@@ -74,82 +76,35 @@ public final class Icon {
      * @throws IllegalArgumentException if it isn't base64, or isn't a fitting image
      */
     public static Icon image(String base64) {
-        return image(decode(base64, MAX_IMAGE_BYTES));
-    }
-
-    /** A PNG, JPEG, GIF or WebP of at most {@code max} bytes, as a data URL */
-    static String dataUrl(byte[] bytes, int max) {
-        Objects.requireNonNull(bytes, "bytes");
-        if (bytes.length > max) {
-            throw new IllegalArgumentException(
-                    "An image is at most " + max + " bytes, not " + bytes.length);
-        }
-        String type = type(bytes);
-        if (type == null) {
-            throw new IllegalArgumentException("An image is a PNG, JPEG, GIF or WebP");
-        }
-        return "data:" + type + ";base64," + Base64.getEncoder().encodeToString(bytes);
-    }
-
-    /** Base64, or a {@code data:…;base64,} URL, of at most {@code max} bytes once decoded */
-    static byte[] decode(String base64, int max) {
-        Objects.requireNonNull(base64, "base64");
-        String data = base64.strip();
-        if (data.startsWith("data:")) {
-            int comma = data.indexOf(',');
-            if (comma < 0 || !data.substring(0, comma).endsWith(";base64")) {
-                throw new IllegalArgumentException("An image's data URL must be base64");
-            }
-            data = data.substring(comma + 1);
-        }
-        if (data.length() > (max + 2) / 3 * 4 + 4) {
-            throw new IllegalArgumentException("An image is at most " + max + " bytes");
-        }
-        try {
-            return Base64.getMimeDecoder().decode(data);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("An image isn't valid base64", e);
-        }
-    }
-
-    private static String type(byte[] b) {
-        if (starts(b, 0, 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A)) return "image/png";
-        if (starts(b, 0, 0xFF, 0xD8, 0xFF)) return "image/jpeg";
-        if (starts(b, 0, 'G', 'I', 'F', '8')) return "image/gif";
-        if (starts(b, 0, 'R', 'I', 'F', 'F') && starts(b, 8, 'W', 'E', 'B', 'P')) {
-            return "image/webp";
-        }
-        return null;
-    }
-
-    private static boolean starts(byte[] bytes, int offset, int... expected) {
-        if (bytes.length < offset + expected.length) return false;
-        for (int i = 0; i < expected.length; i++) {
-            if ((bytes[offset + i] & 0xFF) != expected[i]) return false;
-        }
-        return true;
+        return new Icon(null, ImageData.of(base64, MAX_IMAGE_BYTES));
     }
 
     public boolean isImage() {
-        return id.startsWith("data:");
+        return image != null;
     }
 
+    /** The image, or null for a named icon */
+    public ImageData image() {
+        return image;
+    }
+
+    /** What views carry: the name, or {@link ImageData#ref()} */
     public String id() {
-        return id;
+        return image != null ? image.ref() : name;
     }
 
     @Override
     public boolean equals(Object o) {
-        return o instanceof Icon icon && icon.id.equals(id);
+        return o instanceof Icon icon && icon.id().equals(id());
     }
 
     @Override
     public int hashCode() {
-        return id.hashCode();
+        return id().hashCode();
     }
 
     @Override
     public String toString() {
-        return isImage() ? "Icon[image, " + id.length() + " chars]" : "Icon[" + id + "]";
+        return isImage() ? "Icon[" + image + "]" : "Icon[" + name + "]";
     }
 }

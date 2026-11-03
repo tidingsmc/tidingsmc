@@ -64,6 +64,7 @@ import {
 } from "../lib/api";
 import { errorText } from "../lib/i18n";
 import { readImage } from "../lib/icons";
+import { retryMissingImages, useImage } from "../lib/images";
 import { navigate, paths, type AddonRoute } from "../lib/router";
 import { layoutTree } from "../lib/treeLayout";
 import { useWide } from "../lib/useWide";
@@ -106,9 +107,11 @@ export function AddonTab({
   useEffect(() => {
     let cancelled = false;
     api.addonView(server, addon.id, JSON.parse(linkKey), i18n.language).then(
-      (view) =>
-        !cancelled &&
-        setState({ status: "ok", view, for: linkKey, reload: reloads }),
+      (view) => {
+        if (cancelled) return;
+        setState({ status: "ok", view, for: linkKey, reload: reloads });
+        retryMissingImages(server);
+      },
       (error: Error) =>
         !cancelled &&
         setState((previous) =>
@@ -383,9 +386,8 @@ function BlockView({
   }
 }
 
-// Only base64 images
 function ImageView({ block }: { block: ImageBlock }) {
-  const src = readImage(block.src);
+  const src = useImage(readImage(block.src));
   if (!src) return null;
   const width = Number(block.width);
   return (
@@ -408,6 +410,7 @@ function MapView({ block, context }: { block: MapBlock; context: Context }) {
   const { t } = useTranslation();
 
   const map = useMemo(() => readMap(block), [block]);
+  const background = useImage(map?.background ?? null);
   const [zoom, setZoom] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -454,12 +457,8 @@ function MapView({ block, context }: { block: MapBlock; context: Context }) {
               aspectRatio: `${map.width} / ${map.height}`,
             }}
           >
-            {map.background && (
-              <img
-                className="addon-map-background"
-                src={map.background}
-                alt=""
-              />
+            {background && (
+              <img className="addon-map-background" src={background} alt="" />
             )}
             {map.areas.map((area, i) => (
               <div

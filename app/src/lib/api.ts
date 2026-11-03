@@ -126,7 +126,14 @@ export interface TidingsApi {
     action: AddonAction,
     locale: string,
   ): Promise<ActionResult>;
+  image(server: PairedServer, hash: string): Promise<ImageResponse>;
   unpair(server: PairedServer): Promise<void>;
+}
+
+/** An add-on's image, which views refer to as `image:<hash>` */
+export interface ImageResponse {
+  type: string;
+  data: string;
 }
 
 export interface AddonAction {
@@ -303,6 +310,8 @@ export const api: TidingsApi = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ...action, locale }),
     }),
+  image: (server, hash) =>
+    authed(server, `/api/images/${encodeURIComponent(hash)}`),
   unpair: (server) => {
     // Requests still on their way would get a 401
     leftTokens.add(server.token);
