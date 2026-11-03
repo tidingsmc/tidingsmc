@@ -643,6 +643,54 @@ class ApiServerTest {
     }
 
     @Test
+    void addonImagesAreFetchedByTheirHash() throws IOException, InterruptedException {
+        String token = pair();
+        tidings.addons()
+                .add(
+                        Addon.builder("Pictures")
+                                .view(
+                                        "home",
+                                        request ->
+                                                View.of(
+                                                        null,
+                                                        Block.image("GIF89a".getBytes(), "A gif")))
+                                .build("pictures"));
+
+        String src =
+                json(call("POST", "/api/addons/pictures/view", token, "{}"))
+                        .getAsJsonArray("blocks")
+                        .get(0)
+                        .getAsJsonObject()
+                        .get("src")
+                        .getAsString();
+        assertEquals("image:YQ9a5NduMyY2oXvTV_1s6Q", src);
+
+        String path = "/api/images/" + src.substring("image:".length());
+        HttpResponse<String> response = call("GET", path, token, null);
+        assertEquals(200, response.statusCode(), response.body());
+        assertEquals("image/gif", json(response).get("type").getAsString());
+        assertEquals("R0lGODlh", json(response).get("data").getAsString());
+
+        assertEquals(401, call("GET", path, null, null).statusCode());
+        assertEquals(405, call("POST", path, token, "{}").statusCode());
+        assertEquals(
+                404, call("GET", "/api/images/AAAAAAAAAAAAAAAAAAAAAA", token, null).statusCode());
+        assertEquals(404, call("GET", "/api/images/../info", token, null).statusCode());
+        // Only the devices it was sent to can fetch it
+        String other = pair();
+        assertEquals(404, call("GET", path, other, null).statusCode());
+
+        // Text that looks like a reference doesn't count as sending the image
+        tidings.addons()
+                .add(
+                        Addon.builder("Text")
+                                .view("home", request -> View.of(null, Block.heading(src)))
+                                .build("text"));
+        assertEquals(200, call("POST", "/api/addons/text/view", other, "{}").statusCode());
+        assertEquals(404, call("GET", path, other, null).statusCode());
+    }
+
+    @Test
     void infoListsTheAddons() throws IOException, InterruptedException {
         String token = pair();
         assertFalse(json(call("GET", "/api/info", token, null)).has("addons"));
@@ -654,6 +702,22 @@ class ApiServerTest {
         assertEquals("greeter", addons.get(0).getAsJsonObject().get("id").getAsString());
         assertEquals("Greeter", addons.get(0).getAsJsonObject().get("title").getAsString());
         assertEquals("message", addons.get(0).getAsJsonObject().get("icon").getAsString());
+    }
+
+    @Test
+    void infoSendsImageIconsAsDataUrls() throws IOException, InterruptedException {
+        String token = pair();
+        tidings.addons()
+                .add(
+                        Addon.builder("Pictures")
+                                .icon(Icon.image("GIF89a".getBytes()))
+                                .view("home", request -> View.of(null))
+                                .build("pictures"));
+
+        JsonArray addons = json(call("GET", "/api/info", token, null)).getAsJsonArray("addons");
+        assertEquals(
+                "data:image/gif;base64,R0lGODlh",
+                addons.get(0).getAsJsonObject().get("icon").getAsString());
     }
 
     @Test

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Layout } from "pixelarticons/react";
 import { readIcon } from "../lib/icons";
+import { useImage } from "../lib/images";
 
 const loaded = new Map<string, string>();
 
@@ -13,6 +14,7 @@ export function AddonIcon({
 }) {
   const icon = readIcon(name);
   const iconName = icon.kind === "name" ? icon.name : null;
+  const src = useImage(icon.kind === "image" ? icon.src : null);
   const [svg, setSvg] = useState<string | null | undefined>(() =>
     iconName ? loaded.get(iconName) : undefined,
   );
@@ -39,7 +41,10 @@ export function AddonIcon({
 
   const classes = ["addon-icon", className].filter(Boolean).join(" ");
   if (icon.kind === "image") {
-    return <img className={`${classes} image`} src={icon.src} alt="" />;
+    if (src) return <img className={`${classes} image`} src={src} alt="" />;
+    // Unavailable for now: the default icon, until it loads
+    if (src === null) return <Layout className={classes} aria-hidden />;
+    return <svg className={classes} viewBox="0 0 24 24" aria-hidden />;
   }
   if (svg === null) return <Layout className={classes} aria-hidden />;
   if (svg === undefined)

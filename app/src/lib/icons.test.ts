@@ -22,6 +22,12 @@ describe("readIcon", () => {
     });
   });
 
+  it("takes image references", () => {
+    const ref = "image:YQ9a5NduMyY2oXvTV_1s6Q";
+    expect(readIcon(ref)).toEqual({ kind: "image", src: ref });
+    expect(readImage(ref)).toBe(ref);
+  });
+
   it("draws the default for anything else", () => {
     const fallback = { kind: "name", name: "layout" };
     for (const bad of [
@@ -36,6 +42,9 @@ describe("readIcon", () => {
       'data:image/png;base64,abc"onerror',
       "https://example.com/x.png",
       `data:image/png;base64,${"A".repeat(30000)}`,
+      "image:short",
+      "image:YQ9a5NduMyY2oXvTV_1s6Q/../x",
+      "image:YQ9a5NduMyY2oXvTV_1s6Q?",
     ]) {
       expect(readIcon(bad)).toEqual(fallback);
     }

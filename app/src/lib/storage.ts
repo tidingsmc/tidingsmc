@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { PairedServer } from "./api";
+import { keepImagesOnly } from "./images";
 import { infoCache } from "./useInfo";
 import { keepOnlineOnly } from "./useOnline";
 import { pairingKey } from "./serverCache";
@@ -26,6 +27,7 @@ export function useServers() {
     infoCache.keepOnly(servers);
     settingsCache.keepOnly(servers);
     keepOnlineOnly(servers);
+    keepImagesOnly(servers);
   }, [servers]);
 
   const upsert = useCallback(

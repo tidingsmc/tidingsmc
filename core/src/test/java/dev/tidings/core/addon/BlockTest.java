@@ -97,7 +97,7 @@ class BlockTest {
                                         new Block.ListItem("Old", null, null, null, null)))
                         .toJson());
         assertJson(
-                "{type:'tree',nodes:[{id:'a',title:'A',icon:'data:image/gif;base64,R0lGODlh'}]}",
+                "{type:'tree',nodes:[{id:'a',title:'A',icon:'image:YQ9a5NduMyY2oXvTV_1s6Q'}]}",
                 Block.tree(
                                 List.of(
                                         Block.TreeNode.of("a", "A")
@@ -112,10 +112,10 @@ class BlockTest {
                 "{type:'icon',icon:'coins',label:'12 coins'}",
                 Block.icon(Icon.COINS, "12 coins").toJson());
         assertJson(
-                "{type:'image',src:'data:image/gif;base64,R0lGODlh',alt:'A map'}",
+                "{type:'image',src:'image:YQ9a5NduMyY2oXvTV_1s6Q',alt:'A map'}",
                 Block.image("GIF89a".getBytes(), "A map").toJson());
         assertJson(
-                "{type:'image',src:'data:image/gif;base64,R0lGODlh',alt:'',width:64,"
+                "{type:'image',src:'image:YQ9a5NduMyY2oXvTV_1s6Q',alt:'',width:64,"
                         + "pixelated:true}",
                 Block.image("R0lGODlh", "").width(64).pixelArt().toJson());
         assertThrows(IllegalArgumentException.class, () -> Block.image("<svg>".getBytes(), ""));
@@ -126,8 +126,7 @@ class BlockTest {
                 IllegalArgumentException.class,
                 () -> Block.image("GIF89a".getBytes(), "").width(Block.Image.MAX_WIDTH + 1));
         assertThrows(
-                IllegalArgumentException.class,
-                () -> new Block.Image("https://example.com/x.png", "", 0, false));
+                NullPointerException.class, () -> new Block.Image(null, "", 0, false));
     }
 
     @Test
@@ -218,7 +217,7 @@ class BlockTest {
         byte[] png = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0};
         assertJson(
                 "{type:'map',minX:-10,minZ:0,maxX:10,maxZ:40,"
-                        + "background:'data:image/png;base64,iVBORw0KGgoA',"
+                        + "background:'image:hDrCOxc2tEh-yBz3wH3dmw',"
                         + "areas:[{minX:-5,minZ:2,maxX:1,maxZ:8.5}],"
                         + "markers:[{x:0.5,z:3,label:'Town hall',icon:'crown',"
                         + "link:{view:'building',params:{id:'7'}}},"
@@ -252,6 +251,50 @@ class BlockTest {
         }
         assertThrows(IllegalArgumentException.class, () -> Block.map(0, 0, 1, 1).markers(many));
         assertThrows(IllegalArgumentException.class, () -> Block.MapMarker.of(0, 0, " "));
+
+        Icon face = Icon.image("GIF89a".getBytes());
+        List<Block.MapMarker> faces = new ArrayList<>();
+        for (int i = 0; i < Block.MapBlock.MAX_MARKERS; i++) {
+            faces.add(Block.MapMarker.of(0, 0, "#" + i).icon(face));
+        }
+        Block.map(0, 0, 1, 1).markers(faces);
+    }
+
+    private static Icon gif(int i) {
+        byte[] gif = "GIF89a??".getBytes();
+        gif[6] = (byte) i;
+        gif[7] = (byte) (i >> 8);
+        return Icon.image(gif);
+    }
+
+    @Test
+    void viewsShowFewDifferentImages() {
+        List<Block.ListItem> rows = new ArrayList<>();
+        for (int i = 0; i < 1000; i++) rows.add(Block.ListItem.of("#" + i).icon(gif(0)));
+        assertEquals(1, View.of(null, Block.list(rows), Block.list(rows)).images().size());
+
+        List<Block.MapMarker> markers = new ArrayList<>();
+        List<Block.TreeNode> nodes = new ArrayList<>();
+        for (int i = 0; i < View.MAX_IMAGES / 4; i++) {
+            markers.add(Block.MapMarker.of(0, 0, "#" + i).icon(gif(i)));
+            nodes.add(Block.TreeNode.of("#" + i, "#" + i).icon(gif(100 + i)));
+        }
+        Block map = Block.map(0, 0, 1, 1).markers(markers);
+        Block tree = Block.tree(nodes);
+        List<Block> blocks = new ArrayList<>(List.of(map, tree));
+        for (int i = 0; i < View.MAX_IMAGES / 2; i++) {
+            blocks.add(Block.card(Block.icon(gif(200 + i))));
+        }
+        assertEquals(View.MAX_IMAGES, View.of(null, blocks).images().size());
+        blocks.add(Block.icon(gif(300)));
+        assertThrows(IllegalArgumentException.class, () -> View.of(null, blocks).images());
+
+        List<Block.ListItem> different = new ArrayList<>();
+        for (int i = 0; i <= View.MAX_IMAGES; i++) {
+            different.add(Block.ListItem.of("#" + i).icon(gif(i)));
+        }
+        assertThrows(
+                IllegalArgumentException.class, () -> View.of(null, Block.list(different)).images());
     }
 
     @Test
@@ -261,23 +304,6 @@ class BlockTest {
         assertThrows(IllegalArgumentException.class, () -> Block.MapArea.of(5, 0, 5, 10));
         assertEquals(
                 Block.MapMarker.of(3.5, -1.5, "Chest"), Block.MapMarker.atBlock(3, -2, "Chest"));
-    }
-
-    @Test
-    void mapImagesAreCapped() {
-        byte[] face = new byte[Icon.MAX_IMAGE_BYTES];
-        byte[] png = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
-        System.arraycopy(png, 0, face, 0, png.length);
-        Icon icon = Icon.image(face);
-        List<Block.MapMarker> faces = new ArrayList<>();
-        for (int i = 0; i * icon.id().length() <= Block.MapBlock.MAX_IMAGE_CHARS; i++) {
-            faces.add(Block.MapMarker.of(0, 0, "#" + i).icon(icon));
-        }
-        Block.MapBlock map = Block.map(0, 0, 1, 1);
-        assertThrows(IllegalArgumentException.class, () -> map.markers(faces));
-        map.markers(faces.subList(0, faces.size() - 1));
-        // Named icons cost nothing
-        map.markers(faces.stream().map(m -> m.icon(Icon.STAR)).toList());
     }
 
     @Test

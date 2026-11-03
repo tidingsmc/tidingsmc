@@ -1,8 +1,10 @@
 package dev.tidings.core.addon;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -20,6 +22,11 @@ public record View(String title, List<Block> blocks, PlayerProfile player, int r
     public static final int VERSION = 5;
     public static final Duration MIN_REFRESH = Duration.ofSeconds(2);
     public static final Duration MAX_REFRESH = Duration.ofHours(1);
+    /**
+     * Different images of the add-on's own a page shows, all blocks together. The app fetches each
+     * new one, a request against the relay's quota: reuse images, or use named icons
+     */
+    public static final int MAX_IMAGES = 32;
 
     public View {
         blocks = List.copyOf(blocks);
@@ -30,6 +37,25 @@ public record View(String title, List<Block> blocks, PlayerProfile player, int r
                     "refresh must be between " + MIN_REFRESH.toSeconds() + " and "
                             + MAX_REFRESH.toSeconds() + " seconds: " + refresh);
         }
+    }
+
+    /**
+     * The different images of its own the page shows, all blocks together
+     *
+     * @throws IllegalArgumentException if there are more than {@link #MAX_IMAGES}
+     */
+    public Set<ImageData> images() {
+        Set<ImageData> images = new HashSet<>();
+        blocks.forEach(block -> images.addAll(block.images()));
+        if (images.size() > MAX_IMAGES) {
+            throw new IllegalArgumentException(
+                    "A page shows at most "
+                            + MAX_IMAGES
+                            + " different images of its own, not "
+                            + images.size()
+                            + ": reuse images or use named icons");
+        }
+        return images;
     }
 
     public static View of(String title, Block... blocks) {
