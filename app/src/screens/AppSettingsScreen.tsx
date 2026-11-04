@@ -1,4 +1,3 @@
-import { version } from "../../package.json";
 import type { ReactNode } from "react";
 import {
   BellOff,
@@ -108,7 +107,7 @@ export function AppSettingsScreen({ servers }: { servers: PairedServer[] }) {
             <div className="settings-group">
               <p className="settings-row">
                 {t("appSettings.version")}
-                <span className="muted">{version}</span>
+                <span className="muted">{__APP_VERSION__}</span>
               </p>
             </div>
           </div>
@@ -163,7 +162,8 @@ export function AppSettingsScreen({ servers }: { servers: PairedServer[] }) {
         </div>
 
         <p className="info-row">
-          {t("appSettings.version")} <span className="muted">{version}</span>
+          {t("appSettings.version")}{" "}
+          <span className="muted">{__APP_VERSION__}</span>
         </p>
       </div>
 

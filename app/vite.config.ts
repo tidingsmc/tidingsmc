@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { build } from "esbuild";
+import { execSync } from "node:child_process";
 
 /**
  * Serves src/sw.ts as sw.js at the app's root, so it can be registered for any scope below it.
@@ -38,8 +39,21 @@ function serviceWorker(): Plugin {
   };
 }
 
+function gitVersion(): string {
+  try {
+    return execSync("git describe --tags --always", { encoding: "utf8" })
+      .trim()
+      .replace(/^v/, "");
+  } catch {
+    return "dev";
+  }
+}
+
+const version = gitVersion();
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), serviceWorker()],
+  define: { __APP_VERSION__: JSON.stringify(version) },
   base: "./",
 });
