@@ -176,5 +176,10 @@
     "scrollRight": "Scroll right",
     "open": "Open",
     "locked": "Locked"
+  },
+  "update": {
+    "title": "A new version of Tidings is available",
+    "reload": "Reload",
+    "later": "Later"
   }
 }
