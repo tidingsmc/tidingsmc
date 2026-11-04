@@ -14,9 +14,9 @@ Phones need a way to reach the server over HTTPS. There are two options:
 
 ```sh
 cd relay
-npm install
+pnpm install
 npx wrangler login
-npm run deploy
+pnpm run deploy
 ```
 
 Set `relay-url` to the relay's address (like `https://tidings-relay.<you>.workers.dev`) and restart the server. The mod logs a key: set it as the relay's `OWNER_KEY` secret, either in the Cloudflare dashboard (your worker → Settings → Variables and Secrets, type Secret) or with `npx wrangler secret put OWNER_KEY` from `relay/`. The mod connects within a minute. If you lose `data.json`, the key changes and you'll have to set it again.
@@ -42,16 +42,16 @@ Other mods can add their own tabs to a server's page in the app, and send notifi
 
 ## Development
 
-You need JDK 17+ and Node 22+.
+You need JDK 17+, Node 22+ and pnpm (`corepack enable pnpm` picks up the version pinned in `package.json`).
 
 ```sh
 ./gradlew :core:test          # core tests
 ./gradlew :forge:build        # jar in forge/build/libs/
 ./gradlew :forge:runServer    # dev server with the mod
 
-cd app && npm install && npm run dev
-cd app && npm test
-cd relay && npm install && npm test
+cd app && pnpm install && pnpm run dev
+cd app && pnpm test
+cd relay && pnpm install && pnpm test
 ```
 
 For the dev server, accept the EULA in `forge/run/eula.txt` and set `app-url = "http://localhost:5173/"` in `forge/run/config/tidings-common.toml`. Then pair the app with `localhost:8765`.
