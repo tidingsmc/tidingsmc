@@ -60,6 +60,8 @@ tasks.named('processResources', ProcessResources).configure {
             mod_version            : mod_version,
             mod_authors            : mod_authors,
             mod_description        : mod_description,
+            mod_url                : mod_url,
+            mod_issue_tracker_url  : mod_issue_tracker_url,
     ]
     inputs.properties replaceProperties
 
