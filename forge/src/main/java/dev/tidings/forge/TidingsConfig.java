@@ -38,8 +38,10 @@ final class TidingsConfig {
                                 " Leave empty for a plain TCP tunnel, where it can be faked")
                         .define("client-ip-header", "");
         APP_URL =
-                builder.comment("", " Where the app is hosted (required)")
-                        .define("app-url", "");
+                builder.comment(
+                                "",
+                                " Where the app is hosted. Change it only if you host your own copy")
+                        .define("app-url", "https://tidingsmc.github.io/tidingsmc/");
         SERVER_NAME =
                 builder.comment("", " Server name suggested when pairing")
                         .define("server-name", "");

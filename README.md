@@ -29,8 +29,6 @@ In `config/tidings-common.toml` (in the server folder), set `relay-url` to the r
 
 - **Direct:** The API listens on `127.0.0.1:8765` (`port`, `bind-address`). Expose it over HTTPS yourself (Cloudflare Tunnel, Tailscale Funnel, Caddy...) and set `public-url`.
 
-In both cases, set `app-url` to where the app is hosted, because the pairing QR codes open it. Tidings stays off until it's set. The server also needs outgoing HTTPS to reach the relay and the push services (Google, Mozilla, Apple).
-
 ## Commands
 
 - `/tidings pair`: get a QR code. `/tidings pair code` gives an address and a 6-digit code to type instead.
