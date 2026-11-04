@@ -13,3 +13,4 @@ export { SettingsLink } from "./SettingsLink";
 export { Sidebar } from "./Sidebar";
 export { Toggle } from "./Toggle";
 export { UnreachableNotice } from "./UnreachableNotice";
+export { UpdateAvailable } from "./UpdateAvailable";

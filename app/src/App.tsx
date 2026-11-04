@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Screen, Sidebar } from "./components";
+import { Screen, Sidebar, UpdateAvailable } from "./components";
 import { onUnpaired, type PairedServer } from "./lib/api";
 import { navigate, parseRoute, paths, useRoute } from "./lib/router";
 import { unregister, useSubscriptionSync } from "./lib/notifications";
@@ -133,6 +133,7 @@ export default function App() {
     <div className="shell">
       {wide && <Sidebar servers={servers} route={route} />}
       <div className="main">{screen}</div>
+      <UpdateAvailable />
     </div>
   );
 }

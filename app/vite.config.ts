@@ -49,11 +49,24 @@ function gitVersion(): string {
   }
 }
 
+function versionFile(version: string): Plugin {
+  return {
+    name: "tidings-version-file",
+    generateBundle() {
+      this.emitFile({
+        type: "asset",
+        fileName: "version.json",
+        source: JSON.stringify({ version }),
+      });
+    },
+  };
+}
+
 const version = gitVersion();
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), serviceWorker()],
+  plugins: [react(), serviceWorker(), versionFile(version)],
   define: { __APP_VERSION__: JSON.stringify(version) },
   base: "./",
 });
