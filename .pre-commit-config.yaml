@@ -40,25 +40,25 @@ repos:
 
   - repo: local
     hooks:
-      # ── App — npm exec so the lockfile-pinned versions are used ────────────
+      # ── App ──────────────────────────────────────────────────────────────────
       - id: prettier
         name: prettier
-        entry: bash -c 'cd app && exec npm exec --no -- prettier --write --ignore-unknown "${@#app/}"' --
+        entry: bash -c 'cd app && exec pnpm exec prettier --write --ignore-unknown "${@#app/}"' --
         language: system
         files: ^app/
-        exclude: ^app/(dist/|public/|package-lock\.json$)
+        exclude: ^app/(dist/|public/|pnpm-lock\.yaml$)
         types: [text]
 
       - id: eslint
         name: eslint
-        entry: bash -c 'cd app && exec npm exec --no -- eslint --fix "${@#app/}"' --
+        entry: bash -c 'cd app && exec pnpm exec eslint --fix "${@#app/}"' --
         language: system
         files: ^app/.*\.(ts|tsx|js|jsx|mjs|cjs)$
         exclude: ^app/dist/
 
       - id: tsc
         name: tsc typecheck
-        entry: bash -c 'cd app && exec npm exec --no -- tsc -b --noEmit'
+        entry: bash -c 'cd app && exec pnpm exec tsc -b --noEmit'
         language: system
         files: ^app/.*\.(ts|tsx)$|^app/tsconfig.*\.json$
         pass_filenames: false
@@ -66,15 +66,15 @@ repos:
       # ── Relay ─────────────────────────────────────────────────────────────
       - id: relay-prettier
         name: prettier (relay)
-        entry: bash -c 'cd relay && exec npm exec --no -- prettier --write --ignore-unknown "${@#relay/}"' --
+        entry: bash -c 'cd relay && exec pnpm exec prettier --write --ignore-unknown "${@#relay/}"' --
         language: system
         files: ^relay/
-        exclude: ^relay/package-lock\.json$
+        exclude: ^relay/pnpm-lock\.yaml$
         types: [text]
 
       - id: relay-tsc
         name: tsc typecheck (relay)
-        entry: bash -c 'cd relay && exec npm run --silent typecheck'
+        entry: bash -c 'cd relay && exec pnpm run --silent typecheck'
         language: system
         files: ^relay/.*\.(ts|json|jsonc)$
         pass_filenames: false
