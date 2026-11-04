@@ -1,11 +1,5 @@
 package dev.tidings.core;
 
-import dev.tidings.core.addon.Addons;
-import dev.tidings.core.addon.Notification;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
@@ -19,6 +13,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.tidings.core.addon.Addons;
+import dev.tidings.core.addon.Notification;
 
 public final class Tidings {
     private static final Logger LOGGER = LoggerFactory.getLogger(Tidings.class);
@@ -243,8 +243,7 @@ public final class Tidings {
     }
 
     /**
-     * Asks the player of the device with {@code token} to approve it, once only. They then have
-     * {@link #APPROVAL_TIME} to
+     * Asks the player of the device with {@code token} to approve it
      *
      * @return false if no device with this token awaits approval
      */

@@ -1,5 +1,7 @@
 export { AddonIcon } from "./AddonIcon";
 export { Avatar } from "./Avatar";
+export { Blocks } from "./blocks/Blocks";
+export type { BlockContext } from "./blocks/context";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { Dropdown } from "./Dropdown";
 export { LinkedAs } from "./LinkedAs";
